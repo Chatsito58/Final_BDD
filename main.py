@@ -1,10 +1,22 @@
 import sys
+import os
+import logging
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 from PyQt5.QtWidgets import QApplication, QDialog
-from src.db_manager import DBManager
+from db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.main_view import MainView
 
+# Configuración centralizada de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler(),
+    ],
+)
 
 class AlquilerApp:
     def __init__(self):

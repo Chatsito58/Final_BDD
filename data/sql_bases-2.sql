@@ -370,3 +370,15 @@ BEGIN
     VALUES (NEW.correo, SHA2(NEW.documento, 256), rid, NEW.id_cliente);
 END$$
 DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER trg_empleado_usuario
+AFTER INSERT ON Empleado
+FOR EACH ROW
+BEGIN
+    DECLARE rid INT;
+    SELECT id_rol INTO rid FROM Rol WHERE nombre='empleado' LIMIT 1;
+    INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado)
+    VALUES (NEW.correo, SHA2(NEW.documento, 256), rid, NEW.id_empleado);
+END$$
+DELIMITER ;

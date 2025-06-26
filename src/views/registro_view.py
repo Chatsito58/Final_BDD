@@ -34,17 +34,29 @@ class RegistroView(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, 'Error', 'Complete todos los campos requeridos')
             return
 
-        # Verificar unicidad del correo
-        count_q = 'SELECT COUNT(*) FROM Cliente WHERE correo = %s'
-        result = self.db_manager.execute_query(count_q, (correo,))
+        # Detectar motor activo y ajustar placeholder
+        is_sqlite = hasattr(self.db_manager, 'offline') and self.db_manager.offline
+        if is_sqlite:
+            count_q = 'SELECT COUNT(*) FROM Cliente WHERE correo = ?'
+            params = (correo,)
+        else:
+            count_q = 'SELECT COUNT(*) FROM Cliente WHERE correo = %s'
+            params = (correo,)
+        result = self.db_manager.execute_query(count_q, params)
         if result and result[0][0] > 0:
             QtWidgets.QMessageBox.warning(self, 'Error', 'El correo ya está registrado')
             return
 
-        insert_q = (
-            'INSERT INTO Cliente (documento, nombre, telefono, correo) '
-            'VALUES (%s, %s, %s, %s)'
-        )
+        if is_sqlite:
+            insert_q = (
+                'INSERT INTO Cliente (documento, nombre, telefono, correo) '
+                'VALUES (?, ?, ?, ?)'
+            )
+        else:
+            insert_q = (
+                'INSERT INTO Cliente (documento, nombre, telefono, correo) '
+                'VALUES (%s, %s, %s, %s)'
+            )
         params = (documento, nombre, telefono, correo)
         try:
             self.db_manager.execute_query(insert_q, params, fetch=False)

@@ -46,3 +46,88 @@ logging.basicConfig(
 
 Esto generará un archivo `app.log` con los eventos producidos por
 `AuthManager` y `DBManager`, además de mostrarlos por consola.
+
+## Triggers automáticos de usuario
+
+Tanto en la base de datos remota (MariaDB/MySQL) como en la local (SQLite), existen triggers que crean automáticamente un registro en la tabla `Usuario` cada vez que se inserta un nuevo `Cliente` o `Empleado`:
+
+- Al registrar un **Cliente**, se crea un usuario con rol 'cliente'.
+- Al registrar un **Empleado**, se crea un usuario con rol 'empleado'.
+
+Esto asegura que cada persona registrada pueda autenticarse según su rol.
+
+## Validación de email único
+
+El sistema valida que el correo electrónico de cada cliente sea único antes de permitir el registro, tanto en modo remoto como local. Si el correo ya existe, el registro es rechazado y se muestra un mensaje de error.
+
+## Cómo comprobar que todo funciona
+
+### Prueba manual
+
+1. **Registro de Cliente**
+   - Intenta registrar un cliente con un correo nuevo: debe crearse el cliente y el usuario asociado.
+   - Intenta registrar otro cliente con el mismo correo: debe mostrar un error de "correo ya registrado".
+   - Verifica en la tabla `Usuario` que se haya creado el usuario con el rol correcto.
+
+2. **Registro de Empleado**
+   - Inserta un empleado (puedes hacerlo desde la app o directamente en la base de datos).
+   - Verifica que se crea automáticamente un usuario asociado en la tabla `Usuario` con el rol 'empleado'.
+
+3. **Modo offline**
+   - Desconecta la base remota y registra un cliente: debe guardarse en SQLite y sincronizarse cuando vuelva la conexión.
+
+4. **Triggers**
+   - Inserta un cliente o empleado directamente en la base de datos y verifica que se crea el usuario automáticamente.
+
+### Prueba automática (sugerencia)
+
+Puedes crear un script de test en Python usando `pytest` o `unittest` que:
+- Inserte un cliente y verifique la existencia del usuario asociado.
+- Inserte un empleado y verifique la existencia del usuario asociado.
+- Intente registrar dos clientes con el mismo correo y verifique que el segundo es rechazado.
+
+Ejemplo básico:
+```python
+# test_registro.py
+import pytest
+from src.db_manager import DBManager
+
+def test_registro_cliente():
+    db = DBManager()
+    correo = "test@example.com"
+    # Limpieza previa
+    db.execute_query("DELETE FROM Usuario WHERE usuario = %s", (correo,), fetch=False)
+    db.execute_query("DELETE FROM Cliente WHERE correo = %s", (correo,), fetch=False)
+    # Registro
+    db.execute_query("INSERT INTO Cliente (documento, nombre, telefono, correo) VALUES (%s, %s, %s, %s)", ("123", "Test", "555", correo), fetch=False)
+    usuarios = db.execute_query("SELECT * FROM Usuario WHERE usuario = %s", (correo,))
+    assert usuarios, "No se creó el usuario automáticamente"
+```
+
+Puedes adaptar este ejemplo para empleados y para SQLite cambiando los placeholders a `?`.
+
+## Estructura de carpetas sugerida
+
+- src/models/: lógica de acceso a datos y modelos (db_manager.py, sqlite_manager.py, db.py)
+- src/services/: lógica de negocio y utilidades (auth.py, config.py)
+- src/views/: vistas y controladores de interfaz
+- tests/: tests automáticos
+- data/: scripts SQL y datos de ejemplo
+- ui/: archivos de interfaz gráfica
+
+## Logging centralizado
+
+El logging está centralizado en el archivo `main.py` y todos los logs importantes (errores, advertencias, info) se guardan en `app.log` y se muestran en consola. Se agregaron advertencias para operaciones críticas como fallos de conexión o errores de consulta.
+
+## Test de reservas y modo offline
+
+Hay un test automático en `tests/test_reserva_offline.py` que:
+- Fuerza el modo offline (SQLite).
+- Inserta un cliente y un vehículo de prueba.
+- Crea una reserva en modo offline y verifica que queda pendiente en SQLite.
+- Imprime las reservas pendientes para comprobación manual.
+
+Puedes ejecutarlo con:
+```bash
+pytest tests/test_reserva_offline.py
+```

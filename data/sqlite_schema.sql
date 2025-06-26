@@ -35,9 +35,24 @@ CREATE TABLE IF NOT EXISTS Usuario (
     id_empleado INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS Empleado (
+    id_empleado INTEGER PRIMARY KEY AUTOINCREMENT,
+    documento TEXT,
+    nombre TEXT,
+    telefono TEXT,
+    correo TEXT
+);
+
 CREATE TRIGGER IF NOT EXISTS trg_cliente_usuario
 AFTER INSERT ON Cliente
 BEGIN
     INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente)
     VALUES (NEW.correo, NEW.documento, 1, NEW.id_cliente);
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_empleado_usuario
+AFTER INSERT ON Empleado
+BEGIN
+    INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado)
+    VALUES (NEW.correo, NEW.documento, 2, NEW.id_empleado);
 END;
