@@ -2,7 +2,7 @@ from pathlib import Path
 from PyQt5 import QtWidgets, uic
 from mysql.connector import Error
 
-from ..db_manager import DBManager
+from ..db import DBManager
 
 
 class ReservaView(QtWidgets.QWidget):
@@ -78,23 +78,31 @@ class ReservaView(QtWidgets.QWidget):
         start = self.start_date.date().toPyDate()
         end = self.end_date.date().toPyDate()
         seguro = 1 if self.insurance_checkbox.isChecked() else None
+        query = (
+            "INSERT INTO Alquiler "
+            "(fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) "
+            "VALUES (%s, %s, %s, %s, %s, %s)"
+        )
+        params = (start, end, vehicle, self.client_id, seguro, 1)
 
         try:
-            conn = self.db_manager.connect()
-            cursor = conn.cursor()
-            query = (
-                "INSERT INTO Alquiler "
-                "(fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) "
-                "VALUES (%s, %s, %s, %s, %s, %s)"
-            )
-            cursor.execute(query, (start, end, vehicle, self.client_id, seguro, 1))
-            conn.commit()
-            cursor.close()
+            self.db_manager.execute_query(query, params)
             self.load_reservations()
-        except Error as exc:
-            if conn.is_connected():
-                conn.rollback()
-            QtWidgets.QMessageBox.critical(self, 'Error', f'Error al crear reserva: {exc}')
+        except Exception:
+            datos = {
+                "fecha_hora_salida": str(start),
+                "fecha_hora_entrada": str(end),
+                "id_vehiculo": vehicle,
+                "id_cliente": self.client_id,
+                "id_seguro": seguro,
+                "id_estado": 1,
+            }
+            self.db_manager.save_pending_reservation(datos)
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Aviso',
+                'No se pudo conectar a la base remota. La reserva se guard\u00f3 localmente.'
+            )
 
     def cancel_reservation(self):
         """Remove the selected reservation."""
