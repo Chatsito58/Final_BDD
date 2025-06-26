@@ -131,3 +131,31 @@ Puedes ejecutarlo con:
 ```bash
 pytest tests/test_reserva_offline.py
 ```
+
+## ¿Cómo funcionan la redundancia y la fragmentación en este proyecto?
+
+### Redundancia (¡Siempre hay un respaldo!)
+
+El sistema guarda los datos en dos lugares:
+- **Base de datos remota (MariaDB/MySQL):** Es la principal, donde normalmente se guardan todos los datos.
+- **Base de datos local (SQLite):** Es una copia de respaldo. Si la base remota falla o no hay internet, el sistema automáticamente guarda los datos aquí.
+
+**¿Qué significa esto?**
+- Si se va la conexión, ¡no pierdes nada! Todo lo que hagas se guarda localmente y luego se sincroniza cuando vuelva la conexión.
+- Así, siempre hay un respaldo de tus datos y el sistema nunca se detiene.
+
+### Fragmentación (¡Puedes trabajar aunque falte una parte!)
+
+A veces, los datos están "fragmentados" (divididos):
+- Cuando trabajas sin conexión, los datos nuevos (por ejemplo, una reserva) solo existen en la base local.
+- Cuando vuelve la conexión, esos datos se envían a la base remota y se juntan con el resto.
+
+**¿Qué significa esto?**
+- Puedes seguir trabajando aunque solo tengas una parte de los datos (los locales).
+- Cuando todo vuelve a la normalidad, el sistema une los datos locales con los globales automáticamente.
+
+**Ejemplo sencillo:**
+- Haces una reserva sin internet → se guarda en tu compu.
+- Vuelve el internet → el sistema manda esa reserva a la base principal y la borra de la local.
+
+Así, el sistema es robusto, no se cae y siempre puedes seguir trabajando, tengas o no conexión.
