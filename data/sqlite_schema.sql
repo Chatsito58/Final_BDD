@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS Cliente (
     documento TEXT,
     nombre TEXT,
     telefono TEXT,
+    correo TEXT,
     pendiente INTEGER DEFAULT 1
 );
 
@@ -24,3 +25,19 @@ CREATE TABLE IF NOT EXISTS Abono (
     id_reserva INTEGER,
     pendiente INTEGER DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS Usuario (
+    id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario TEXT,
+    contrasena TEXT,
+    id_rol INTEGER,
+    id_cliente INTEGER,
+    id_empleado INTEGER
+);
+
+CREATE TRIGGER IF NOT EXISTS trg_cliente_usuario
+AFTER INSERT ON Cliente
+BEGIN
+    INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente)
+    VALUES (NEW.correo, NEW.documento, 1, NEW.id_cliente);
+END;
