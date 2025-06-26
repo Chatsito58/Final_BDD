@@ -1,6 +1,8 @@
 from pathlib import Path
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QTimer
+
+from ..db_manager import DBManager
 
 
 class MainView(QtWidgets.QMainWindow):
@@ -15,6 +17,11 @@ class MainView(QtWidgets.QMainWindow):
 
         self._username = username
         self._role = role
+        self._db_manager = DBManager()
+
+        self._sync_timer = QTimer(self)
+        self._sync_timer.timeout.connect(self._db_manager.sync_pending_reservations)
+        self._sync_timer.start(5 * 60 * 1000)
 
         # Setup status bar information
         if self.statusBar():
