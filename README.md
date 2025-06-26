@@ -24,3 +24,25 @@ When the application cannot reach the remote MariaDB server, reservations are no
 pendientes en la base de datos local e intenta insertarlos en MariaDB. Cuando la
 operación tiene éxito dichos registros se eliminan de SQLite. Este proceso se
 ejecuta cada cinco minutos desde `MainView` usando un `QTimer`.
+
+## Ejemplo de configuración de logs
+
+El proyecto utiliza el módulo `logging` para registrar accesos, errores y
+eventos de sincronización. Una configuración básica podría colocarse al inicio
+de la aplicación:
+
+```python
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler(),
+    ],
+)
+```
+
+Esto generará un archivo `app.log` con los eventos producidos por
+`AuthManager` y `DBManager`, además de mostrarlos por consola.
