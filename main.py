@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QDialog
 from src.db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
@@ -18,7 +18,7 @@ class AlquilerApp:
         # Crear y mostrar vista de login
         login_view = LoginView(self.auth_manager)
 
-        if login_view.exec_() == LoginView.Accepted:
+        if login_view.exec_() == QDialog.Accepted:
             user_data = login_view.user_data
             print(f"\u00a1Login exitoso! Bienvenido {user_data['usuario']}")
             print(f"Rol: {user_data['rol']}")

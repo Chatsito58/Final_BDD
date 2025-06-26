@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QDialog, QMessageBox, QPushButton, QLineEdit, QLabel
 from PyQt5.uic import loadUi
 
 class LoginView(QDialog):
-    Accepted = 1
     
     def __init__(self, auth_manager, parent=None):
         super().__init__(parent)
