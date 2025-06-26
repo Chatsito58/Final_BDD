@@ -18,15 +18,12 @@ class LoginView(QDialog):
         self.usernameLineEdit = self.findChild(QLineEdit, 'usernameLineEdit')
         self.passwordLineEdit = self.findChild(QLineEdit, 'passwordLineEdit')
         self.btn_login = self.findChild(QPushButton, 'btn_login')
-        self.lbl_registro = self.findChild(QLabel, 'lbl_registro')
         
         self.auth_manager = auth_manager
         self.user_data = None
         
         # Conectar eventos
         self.btn_login.clicked.connect(self.attempt_login)
-        if hasattr(self, 'lbl_registro') and self.lbl_registro:
-            self.lbl_registro.linkActivated.connect(self.open_registration)
         
     def attempt_login(self):
         usuario = self.usernameLineEdit.text().strip()
