@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QApplication
 from src.db import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
+from src.views.main_view import MainView
 
 
 class AlquilerApp:
@@ -24,14 +25,13 @@ class AlquilerApp:
             print(f"ID Cliente: {user_data.get('id_cliente', 'N/A')}")
             print(f"ID Empleado: {user_data.get('id_empleado', 'N/A')}")
 
-            # Aqu\u00ed continuar\u00edamos con la vista principal
-            # main_view = MainView(user_data, self.db_manager)
-            # main_view.show()
-            # app.exec_()
+            # Mostrar la ventana principal
+            main_view = MainView(user_data['usuario'], user_data['rol'])
+            main_view.show()
+            sys.exit(app.exec_())
         else:
             print("Aplicaci\u00f3n cerrada")
-
-        sys.exit()
+            sys.exit()
 
 
 if __name__ == "__main__":
