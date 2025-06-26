@@ -2,7 +2,7 @@ from pathlib import Path
 from PyQt5 import QtWidgets, uic
 from mysql.connector import Error
 
-from ..db import DBManager
+from ..db_manager import DBManager
 
 
 class ReservaView(QtWidgets.QWidget):

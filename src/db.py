@@ -1,7 +1,7 @@
 from mysql.connector import connect, Error
 from src.config import Config
 
-class DBManager:
+class DatabaseHelper:
     def __init__(self):
         self.config = {
             'host': Config.DB_REMOTE_HOST,
@@ -10,7 +10,7 @@ class DBManager:
             'database': Config.DB_REMOTE_NAME
         }
 
-    def get_connection(self):
+    def connect(self):
         try:
             conn = connect(**self.config)
             return conn
@@ -19,7 +19,7 @@ class DBManager:
             return None
 
     def execute_query(self, query, params=None):
-        conn = self.get_connection()
+        conn = self.connect()
         if not conn:
             return None
 

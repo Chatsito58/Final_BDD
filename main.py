@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from src.db import DBManager
+from src.db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.main_view import MainView
