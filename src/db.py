@@ -3,12 +3,14 @@ from src.config import Config
 
 class DatabaseHelper:
     def __init__(self):
+        load_dotenv()
         self.config = {
-            'host': Config.DB_REMOTE_HOST,
-            'user': Config.DB_REMOTE_USER,
-            'password': Config.DB_REMOTE_PASSWORD,
-            'database': Config.DB_REMOTE_NAME
+            'host': os.getenv('DB_REMOTE_HOST'),
+            'user': os.getenv('DB_REMOTE_USER'),
+            'password': os.getenv('DB_REMOTE_PASSWORD'),
+            'database': os.getenv('DB_REMOTE_NAME'),
         }
+
 
     def connect(self):
         try:

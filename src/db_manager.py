@@ -1,42 +1,51 @@
 import os
-from mysql import connector
-from mysql.connector import Error
+import pymysql
 from dotenv import load_dotenv
 
 
 class DBManager:
-    """Simple database manager for MariaDB connections."""
+    """Gestor simple de base de datos para MariaDB usando PyMySQL."""
 
     def __init__(self):
+        pass  # No se guarda ninguna variable de instancia
+
+    def connect(self):
         load_dotenv()
-        self.config = {
+        config = {
             'host': os.getenv('DB_REMOTE_HOST'),
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
+            'connect_timeout': 3,
+            'charset': 'utf8mb4',
+            'cursorclass': pymysql.cursors.Cursor,
+            'autocommit': True,
         }
-        self._connection = None
-
-    def connect(self):
-        """Establish and return a database connection."""
-        if self._connection is None or not self._connection.is_connected():
-            self._connection = connector.connect(**self.config)
-        return self._connection
+        try:
+            connection = pymysql.connect(**config)
+            print("[DBManager] ¡Conexión exitosa a la base de datos!")
+            return connection
+        except Exception as exc:
+            print(f"[DBManager] Error de conexión a la base de datos: {exc}")
+            return None
 
     def execute_query(self, query, params=None, fetch=True):
-        """Execute a SQL query and optionally fetch results."""
         try:
             conn = self.connect()
+            if conn is None:
+                print("[DBManager] No se pudo establecer conexión con la base de datos")
+                return None
             cursor = conn.cursor()
             cursor.execute(query, params or ())
-            result = cursor.fetchall() if fetch else None
-            conn.commit()
+            if fetch:
+                result = cursor.fetchall()
+            else:
+                result = None
             cursor.close()
+            conn.close()
             return result
-        except Error as exc:
-            print(f"Database query error: {exc}")
-            if self._connection and self._connection.is_connected():
-                self._connection.rollback()
+        except Exception as exc:
+            print(f"[DBManager] Error ejecutando consulta: {exc}")
             return None
 
     def save_pending_reservation(self, data):

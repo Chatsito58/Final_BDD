@@ -18,6 +18,26 @@
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
+   <widget class="QMenu" name="menuReservas">
+    <property name="title">
+     <string>Reservas</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuClientes">
+    <property name="title">
+     <string>Clientes</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuVehiculos">
+    <property name="title">
+     <string>Vehículos</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuAdministracion">
+    <property name="title">
+     <string>Administración</string>
+    </property>
+   </widget>
    <addaction name="menuReservas"/>
    <addaction name="menuClientes"/>
    <addaction name="menuVehiculos"/>
@@ -25,26 +45,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <action name="menuReservas">
-  <property name="text">
-   <string>Reservas</string>
-  </property>
- </action>
- <action name="menuClientes">
-  <property name="text">
-   <string>Clientes</string>
-  </property>
- </action>
- <action name="menuVehiculos">
-  <property name="text">
-   <string>Vehículos</string>
-  </property>
- </action>
- <action name="menuAdministracion">
-  <property name="text">
-   <string>Administración</string>
-  </property>
- </action>
  <resources/>
  <connections/>
 </ui>
