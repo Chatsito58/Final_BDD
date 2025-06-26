@@ -13,3 +13,7 @@ fails the manager automatically falls back to a local SQLite database defined by
 will be set to `True` and all subsequent queries are executed on the local
 file. This allows the application to keep basic functionality when the remote
 server is unreachable.
+
+## Local offline storage
+
+When the application cannot reach the remote MariaDB server, reservations are now stored in the local SQLite database. The schema for this lightweight database lives in `data/sqlite_schema.sql` and creates the tables `Cliente`, `Reserva` and `Abono`. Each table includes a `pendiente` column used to mark records that still need to be synchronized with the remote server.
