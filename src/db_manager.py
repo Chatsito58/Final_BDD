@@ -33,10 +33,10 @@ class DBManager:
         }
         try:
             connection = pymysql.connect(**config)
-            print("[DBManager] ¡Conexión exitosa a la base de datos!")
+            self.logger.info("Conexión exitosa a la base de datos")
             return connection
         except Exception as exc:
-            print(f"[DBManager] Error de conexión a la base de datos: {exc}")
+            self.logger.error("Error de conexión a la base de datos: %s", exc)
             self.offline = True
             return self._sqlite.connect()
 
@@ -44,7 +44,7 @@ class DBManager:
         try:
             conn = self.connect()
             if conn is None:
-                print("[DBManager] No se pudo establecer conexión con la base de datos")
+                self.logger.error("No se pudo establecer conexión con la base de datos")
                 return None
             cursor = conn.cursor()
             cursor.execute(query, params or ())
@@ -57,7 +57,7 @@ class DBManager:
             conn.close()
             return result
         except Exception as exc:
-            print(f"[DBManager] Error ejecutando consulta: {exc}")
+            self.logger.error("Error ejecutando consulta: %s", exc)
             if not self.offline:
                 self.offline = True
                 return self._sqlite.execute_query(query, params, fetch)
@@ -87,7 +87,7 @@ class DBManager:
         try:
             conn = pymysql.connect(**config)
         except Exception as exc:
-            self.logger.error(f"[DBManager] Error conectando a MariaDB: {exc}")
+            self.logger.error("[DBManager] Error conectando a MariaDB: %s", exc)
             self.offline = True
             return
 
@@ -106,9 +106,11 @@ class DBManager:
             try:
                 cursor.execute(insert_q, params)
                 self._sqlite.delete_reservation(res[0])
-                self.logger.info(f"[DBManager] Sincronizada reserva {res[0]}")
+                self.logger.info("[DBManager] Sincronizada reserva %s", res[0])
             except Exception as exc:
-                self.logger.error(f"[DBManager] Error insertando reserva {res[0]}: {exc}")
+                self.logger.error(
+                    "[DBManager] Error insertando reserva %s: %s", res[0], exc
+                )
                 conn.close()
                 return
 
@@ -124,9 +126,11 @@ class DBManager:
             try:
                 cursor.execute(insert_a, params)
                 self._sqlite.delete_abono(ab[0])
-                self.logger.info(f"[DBManager] Sincronizado abono {ab[0]}")
+                self.logger.info("[DBManager] Sincronizado abono %s", ab[0])
             except Exception as exc:
-                self.logger.error(f"[DBManager] Error insertando abono {ab[0]}: {exc}")
+                self.logger.error(
+                    "[DBManager] Error insertando abono %s: %s", ab[0], exc
+                )
                 conn.close()
                 return
 
