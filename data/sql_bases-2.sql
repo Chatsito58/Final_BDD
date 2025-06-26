@@ -358,3 +358,15 @@ CREATE TABLE Usuario (
   FOREIGN KEY (id_cliente) REFERENCES Cliente(id_cliente),
   FOREIGN KEY (id_empleado) REFERENCES Empleado(id_empleado)
 ) ENGINE=InnoDB;
+
+DELIMITER $$
+CREATE TRIGGER trg_cliente_usuario
+AFTER INSERT ON Cliente
+FOR EACH ROW
+BEGIN
+    DECLARE rid INT;
+    SELECT id_rol INTO rid FROM Rol WHERE nombre='cliente' LIMIT 1;
+    INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente)
+    VALUES (NEW.correo, SHA2(NEW.documento, 256), rid, NEW.id_cliente);
+END$$
+DELIMITER ;

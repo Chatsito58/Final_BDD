@@ -1,6 +1,14 @@
 import os
-from PyQt5.QtWidgets import QDialog, QMessageBox, QPushButton, QLineEdit, QLabel
+from PyQt5.QtWidgets import (
+    QDialog,
+    QMessageBox,
+    QPushButton,
+    QLineEdit,
+    QLabel,
+)
 from PyQt5.uic import loadUi
+
+from .registro_view import RegistroView
 
 class LoginView(QDialog):
     
@@ -17,12 +25,15 @@ class LoginView(QDialog):
         self.usernameLineEdit = self.findChild(QLineEdit, 'usernameLineEdit')
         self.passwordLineEdit = self.findChild(QLineEdit, 'passwordLineEdit')
         self.btn_login = self.findChild(QPushButton, 'btn_login')
+        self.btn_register = self.findChild(QPushButton, 'btn_register')
         
         self.auth_manager = auth_manager
         self.user_data = None
         
         # Conectar eventos
         self.btn_login.clicked.connect(self.attempt_login)
+        if self.btn_register:
+            self.btn_register.clicked.connect(self.open_registration)
         
     def attempt_login(self):
         usuario = self.usernameLineEdit.text().strip()
@@ -49,5 +60,5 @@ class LoginView(QDialog):
             QMessageBox.warning(self, "Error", "Credenciales incorrectas")
     
     def open_registration(self):
-        print("Funcionalidad de registro a implementar")
-        QMessageBox.information(self, "Registro", "Funcionalidad de registro en desarrollo")
+        registro = RegistroView(self.auth_manager.db)
+        registro.exec_()
