@@ -39,7 +39,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="loginButton">
+    <widget class="QPushButton" name="btn_login">
      <property name="text">
       <string>Ingresar</string>
      </property>
