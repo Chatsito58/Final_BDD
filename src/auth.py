@@ -20,6 +20,10 @@ class AuthManager:
 
         result = self.db.execute_query(query, (usuario, hashed_pwd))
 
+        # Si la consulta devuelve None, hubo un problema de base de datos
+        if result is None:
+            raise ConnectionError("Error executing login query")
+
         if result and len(result) > 0:
             # Convertir resultado en diccionario
             row = result[0]

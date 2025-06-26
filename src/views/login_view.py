@@ -33,8 +33,16 @@ class LoginView(QDialog):
             QMessageBox.warning(self, "Error", "Por favor complete todos los campos")
             return
             
-        user_data = self.auth_manager.login(usuario, contrasena)
-        
+        try:
+            user_data = self.auth_manager.login(usuario, contrasena)
+        except Exception:
+            QMessageBox.critical(
+                self,
+                "Error de base de datos",
+                "Ocurri\u00f3 un problema al conectar con la base de datos."
+            )
+            return
+
         if user_data:
             self.user_data = user_data
             self.accept()
