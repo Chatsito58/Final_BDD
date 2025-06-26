@@ -360,4 +360,9 @@ CREATE TABLE Usuario (
 ) ENGINE=InnoDB;
 
 -- Insertar roles iniciales
-INSERT INTO Rol (nombre) VALUES ('Cliente'), ('Vendedor'), ('Gerente'), ('Administrador');
+INSERT INTO Rol (nombre) VALUES 
+('Cliente'), ('Vendedor'), ('Gerente'), ('Administrador');
+
+INSERT INTO Usuario (usuario, contrasena, id_rol) VALUES 
+('cliente1', SHA2('password123', 256), 1),
+('vendedor1', SHA2('password123', 256), 2);
