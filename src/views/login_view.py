@@ -1,39 +1,38 @@
-from pathlib import Path
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.uic import loadUi
 
-class LoginView(QtWidgets.QWidget):
-    """Widget that handles user login."""
 
-    authenticated = pyqtSignal(str)
+class LoginView(QDialog):
+    # Definir una constante Accepted
+    Accepted = 1
 
-    def __init__(self, parent=None):
+    def __init__(self, auth_manager, parent=None):
         super().__init__(parent)
-        ui_path = Path(__file__).resolve().parent / 'ui' / 'login.ui'
-        uic.loadUi(ui_path, self)
+        loadUi('ui/login.ui', self)
+        self.auth_manager = auth_manager
+        self.user_data = None
 
-        # Access widgets defined in the .ui file
-        self.user_input = self.findChild(QtWidgets.QLineEdit, 'usernameLineEdit')
-        self.pass_input = self.findChild(QtWidgets.QLineEdit, 'passwordLineEdit')
-        self.error_label = self.findChild(QtWidgets.QLabel, 'errorLabel')
-        self.login_button = self.findChild(QtWidgets.QPushButton, 'loginButton')
+        # Conectar eventos
+        self.btn_login.clicked.connect(self.attempt_login)
+        self.lbl_registro.linkActivated.connect(self.open_registration)
 
-        if self.login_button:
-            self.login_button.clicked.connect(self.handle_login)
+    def attempt_login(self):
+        usuario = self.txt_usuario.text().strip()
+        contrasena = self.txt_contrasena.text().strip()
 
-    def handle_login(self):
-        """Validate credentials and emit authenticated signal."""
-        username = self.user_input.text() if self.user_input else ''
-        password = self.pass_input.text() if self.pass_input else ''
-
-        if not username or not password:
-            if self.error_label:
-                self.error_label.setText('Usuario y contraseña son obligatorios.')
+        if not usuario or not contrasena:
+            QMessageBox.warning(self, "Error", "Por favor complete todos los campos")
             return
 
-        if self.error_label:
-            self.error_label.clear()
+        user_data = self.auth_manager.login(usuario, contrasena)
 
-        # Here would normally be authentication logic with backend
-        # For now we assume success when fields are not empty
-        self.authenticated.emit(username)
+        if user_data:
+            self.user_data = user_data
+            self.accept()  # Cierra el di\u00e1logo con resultado Accepted
+        else:
+            QMessageBox.warning(self, "Error", "Credenciales incorrectas")
+
+    def open_registration(self):
+        # TODO: Implementar apertura de vista de registro
+        print("Funcionalidad de registro a implementar")
+        QMessageBox.information(self, "Registro", "Funcionalidad de registro en desarrollo")
