@@ -1,17 +1,16 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from the project root .env file
-ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=ENV_PATH)
+# Cargar variables de entorno desde .env
+load_dotenv()
 
-DB_REMOTE_HOST = os.getenv("DB_REMOTE_HOST")
-DB_REMOTE_USER = os.getenv("DB_REMOTE_USER")
-DB_REMOTE_PASSWORD = os.getenv("DB_REMOTE_PASSWORD")
-DB_REMOTE_NAME = os.getenv("DB_REMOTE_NAME")
+class Config:
+    # Configuraci\u00f3n de base de datos
+    DB_REMOTE_HOST = os.getenv('DB_REMOTE_HOST', 'localhost')
+    DB_REMOTE_USER = os.getenv('DB_REMOTE_USER', 'root')
+    DB_REMOTE_PASSWORD = os.getenv('DB_REMOTE_PASSWORD', '')
+    DB_REMOTE_NAME = os.getenv('DB_REMOTE_NAME', 'Alquiler_vehiculos')
 
-# Application constants
-MAX_INTENTOS_LOGIN = 3
-TIMEOUT_CONEXION = 5
-RUTA_DB_LOCAL = "local.db"
+    # Configuraci\u00f3n de seguridad
+    MAX_LOGIN_ATTEMPTS = 3
+    PASSWORD_HASH = "sha256"
