@@ -68,3 +68,30 @@ class SQLiteManager:
         )
         self.execute_query(query, params, fetch=False)
 
+    def get_pending_reservations(self):
+        """Return all reservations marked as pending."""
+        query = (
+            "SELECT id_reserva, fecha_hora_salida, fecha_hora_entrada, "
+            "id_vehiculo, id_cliente, id_seguro, id_estado "
+            "FROM Reserva WHERE pendiente = 1"
+        )
+        return self.execute_query(query)
+
+    def delete_reservation(self, reserva_id):
+        """Remove a reservation from the local database."""
+        query = "DELETE FROM Reserva WHERE id_reserva = ?"
+        self.execute_query(query, (reserva_id,), fetch=False)
+
+    def get_pending_abonos(self):
+        """Return all payments marked as pending."""
+        query = (
+            "SELECT id_abono, valor, fecha_hora, id_reserva "
+            "FROM Abono WHERE pendiente = 1"
+        )
+        return self.execute_query(query)
+
+    def delete_abono(self, abono_id):
+        """Remove a payment from the local database."""
+        query = "DELETE FROM Abono WHERE id_abono = ?"
+        self.execute_query(query, (abono_id,), fetch=False)
+
