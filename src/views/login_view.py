@@ -14,10 +14,11 @@ class LoginView(QDialog):
         loadUi(ui_path, self)
         
         # Obtener referencias a los widgets
-        self.txt_usuario = self.findChild(QLineEdit, 'txt_usuario')  # Ajusta al nombre real en .ui
-        self.txt_contrasena = self.findChild(QLineEdit, 'txt_contrasena')  # Ajusta al nombre real
-        self.btn_login = self.findChild(QPushButton, 'btn_login')  # Ajusta al nombre real
-        self.lbl_registro = self.findChild(QLabel, 'lbl_registro')  # Ajusta al nombre real
+        # Los nombres se corresponden con los definidos en el archivo .ui
+        self.usernameLineEdit = self.findChild(QLineEdit, 'usernameLineEdit')
+        self.passwordLineEdit = self.findChild(QLineEdit, 'passwordLineEdit')
+        self.btn_login = self.findChild(QPushButton, 'btn_login')
+        self.lbl_registro = self.findChild(QLabel, 'lbl_registro')
         
         self.auth_manager = auth_manager
         self.user_data = None
@@ -28,8 +29,8 @@ class LoginView(QDialog):
             self.lbl_registro.linkActivated.connect(self.open_registration)
         
     def attempt_login(self):
-        usuario = self.txt_usuario.text().strip()
-        contrasena = self.txt_contrasena.text().strip()
+        usuario = self.usernameLineEdit.text().strip()
+        contrasena = self.passwordLineEdit.text().strip()
         
         if not usuario or not contrasena:
             QMessageBox.warning(self, "Error", "Por favor complete todos los campos")
