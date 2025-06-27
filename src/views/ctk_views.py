@@ -529,10 +529,10 @@ class ClienteView(BaseCTKView):
                     self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                    win.destroy()
-                    # Solo recargar si el widget existe
-                    if hasattr(self, 'reservas_listbox'):
-                        self._cargar_reservas_cliente(id_cliente)
+                win.destroy()
+                # Solo recargar si el widget existe
+                if hasattr(self, 'reservas_listbox'):
+                    self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
@@ -1642,10 +1642,10 @@ class EmpleadoView(BaseCTKView):
                     self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                    win.destroy()
-                    # Solo recargar si el widget existe
-                    if hasattr(self, 'reservas_listbox'):
-                        self._cargar_reservas_cliente(id_cliente)
+                win.destroy()
+                # Solo recargar si el widget existe
+                if hasattr(self, 'reservas_listbox'):
+                    self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
@@ -1996,10 +1996,10 @@ class EmpleadoVentasView(BaseCTKView):
                     self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                    win.destroy()
-                    # Solo recargar si el widget existe
-                    if hasattr(self, 'reservas_listbox'):
-                        self._cargar_reservas_cliente(id_cliente)
+                win.destroy()
+                # Solo recargar si el widget existe
+                if hasattr(self, 'reservas_listbox'):
+                    self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
