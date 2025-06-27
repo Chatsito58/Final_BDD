@@ -15,11 +15,18 @@ class SQLiteManager:
     def _initialize_db(self):
         """Ensure required tables exist."""
         schema = Path(__file__).resolve().parents[1] / 'data' / 'sqlite_schema.sql'
-        if not schema.exists():
-            return
+        inserts = Path(__file__).resolve().parents[1] / 'data' / 'inserts_sqlite.sql'
+        
         conn = sqlite3.connect(self.db_path)
-        with schema.open('r', encoding='utf-8') as fh:
-            conn.executescript(fh.read())
+        
+        if schema.exists():
+            with schema.open('r', encoding='utf-8') as fh:
+                conn.executescript(fh.read())
+        
+        if inserts.exists():
+            with inserts.open('r', encoding='utf-8') as fh:
+                conn.executescript(fh.read())
+        
         conn.close()
 
     def connect(self):

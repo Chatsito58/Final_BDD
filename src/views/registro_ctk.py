@@ -148,7 +148,7 @@ class RegistroCTk(ctk.CTk):
             cliente_id = row[0][0] if row else ""
             messagebox.showinfo(
                 "Registro exitoso",
-                f"Cliente registrado. Su contraseña inicial es: {cliente_id}",
+                "Cliente registrado. Su contraseña inicial es su número de documento. Podrá cambiarla después de iniciar sesión.",
             )
             self.destroy()
         except Exception as exc:

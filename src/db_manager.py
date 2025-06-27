@@ -1,9 +1,10 @@
 import os
 import logging
+import traceback
 try:
-    import mysql.connector as pymysql
+    import mysql.connector
 except Exception:  # pragma: no cover - if connector missing
-    pymysql = None
+    mysql = None
 from dotenv import load_dotenv
 
 from .sqlite_manager import SQLiteManager
@@ -16,7 +17,7 @@ class DBManager:
         load_dotenv()
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
-        self.offline = pymysql is None
+        self.offline = False  # Inicializa en modo remoto por defecto
         self._sqlite = SQLiteManager()
 
     def is_sqlite(self):
@@ -25,52 +26,105 @@ class DBManager:
 
     def connect(self):
         """Return a connection to the active database."""
+        self.logger.info("=== Iniciando método connect ===")
+        self.logger.info(f"Modo offline: {self.offline}")
+        
         if self.offline:
+            self.logger.info("Usando modo offline, conectando a SQLite...")
             return self._sqlite.connect()
 
-        if pymysql is None:
+        if mysql is None:
             self.logger.warning("Driver de MySQL no disponible, usando modo offline")
             self.offline = True
             return self._sqlite.connect()
 
+        self.logger.info("Configurando conexión a MySQL/MariaDB...")
         config = {
             'host': os.getenv('DB_REMOTE_HOST'),
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'connection_timeout': 3,
-            'autocommit': True,
+            'port': 3306,  # Puerto por defecto de MySQL/MariaDB
+            'connection_timeout': 10,  # Aumentar timeout a 10 segundos
         }
+        
+        self.logger.info(f"Configuración de conexión:")
+        self.logger.info(f"  Host: {config['host']}")
+        self.logger.info(f"  User: {config['user']}")
+        self.logger.info(f"  Database: {config['database']}")
+        self.logger.info(f"  Timeout: {config['connection_timeout']}")
+        
         try:
-            connection = pymysql.connect(**config)
+            self.logger.info("[DEBUG] Antes de conectar con mysql.connector.connect()")
+            print("[DEBUG] Antes de conectar con mysql.connector.connect()")
+            connection = mysql.connector.connect(**config)
+            self.logger.info("[DEBUG] Conexión creada, antes de autocommit")
+            print("[DEBUG] Conexión creada, antes de autocommit")
+            connection.autocommit = True
+            self.logger.info("[DEBUG] Autocommit activado")
+            print("[DEBUG] Autocommit activado")
             self.logger.info("Conexión exitosa a la base de datos")
+            print("[DEBUG] Conexión exitosa a la base de datos")
             return connection
         except Exception as exc:
-            self.logger.error("Error de conexión a la base de datos: %s", exc)
+            self.logger.error(f"Error de conexión a la base de datos: {exc}")
+            self.logger.error(traceback.format_exc())
+            try:
+                import PyQt5.QtWidgets as QtWidgets
+                QtWidgets.QMessageBox.critical(None, "Error de conexión", f"{exc}\n\n{traceback.format_exc()}")
+            except Exception as e:
+                self.logger.error(f"No se pudo mostrar el QMessageBox: {e}")
+            self.logger.info("Cambiando a modo offline...")
             self.offline = True
             return self._sqlite.connect()
 
     def execute_query(self, query, params=None, fetch=True):
         try:
+            self.logger.info(f"Ejecutando consulta: {query}")
+            self.logger.info(f"Parámetros: {params}")
+            self.logger.info(f"Modo offline: {self.offline}")
+            
+            self.logger.info("Intentando conectar a la base de datos...")
             conn = self.connect()
+            self.logger.info(f"Conexión establecida: {conn is not None}")
+            
             if self.is_sqlite():
                 query = query.replace('%s', '?')
+                self.logger.info(f"Consulta adaptada para SQLite: {query}")
+            
             if conn is None:
                 self.logger.error("No se pudo establecer conexión con la base de datos")
                 return None
+                
+            self.logger.info("Creando cursor...")
             cursor = conn.cursor()
+            self.logger.info("Cursor creado exitosamente")
+            
+            self.logger.info("Ejecutando consulta en la base de datos...")
             cursor.execute(query, params or ())
+            self.logger.info("Consulta ejecutada exitosamente en la base de datos")
+            
             if fetch:
+                self.logger.info("Obteniendo resultados...")
                 result = cursor.fetchall()
+                self.logger.info(f"Resultado obtenido: {result}")
             else:
                 result = None
                 conn.commit()
+                self.logger.info("Cambios confirmados en la base de datos")
+                
+            self.logger.info("Cerrando cursor...")
             cursor.close()
+            self.logger.info("Cerrando conexión...")
             conn.close()
+            self.logger.info("Conexión cerrada exitosamente")
             return result
         except Exception as exc:
-            self.logger.error("Error ejecutando consulta: %s", exc)
+            self.logger.error(f"Error ejecutando consulta: {exc}")
+            self.logger.error(f"Tipo de error: {type(exc).__name__}")
+            self.logger.error(traceback.format_exc())
             if not self.offline:
+                self.logger.info("Cambiando a modo offline...")
                 self.offline = True
                 return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
             return None
@@ -91,11 +145,11 @@ class DBManager:
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'connection_timeout': 3,
-            'autocommit': True,
+            'port': 3306,  # Puerto por defecto de MySQL/MariaDB
+            'connection_timeout': 10,  # Aumentar timeout a 10 segundos
         }
         try:
-            conn = pymysql.connect(**config)
+            conn = mysql.connector.connect(**config)
         except Exception as exc:
             self.logger.error("[DBManager] Error conectando a MariaDB: %s", exc)
             self.offline = True

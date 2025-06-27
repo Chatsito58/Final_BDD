@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS Abono (
     pendiente INTEGER DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS Rol (
+    id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT
+);
+
 CREATE TABLE IF NOT EXISTS Usuario (
     id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
     usuario TEXT,
@@ -40,8 +45,16 @@ CREATE TABLE IF NOT EXISTS Empleado (
     documento TEXT,
     nombre TEXT,
     telefono TEXT,
-    correo TEXT
+    correo TEXT,
+    cargo TEXT
 );
+
+-- Insertar roles básicos
+INSERT OR IGNORE INTO Rol (id_rol, nombre) VALUES 
+(1, 'cliente'),
+(2, 'empleado'),
+(3, 'gerente'),
+(4, 'admin');
 
 CREATE TRIGGER IF NOT EXISTS trg_cliente_usuario
 AFTER INSERT ON Cliente

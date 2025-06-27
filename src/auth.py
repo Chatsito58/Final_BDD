@@ -31,18 +31,31 @@ class AuthManager:
 
         # Aplicar hash a la contraseña
         hashed_pwd = hashlib.sha256(contrasena.encode()).hexdigest()
+        
         # Consultar base de datos
-        query = """
-        SELECT u.id_usuario, u.usuario, r.nombre as rol,
-               u.id_cliente, u.id_empleado, e.cargo
-        FROM Usuario u
-        JOIN Rol r ON u.id_rol = r.id_rol
-        LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
-        WHERE u.usuario = %s AND u.contrasena = %s
-        """
         is_sqlite = getattr(self.db, 'offline', False)
+        
         if is_sqlite:
-            query = query.replace('%s', '?')
+            # Consulta para SQLite
+            query = """
+            SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                   u.id_cliente, u.id_empleado, e.cargo
+            FROM Usuario u
+            JOIN Rol r ON u.id_rol = r.id_rol
+            LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+            WHERE u.usuario = ? AND u.contrasena = ?
+            """
+        else:
+            # Consulta para MySQL
+            query = """
+            SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                   u.id_cliente, u.id_empleado, e.cargo
+            FROM Usuario u
+            JOIN Rol r ON u.id_rol = r.id_rol
+            LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+            WHERE u.usuario = %s AND u.contrasena = %s
+            """
+            
         result = self.db.execute_query(query, (correo, hashed_pwd))
 
         if result is None:

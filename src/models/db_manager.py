@@ -4,6 +4,7 @@ except Exception:  # pragma: no cover - fallback if mysql connector missing
     pymysql = None
 import os
 from src.sqlite_manager import SQLiteManager
+import traceback
 
 class DBManager:
     def __init__(self, logger):
@@ -63,7 +64,7 @@ class DBManager:
             conn.close()
             return result
         except Exception as exc:
-            self.logger.error("Error ejecutando consulta: %s", exc)
+            self.logger.error(traceback.format_exc())
             self.logger.warning("Consulta fallida: %s", query)
             if not self.offline:
                 self.offline = True

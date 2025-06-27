@@ -167,3 +167,46 @@ A veces, los datos están "fragmentados" (divididos):
 - Vuelve el internet → el sistema manda esa reserva a la base principal y la borra de la local.
 
 Así, el sistema es robusto, no se cae y siempre puedes seguir trabajando, tengas o no conexión.
+
+## Problema conocido: PyQt5 y conexión remota MySQL/MariaDB
+
+### Descripción del problema
+
+Si se importa PyQt5 (o cualquier módulo que dependa de él) **antes** de realizar la conexión remota a la base de datos con `mysql-connector-python`, la aplicación puede quedarse colgada (sin error) al intentar conectar, especialmente en Windows.
+
+Este bug ocurre por cómo PyQt5 inicializa internamente los sockets/hilos, interfiriendo con el stack de red de Python y el conector MySQL.
+
+### Solución implementada
+
+- En `main.py`, la conexión remota a la base de datos se prueba **antes** de importar PyQt5 y los módulos que dependen de él.
+- Si la conexión es exitosa, se importa PyQt5 y la app continúa normalmente.
+- Si la conexión falla, se muestra el error y el programa termina.
+
+#### Ejemplo de la solución:
+
+```python
+# main.py (fragmento relevante)
+import os
+import sys
+import logging
+from dotenv import load_dotenv
+
+# Configuración de logging...
+
+# Probar conexión remota antes de importar PyQt5
+try:
+    import mysql.connector
+    load_dotenv()
+    config = { ... }
+    conn = mysql.connector.connect(**config)
+    # ...
+except Exception as e:
+    print(f"Error de conexión: {e}")
+    sys.exit(1)
+
+# Ahora sí, importar PyQt5 y módulos de la app
+from PyQt5.QtWidgets import QApplication, ...
+# ...
+```
+
+**Esta solución garantiza que la app no se cuelgue y la conexión remota funcione correctamente en todos los entornos.**

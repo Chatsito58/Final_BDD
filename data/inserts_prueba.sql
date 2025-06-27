@@ -34,10 +34,6 @@ INSERT INTO Empleado (documento, nombre, salario, cargo, telefono, direccion, co
 INSERT INTO Seguro_vehiculo (estado, descripcion, vencimiento, costo) VALUES ('Vigente', 'Todo riesgo', '2025-12-31', 900000);
 INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, id_marca, id_color, id_tipo_vehiculo, id_blindaje, id_transmision, id_cilindraje, id_seguro_vehiculo, id_estado_vehiculo, id_proveedor, id_sucursal) VALUES ('ABC123', 'CHS123456789', '2022', 15000, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1);
 
--- Usuario (manual, además de los triggers)
-INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente) VALUES ('carlos.ramirez@email.com', '09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9', 1, 1);
-INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado) VALUES ('elena.torres@email.com', 'ccc13e8ab0819e3ab61719de4071ecae6c1d3cd35dc48b91cad3481f20922f9f', 2, 1);
-
 -- 1. Insertar en Seguro_alquiler
 INSERT INTO Seguro_alquiler (estado, descripcion, vencimiento, costo)
 VALUES ('Vigente', 'Todo riesgo', '2025-12-31', 900000);
