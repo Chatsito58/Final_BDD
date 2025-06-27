@@ -1,6 +1,12 @@
 import customtkinter as ctk
 import threading
 import time
+from ..services.roles import (
+    puede_gestionar_gerentes,
+    verificar_permiso_creacion_empleado,
+    cargos_permitidos_para_gerente,
+    puede_ejecutar_sql_libre
+)
 
 class BaseCTKView(ctk.CTk):
     def __init__(self, user_data, db_manager, on_logout=None):
@@ -103,6 +109,22 @@ class ClienteView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido cliente, {self.user_data.get('usuario', '')}"
 
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Mis reservas
+        self.tab_reservas = self.tabview.add("Mis reservas")
+        ctk.CTkLabel(self.tabview.tab("Mis reservas"), text="Ver y gestionar mis reservas").pack(pady=10)
+        # Pestaña: Vehículos disponibles
+        self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
+        ctk.CTkLabel(self.tabview.tab("Vehículos disponibles"), text="Consultar vehículos disponibles").pack(pady=10)
+        # Pestaña: Editar perfil
+        self.tab_perfil = self.tabview.add("Editar perfil")
+        ctk.CTkLabel(self.tabview.tab("Editar perfil"), text="Editar mis datos personales").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
 class GerenteView(BaseCTKView):
     def _welcome_message(self):
         # Obtener nombre de la base de datos
@@ -120,9 +142,45 @@ class GerenteView(BaseCTKView):
         except Exception:
             return "(desconocida)"
 
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Gestionar Empleados (excepto gerentes y admin)
+        self.tab_empleados = self.tabview.add("Empleados")
+        ctk.CTkLabel(self.tabview.tab("Empleados"), text="Gestión de empleados (ventas, caja, mantenimiento)").pack(pady=10)
+        # Pestaña: Gestionar Clientes
+        self.tab_clientes = self.tabview.add("Clientes")
+        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Gestión de clientes").pack(pady=10)
+        # Pestaña: Reportes
+        self.tab_reportes = self.tabview.add("Reportes")
+        ctk.CTkLabel(self.tabview.tab("Reportes"), text="Reportes de sucursal").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
 class AdminView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido administrador, {self.user_data.get('usuario', '')}"
+
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Gestionar Gerentes
+        self.tab_gerentes = self.tabview.add("Gerentes")
+        ctk.CTkLabel(self.tabview.tab("Gerentes"), text="Gestión de gerentes (crear, editar, eliminar)").pack(pady=10)
+        # Pestaña: Gestionar Empleados
+        self.tab_empleados = self.tabview.add("Empleados")
+        ctk.CTkLabel(self.tabview.tab("Empleados"), text="Gestión de empleados (todos los cargos)").pack(pady=10)
+        # Pestaña: Gestionar Clientes
+        self.tab_clientes = self.tabview.add("Clientes")
+        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Gestión de clientes").pack(pady=10)
+        # Pestaña: SQL Libre (solo admin)
+        if puede_ejecutar_sql_libre(self.user_data.get('rol', '')):
+            self.tab_sql = self.tabview.add("SQL Libre")
+            ctk.CTkLabel(self.tabview.tab("SQL Libre"), text="Ejecutar consultas SQL (solo admin)").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
 
 class EmpleadoView(BaseCTKView):
     def _welcome_message(self):
@@ -132,10 +190,58 @@ class EmpleadoVentasView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido empleado de ventas, {self.user_data.get('usuario', '')}"
 
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Gestionar Clientes
+        self.tab_clientes = self.tabview.add("Clientes")
+        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Gestión de clientes (crear, editar, ver)").pack(pady=10)
+        # Pestaña: Reservas
+        self.tab_reservas = self.tabview.add("Reservas")
+        ctk.CTkLabel(self.tabview.tab("Reservas"), text="Gestión de reservas").pack(pady=10)
+        # Pestaña: Vehículos
+        self.tab_vehiculos = self.tabview.add("Vehículos")
+        ctk.CTkLabel(self.tabview.tab("Vehículos"), text="Consulta de vehículos").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+class EmpleadoCajaView(BaseCTKView):
+    def _welcome_message(self):
+        return f"Bienvenido empleado de caja, {self.user_data.get('usuario', '')}"
+
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Pagos
+        self.tab_pagos = self.tabview.add("Pagos")
+        ctk.CTkLabel(self.tabview.tab("Pagos"), text="Procesar pagos").pack(pady=10)
+        # Pestaña: Reservas
+        self.tab_reservas = self.tabview.add("Reservas")
+        ctk.CTkLabel(self.tabview.tab("Reservas"), text="Consultar reservas").pack(pady=10)
+        # Pestaña: Clientes
+        self.tab_clientes = self.tabview.add("Clientes")
+        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Consultar clientes").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
 class EmpleadoMantenimientoView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido empleado de mantenimiento, {self.user_data.get('usuario', '')}"
 
-class EmpleadoCajaView(BaseCTKView):
-    def _welcome_message(self):
-        return f"Bienvenido empleado de caja, {self.user_data.get('usuario', '')}" 
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña: Vehículos asignados
+        self.tab_vehiculos = self.tabview.add("Vehículos asignados")
+        ctk.CTkLabel(self.tabview.tab("Vehículos asignados"), text="Ver vehículos asignados").pack(pady=10)
+        # Pestaña: Reportar mantenimiento
+        self.tab_reportar = self.tabview.add("Reportar mantenimiento")
+        ctk.CTkLabel(self.tabview.tab("Reportar mantenimiento"), text="Reportar mantenimiento").pack(pady=10)
+        # Pestaña: Historial vehículos
+        self.tab_historial = self.tabview.add("Historial vehículos")
+        ctk.CTkLabel(self.tabview.tab("Historial vehículos"), text="Consultar historial de vehículos").pack(pady=10)
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña")) 
