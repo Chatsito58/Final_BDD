@@ -10,7 +10,7 @@ class BaseCTKView(ctk.CTk):
         self.on_logout = on_logout
         self._status_label = None
         self._stop_status = False
-        self.geometry("400x300")
+        self.geometry("600x400")
         self.configure(bg="#18191A")
         self._build_ui()
         self._update_status_label()
@@ -22,12 +22,56 @@ class BaseCTKView(ctk.CTk):
         self.focus_force()
 
     def _build_ui(self):
-        frame = ctk.CTkFrame(self, fg_color="#18191A")
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña principal
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"), fg_color="#18191A")
         frame.pack(expand=True)
         self._status_label = ctk.CTkLabel(frame, text="", font=("Arial", 15))
         self._status_label.pack(pady=(20, 10))
         ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
         ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(pady=20)
+        # Pestaña cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+    def _build_cambiar_contrasena_tab(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+        ctk.CTkLabel(parent, text="Contraseña actual:").pack(pady=(20, 5))
+        self.input_actual = ctk.CTkEntry(parent, show="*")
+        self.input_actual.pack(pady=5)
+        ctk.CTkLabel(parent, text="Nueva contraseña:").pack(pady=5)
+        self.input_nueva = ctk.CTkEntry(parent, show="*")
+        self.input_nueva.pack(pady=5)
+        ctk.CTkLabel(parent, text="Confirmar nueva contraseña:").pack(pady=5)
+        self.input_confirmar = ctk.CTkEntry(parent, show="*")
+        self.input_confirmar.pack(pady=5)
+        ctk.CTkButton(parent, text="Cambiar", command=self._cambiar_contrasena, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=20)
+
+    def _cambiar_contrasena(self):
+        from tkinter import messagebox
+        actual = self.input_actual.get()
+        nueva = self.input_nueva.get()
+        confirmar = self.input_confirmar.get()
+        if not actual or not nueva or not confirmar:
+            messagebox.showwarning("Error", "Complete todos los campos")
+            return
+        if nueva != confirmar:
+            messagebox.showwarning("Error", "La nueva contraseña y la confirmación no coinciden")
+            return
+        from ..auth import AuthManager
+        auth = AuthManager(self.db_manager)
+        usuario = self.user_data.get('usuario')
+        resultado = auth.cambiar_contrasena(usuario, actual, nueva)
+        if resultado is True:
+            messagebox.showinfo("Éxito", "Contraseña cambiada correctamente")
+            self.input_actual.delete(0, 'end')
+            self.input_nueva.delete(0, 'end')
+            self.input_confirmar.delete(0, 'end')
+        else:
+            messagebox.showwarning("Error", str(resultado))
 
     def _welcome_message(self):
         return f"Bienvenido, {self.user_data.get('usuario', '')}"

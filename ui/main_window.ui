@@ -13,7 +13,24 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QStackedWidget" name="stackedWidget"/>
+     <widget class="QTabWidget" name="tabWidget">
+      <widget class="QWidget" name="tabPrincipal">
+       <attribute name="title">
+        <string>Principal</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutTabPrincipal">
+        <item>
+         <widget class="QStackedWidget" name="stackedWidget"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabCambiarContrasena">
+       <attribute name="title">
+        <string>Cambiar contraseña</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutTabCambiarContrasena"/>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>

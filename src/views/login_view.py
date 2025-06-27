@@ -28,6 +28,34 @@ class LoginView(QDialog):
         self.user_data = None
         self._status_label = None
         self._stop_status = False
+        self._modern_stylesheet = '''
+            QDialog, QWidget {
+                background-color: #18191A;
+            }
+            QLabel {
+                color: #F5F6FA;
+                font-size: 15px;
+            }
+            QLineEdit {
+                background: #242526;
+                color: #F5F6FA;
+                border: 1px solid #3A3B3C;
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-size: 15px;
+            }
+            QPushButton {
+                background-color: #3A86FF;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 0px;
+                font-size: 15px;
+            }
+            QPushButton:hover {
+                background-color: #265DAB;
+            }
+        '''
         
         try:
             # Cargar la interfaz con ruta absoluta
@@ -35,6 +63,7 @@ class LoginView(QDialog):
             ui_path = os.path.join(current_dir, '../../ui/login.ui')
             logger.info(f"Cargando UI desde: {ui_path}")
             loadUi(ui_path, self)
+            self.setStyleSheet(self._modern_stylesheet)
             
             # Obtener referencias a los widgets
             # Los nombres se corresponden con los definidos en el archivo .ui
@@ -56,36 +85,6 @@ class LoginView(QDialog):
             self.setWindowTitle("Login - Sistema de Alquiler")
             self.setModal(True)
             
-            # === ESTILO MODERNO Y FONDO OSCURO ===
-            self.setStyleSheet('''
-                QDialog {
-                    background-color: #18191A;
-                }
-                QLabel {
-                    color: #F5F6FA;
-                    font-size: 15px;
-                }
-                QLineEdit {
-                    background: #242526;
-                    color: #F5F6FA;
-                    border: 1px solid #3A3B3C;
-                    border-radius: 8px;
-                    padding: 6px 10px;
-                    font-size: 15px;
-                }
-                QPushButton {
-                    background-color: #3A86FF;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 8px 0px;
-                    font-size: 15px;
-                }
-                QPushButton:hover {
-                    background-color: #265DAB;
-                }
-            ''')
-            
             # Agregar label de estado
             self._status_label = QLabel(self)
             self._status_label.setText("")
@@ -101,10 +100,8 @@ class LoginView(QDialog):
                 if widget:
                     widget.setMinimumWidth(320)
                     widget.setMaximumWidth(400)
-                    widget.setStyleSheet("font-size: 16px; padding: 10px; border-radius: 8px; margin: 10px auto;")
             for label in self.findChildren(QLabel):
                 label.setAlignment(Qt.AlignCenter)
-                label.setStyleSheet("color: #F5F6FA; font-size: 15px; margin: 0 auto;")
             self.layout().setAlignment(Qt.AlignCenter)
             
             logger.info("LoginView inicializada correctamente")
@@ -201,3 +198,8 @@ class LoginView(QDialog):
     def closeEvent(self, event):
         self._stop_status = True
         super().closeEvent(event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Reaplicar el estilo moderno cada vez que se muestre la ventana
+        self.setStyleSheet(self._modern_stylesheet)

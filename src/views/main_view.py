@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QTimer
 
 from ..db_manager import DBManager
+from ..auth import AuthManager
 
 
 class MainView(QtWidgets.QMainWindow):
@@ -18,6 +19,7 @@ class MainView(QtWidgets.QMainWindow):
         self._username = username
         self._role = role
         self._db_manager = DBManager()
+        self._auth_manager = AuthManager(self._db_manager)
 
         self._sync_timer = QTimer(self)
         self._sync_timer.timeout.connect(self._sync_and_update_status)
@@ -64,6 +66,26 @@ class MainView(QtWidgets.QMainWindow):
 
         self._apply_role_visibility(role)
 
+        # --- Agregar widgets de la pestaña Cambiar contraseña ---
+        self.tabWidget = self.findChild(QtWidgets.QTabWidget, 'tabWidget')
+        self.tabCambiarContrasena = self.findChild(QtWidgets.QWidget, 'tabCambiarContrasena')
+        self.verticalLayoutTabCambiarContrasena = self.findChild(QtWidgets.QVBoxLayout, 'verticalLayoutTabCambiarContrasena')
+        if self.tabCambiarContrasena and self.verticalLayoutTabCambiarContrasena:
+            from PyQt5.QtWidgets import QLineEdit, QPushButton, QLabel
+            self.label_actual = QLabel('Contraseña actual:')
+            self.input_actual = QLineEdit()
+            self.input_actual.setEchoMode(QLineEdit.Password)
+            self.label_nueva = QLabel('Nueva contraseña:')
+            self.input_nueva = QLineEdit()
+            self.input_nueva.setEchoMode(QLineEdit.Password)
+            self.label_confirmar = QLabel('Confirmar nueva contraseña:')
+            self.input_confirmar = QLineEdit()
+            self.input_confirmar.setEchoMode(QLineEdit.Password)
+            self.btn_cambiar = QPushButton('Cambiar')
+            self.btn_cambiar.clicked.connect(self._cambiar_contrasena)
+            for w in [self.label_actual, self.input_actual, self.label_nueva, self.input_nueva, self.label_confirmar, self.input_confirmar, self.btn_cambiar]:
+                self.verticalLayoutTabCambiarContrasena.addWidget(w)
+
     def _apply_role_visibility(self, role: str):
         """Show or hide menus depending on the user role."""
         if self.menu_admin:
@@ -82,3 +104,23 @@ class MainView(QtWidgets.QMainWindow):
     def _sync_and_update_status(self):
         self._db_manager.sync_pending_reservations()
         self._update_status_bar()
+
+    def _cambiar_contrasena(self):
+        from PyQt5.QtWidgets import QMessageBox
+        actual = self.input_actual.text()
+        nueva = self.input_nueva.text()
+        confirmar = self.input_confirmar.text()
+        if not actual or not nueva or not confirmar:
+            QMessageBox.warning(self, 'Error', 'Complete todos los campos')
+            return
+        if nueva != confirmar:
+            QMessageBox.warning(self, 'Error', 'La nueva contraseña y la confirmación no coinciden')
+            return
+        resultado = self._auth_manager.cambiar_contrasena(self._username, actual, nueva)
+        if resultado is True:
+            QMessageBox.information(self, 'Éxito', 'Contraseña cambiada correctamente')
+            self.input_actual.clear()
+            self.input_nueva.clear()
+            self.input_confirmar.clear()
+        else:
+            QMessageBox.warning(self, 'Error', str(resultado))
