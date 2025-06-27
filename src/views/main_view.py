@@ -20,8 +20,9 @@ class MainView(QtWidgets.QMainWindow):
         self._db_manager = DBManager()
 
         self._sync_timer = QTimer(self)
-        self._sync_timer.timeout.connect(self._db_manager.sync_pending_reservations)
+        self._sync_timer.timeout.connect(self._sync_and_update_status)
         self._sync_timer.start(5 * 60 * 1000)
+        self._update_status_bar()
 
         # Setup status bar information
         if self.statusBar():
@@ -52,3 +53,12 @@ class MainView(QtWidgets.QMainWindow):
         """Emit logout signal and close the window."""
         self.logged_out.emit()
         self.close()
+
+    def _update_status_bar(self):
+        estado = "ONLINE" if not self._db_manager.offline else "OFFLINE"
+        if self.statusBar():
+            self.statusBar().showMessage(f"Usuario: {self._username} | Rol: {self._role} | Estado: {estado}")
+
+    def _sync_and_update_status(self):
+        self._db_manager.sync_pending_reservations()
+        self._update_status_bar()

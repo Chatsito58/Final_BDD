@@ -133,74 +133,95 @@ class DBManager:
         """Persist reservation data in the local SQLite database."""
         self._sqlite.save_pending_reservation(data)
 
+    def save_pending_abono(self, data):
+        """Insertar un abono localmente marcado como pendiente."""
+        query = (
+            "INSERT INTO Abono (valor, fecha_hora, id_reserva, pendiente) "
+            "VALUES (?, ?, ?, 1)"
+        )
+        params = (
+            data.get("valor"),
+            data.get("fecha_hora"),
+            data.get("id_reserva"),
+        )
+        self._sqlite.execute_query(query, params, fetch=False)
+
+    def save_pending_registro(self, tabla, data):
+        """Insertar un registro pendiente en cualquier tabla con columna 'pendiente'."""
+        # data: dict con los campos y valores
+        campos = ', '.join(data.keys()) + ', pendiente'
+        placeholders = ', '.join(['?'] * len(data)) + ', 1'
+        query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
+        params = tuple(data.values())
+        self._sqlite.execute_query(query, params, fetch=False)
+
     def sync_pending_reservations(self):
-        """Attempt to push locally stored reservations and payments to MariaDB."""
+        """Sincronizar todas las tablas con columna 'pendiente' de SQLite a MariaDB."""
         if self.offline:
             self.logger.info("[DBManager] Sincronización omitida, modo sin conexión")
+            print("[DBManager] Sincronización omitida, modo sin conexión")
             return
 
-        # Connect directly to MariaDB
+        tablas = [
+            {
+                'tabla': 'Reserva',
+                'get': self._sqlite.get_pending_reservations,
+                'delete': self._sqlite.delete_reservation,
+                'insert': (
+                    "INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)"
+                ),
+                'params': lambda r: (r[1], r[2], r[3], r[4], r[5], r[6]),
+                'id': 0
+            },
+            {
+                'tabla': 'Abono',
+                'get': self._sqlite.get_pending_abonos,
+                'delete': self._sqlite.delete_abono,
+                'insert': (
+                    "INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) "
+                    "VALUES (%s, %s, %s, %s)"
+                ),
+                'params': lambda a: (a[1], a[2], a[3], 1),
+                'id': 0
+            },
+            # Agrega aquí más tablas si tienes más operaciones pendientes
+        ]
+
         config = {
             'host': os.getenv('DB_REMOTE_HOST'),
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'port': 3306,  # Puerto por defecto de MySQL/MariaDB
-            'connection_timeout': 10,  # Aumentar timeout a 10 segundos
+            'port': 3306,
+            'connection_timeout': 10,
         }
         try:
             conn = mysql.connector.connect(**config)
         except Exception as exc:
             self.logger.error("[DBManager] Error conectando a MariaDB: %s", exc)
+            print(f"[DBManager] Error conectando a MariaDB: {exc}")
             self.offline = True
             return
 
         cursor = conn.cursor()
-
-        # Synchronize reservations
-        reservas = self._sqlite.get_pending_reservations() or []
-        for res in reservas:
-            insert_q = (
-                "INSERT INTO Alquiler "
-                "(fecha_hora_salida, fecha_hora_entrada, id_vehiculo, "
-                "id_cliente, id_seguro, id_estado) "
-                "VALUES (%s, %s, %s, %s, %s, %s)"
-            )
-            params = (res[1], res[2], res[3], res[4], res[5], res[6])
-            try:
-                cursor.execute(insert_q, params)
-                self._sqlite.delete_reservation(res[0])
-                self.logger.info("[DBManager] Sincronizada reserva %s", res[0])
-            except Exception as exc:
-                self.logger.error(
-                    "[DBManager] Error insertando reserva %s: %s", res[0], exc
-                )
-                conn.close()
-                return
-
-        # Synchronize payments (abonos)
-        abonos = self._sqlite.get_pending_abonos() or []
-        for ab in abonos:
-            insert_a = (
-                "INSERT INTO Abono_reserva "
-                "(valor, fecha_hora, id_reserva, id_medio_pago) "
-                "VALUES (%s, %s, %s, %s)"
-            )
-            params = (ab[1], ab[2], ab[3], 1)
-            try:
-                cursor.execute(insert_a, params)
-                self._sqlite.delete_abono(ab[0])
-                self.logger.info("[DBManager] Sincronizado abono %s", ab[0])
-            except Exception as exc:
-                self.logger.error(
-                    "[DBManager] Error insertando abono %s: %s", ab[0], exc
-                )
-                conn.close()
-                return
-
+        for t in tablas:
+            pendientes = t['get']() or []
+            for reg in pendientes:
+                try:
+                    cursor.execute(t['insert'], t['params'](reg))
+                    t['delete'](reg[t['id']])
+                    self.logger.info(f"[DBManager] Sincronizado y eliminado pendiente en {t['tabla']} id={reg[t['id']]}")
+                    print(f"[DBManager] Sincronizado y eliminado pendiente en {t['tabla']} id={reg[t['id']]}")
+                except Exception as exc:
+                    self.logger.error(f"[DBManager] Error insertando en {t['tabla']} id={reg[t['id']]}: {exc}")
+                    print(f"[DBManager] Error insertando en {t['tabla']} id={reg[t['id']]}: {exc}")
+                    conn.close()
+                    return
         cursor.close()
         conn.close()
         self.logger.info("[DBManager] Sincronización finalizada")
+        print("[DBManager] Sincronización finalizada")
 
     def close(self):
         """Placeholder to keep API compatibility."""
