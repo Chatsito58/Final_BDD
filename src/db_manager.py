@@ -129,20 +129,20 @@ class DBManager:
             self.logger.info("Ejecutando consulta en la base de datos...")
             cursor.execute(query, params or ())
             self.logger.info("Consulta ejecutada exitosamente en la base de datos")
+            
             if return_lastrowid:
                 if self.is_sqlite():
                     last_id = cursor.lastrowid
+                    cursor.close()
+                    conn.close()
+                    self.logger.info("Conexión cerrada exitosamente")
+                    return last_id
                 else:
                     # Para MySQL, obtener el LAST_INSERT_ID() de manera segura
                     try:
-                        # Hacer commit primero para asegurar que el INSERT se complete
-                        conn.commit()
-                        self.logger.info("Cambios confirmados en la base de datos")
-                        # Cerrar el cursor anterior y crear uno nuevo para evitar "Unread result found"
-                        cursor.close()
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT LAST_INSERT_ID()")
-                        last_id = cursor.fetchone()[0]
+                        # Para MySQL, no necesitamos hacer commit explícito si autocommit está activado
+                        # Solo obtener el lastrowid del cursor
+                        last_id = cursor.lastrowid
                         cursor.close()
                         conn.close()
                         self.logger.info("Conexión cerrada exitosamente")
@@ -153,12 +153,14 @@ class DBManager:
                         cursor.close()
                         conn.close()
                         return None
+            
             if fetch and not return_lastrowid:
                 self.logger.info("Obteniendo resultados...")
                 result = cursor.fetchall()
                 self.logger.info(f"Resultado obtenido: {result}")
             elif not fetch:
                 result = None
+                # Solo hacer commit si no es return_lastrowid
                 conn.commit()
                 self.logger.info("Cambios confirmados en la base de datos")
             else:
@@ -167,6 +169,7 @@ class DBManager:
                 if not self.is_sqlite():
                     conn.commit()
                     self.logger.info("Cambios confirmados en la base de datos")
+            
             self.logger.info("Cerrando cursor...")
             cursor.close()
             self.logger.info("Cerrando conexión...")

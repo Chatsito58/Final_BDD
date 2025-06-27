@@ -1036,14 +1036,11 @@ class ClienteView(BaseCTKView):
                     id_seguro, id_descuento, valor) 
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 """
-                self.db_manager.execute_query(alquiler_query, (
+                id_alquiler = self.db_manager.execute_query(alquiler_query, (
                     fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
                     id_seguro, id_descuento, total
-                ), fetch=False)
+                ), fetch=False, return_lastrowid=True)
                 
-                print(f"Obteniendo id_alquiler...")
-                # Obtener id_alquiler
-                id_alquiler = self.db_manager.execute_query("SELECT LAST_INSERT_ID()", return_lastrowid=True)
                 if not id_alquiler:
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
                     return
@@ -1057,10 +1054,9 @@ class ClienteView(BaseCTKView):
                     INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
                     VALUES ({placeholder}, 1, {placeholder}, {placeholder})
                 """
-                self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
+                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
                 if not id_reserva:
-                    messagebox.showerror("Error", "No se pudo obtener el ID de la reserva")
-                    return
+                    raise Exception("No se pudo obtener el ID de la reserva")
                 
                 print(f"ID Reserva obtenido: {id_reserva}")
                 
