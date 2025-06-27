@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.uic import loadUi
 
-from .registro_view import RegistroView
+from .registro_ctk import RegistroCTk
 
 class LoginView(QDialog):
     
@@ -60,5 +60,5 @@ class LoginView(QDialog):
             QMessageBox.warning(self, "Error", "Credenciales incorrectas")
     
     def open_registration(self):
-        registro = RegistroView(self.auth_manager.db)
-        registro.exec_()
+        registro = RegistroCTk(self.auth_manager.db)
+        registro.mainloop()

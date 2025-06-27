@@ -1,6 +1,9 @@
 import os
 import logging
-import pymysql
+try:
+    import mysql.connector as pymysql
+except Exception:  # pragma: no cover - if connector missing
+    pymysql = None
 from dotenv import load_dotenv
 
 from .sqlite_manager import SQLiteManager
@@ -13,7 +16,7 @@ class DBManager:
         load_dotenv()
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
-        self.offline = False
+        self.offline = pymysql is None
         self._sqlite = SQLiteManager()
 
     def is_sqlite(self):
@@ -25,14 +28,17 @@ class DBManager:
         if self.offline:
             return self._sqlite.connect()
 
+        if pymysql is None:
+            self.logger.warning("Driver de MySQL no disponible, usando modo offline")
+            self.offline = True
+            return self._sqlite.connect()
+
         config = {
             'host': os.getenv('DB_REMOTE_HOST'),
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'connect_timeout': 3,
-            'charset': 'utf8mb4',
-            'cursorclass': pymysql.cursors.Cursor,
+            'connection_timeout': 3,
             'autocommit': True,
         }
         try:
@@ -46,9 +52,9 @@ class DBManager:
 
     def execute_query(self, query, params=None, fetch=True):
         try:
+            conn = self.connect()
             if self.is_sqlite():
                 query = query.replace('%s', '?')
-            conn = self.connect()
             if conn is None:
                 self.logger.error("No se pudo establecer conexión con la base de datos")
                 return None
@@ -85,9 +91,7 @@ class DBManager:
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'connect_timeout': 3,
-            'charset': 'utf8mb4',
-            'cursorclass': pymysql.cursors.Cursor,
+            'connection_timeout': 3,
             'autocommit': True,
         }
         try:
