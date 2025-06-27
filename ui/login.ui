@@ -22,9 +22,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="usernameLineEdit">
+    <widget class="QLineEdit" name="emailLineEdit">
      <property name="placeholderText">
-      <string>Usuario</string>
+      <string>Correo</string>
      </property>
     </widget>
    </item>
