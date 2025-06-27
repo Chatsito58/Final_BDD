@@ -22,7 +22,7 @@ class LoginView(QDialog):
         
         # Obtener referencias a los widgets
         # Los nombres se corresponden con los definidos en el archivo .ui
-        self.usernameLineEdit = self.findChild(QLineEdit, 'usernameLineEdit')
+        self.emailLineEdit = self.findChild(QLineEdit, 'emailLineEdit')
         self.passwordLineEdit = self.findChild(QLineEdit, 'passwordLineEdit')
         self.btn_login = self.findChild(QPushButton, 'btn_login')
         self.btn_register = self.findChild(QPushButton, 'btn_register')
@@ -36,15 +36,15 @@ class LoginView(QDialog):
             self.btn_register.clicked.connect(self.open_registration)
         
     def attempt_login(self):
-        usuario = self.usernameLineEdit.text().strip()
+        correo = self.emailLineEdit.text().strip()
         contrasena = self.passwordLineEdit.text().strip()
-        
-        if not usuario or not contrasena:
+
+        if not correo or not contrasena:
             QMessageBox.warning(self, "Error", "Por favor complete todos los campos")
             return
-            
+
         try:
-            user_data = self.auth_manager.login(usuario, contrasena)
+            user_data = self.auth_manager.login(correo, contrasena)
         except Exception:
             QMessageBox.critical(
                 self,

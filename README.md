@@ -60,6 +60,14 @@ Esto asegura que cada persona registrada pueda autenticarse según su rol.
 
 El sistema valida que el correo electrónico de cada cliente sea único antes de permitir el registro, tanto en modo remoto como local. Si el correo ya existe, el registro es rechazado y se muestra un mensaje de error.
 
+## Autenticación por correo
+
+El inicio de sesión ahora utiliza la dirección de correo almacenada en la tabla
+`Usuario`. El sistema valida la contraseña cifrada con SHA-256 y registra en el
+archivo de logs cada intento exitoso o fallido. Tras **tres** intentos fallidos
+consecutivos el usuario será bloqueado durante diez minutos. El modo offline se
+maneja de forma automática a través de `DBManager` y su respaldo en SQLite.
+
 ## Cómo comprobar que todo funciona
 
 ### Prueba manual

@@ -14,5 +14,5 @@ class Config:
     # Configuraci\u00f3n de seguridad
     MAX_LOGIN_ATTEMPTS = 3
     # Tiempo de bloqueo en segundos cuando se supera el número de intentos
-    BLOCK_TIME = 300  # 5 minutos
+    BLOCK_TIME = 600  # 10 minutos
     PASSWORD_HASH = "sha256"

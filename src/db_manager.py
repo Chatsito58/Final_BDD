@@ -16,6 +16,10 @@ class DBManager:
         self.offline = False
         self._sqlite = SQLiteManager()
 
+    def is_sqlite(self):
+        """Return True if operating in offline SQLite mode."""
+        return self.offline
+
     def connect(self):
         """Return a connection to the active database."""
         if self.offline:
@@ -42,6 +46,8 @@ class DBManager:
 
     def execute_query(self, query, params=None, fetch=True):
         try:
+            if self.is_sqlite():
+                query = query.replace('%s', '?')
             conn = self.connect()
             if conn is None:
                 self.logger.error("No se pudo establecer conexión con la base de datos")
@@ -60,7 +66,7 @@ class DBManager:
             self.logger.error("Error ejecutando consulta: %s", exc)
             if not self.offline:
                 self.offline = True
-                return self._sqlite.execute_query(query, params, fetch)
+                return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
             return None
 
     def save_pending_reservation(self, data):
