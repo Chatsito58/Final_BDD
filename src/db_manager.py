@@ -108,33 +108,32 @@ class DBManager:
                 self.logger.error(f"Error notificando desconexión a la vista: {e}")
             return self._sqlite.connect()
 
-    def execute_query(self, query, params=None, fetch=True):
+    def execute_query(self, query, params=None, fetch=True, return_lastrowid=False):
         try:
             self.logger.info(f"Ejecutando consulta: {query}")
             self.logger.info(f"Parámetros: {params}")
             self.logger.info(f"Modo offline: {self.offline}")
-            
             self.logger.info("Intentando conectar a la base de datos...")
             conn = self.connect()
             self.logger.info(f"Conexión establecida: {conn is not None}")
-            
             if self.is_sqlite():
                 query = query.replace('%s', '?')
                 self.logger.info(f"Consulta adaptada para SQLite: {query}")
-            
             if conn is None:
                 print("[SYNC][ERROR] No se pudo establecer conexión con la base de datos. Cambiando a modo offline.")
                 self.logger.error("No se pudo establecer conexión con la base de datos")
                 return None
-                
             self.logger.info("Creando cursor...")
             cursor = conn.cursor()
             self.logger.info("Cursor creado exitosamente")
-            
             self.logger.info("Ejecutando consulta en la base de datos...")
             cursor.execute(query, params or ())
             self.logger.info("Consulta ejecutada exitosamente en la base de datos")
-            
+            if return_lastrowid:
+                last_id = cursor.lastrowid if self.is_sqlite() else None
+                if not self.is_sqlite():
+                    cursor.execute("SELECT LAST_INSERT_ID()")
+                    last_id = cursor.fetchone()[0]
             if fetch:
                 self.logger.info("Obteniendo resultados...")
                 result = cursor.fetchall()
@@ -143,44 +142,64 @@ class DBManager:
                 result = None
                 conn.commit()
                 self.logger.info("Cambios confirmados en la base de datos")
-                
             self.logger.info("Cerrando cursor...")
             cursor.close()
             self.logger.info("Cerrando conexión...")
             conn.close()
             self.logger.info("Conexión cerrada exitosamente")
+            if return_lastrowid:
+                return last_id
             return result
         except Exception as exc:
-            print("[SYNC][ERROR] Desconexión detectada. Cambiando a modo offline.")
-            self.logger.error(f"Error ejecutando consulta: {exc}")
+            import mysql.connector
+            import sqlite3
+            import sys
+            from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError, IntegrityError, ProgrammingError
+            # Si es un error de integridad o de sintaxis, NO cambiar a offline
+            if isinstance(exc, (IntegrityError, ProgrammingError, sqlite3.IntegrityError, sqlite3.ProgrammingError)):
+                print(f"[DB][ERROR] Error de integridad o sintaxis: {exc}")
+                self.logger.error(f"[DB][ERROR] Error de integridad o sintaxis: {exc}")
+                self.logger.error(f"Tipo de error: {type(exc).__name__}")
+                self.logger.error(traceback.format_exc())
+                return None
+            # Si es un error de conexión, sí cambiar a offline
+            if isinstance(exc, (InterfaceError, OperationalError, DatabaseError, sqlite3.OperationalError)):
+                print("[SYNC][ERROR] Desconexión detectada. Cambiando a modo offline.")
+                self.logger.error(f"Error ejecutando consulta: {exc}")
+                self.logger.error(f"Tipo de error: {type(exc).__name__}")
+                self.logger.error(traceback.format_exc())
+                if not self.offline:
+                    print("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
+                    self.logger.info("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
+                    self.offline = True
+                    return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
+                else:
+                    # Si se recupera la conexión, sincronizar datos críticos
+                    try:
+                        print("[SYNC][INFO] Intentando reconexión con el servidor...")
+                        self.logger.info("[SYNC][INFO] Intentando reconexión con el servidor...")
+                        conn = self.connect()
+                        if conn and not self.offline:
+                            print("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
+                            self.logger.info("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
+                            self.sync_critical_data_to_local()
+                            print("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
+                            self.logger.info("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
+                            print("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
+                            self.logger.info("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
+                            self.sync_pending_reservations()
+                            print("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
+                            self.logger.info("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
+                            conn.close()
+                    except Exception as e:
+                        print(f"[SYNC][ERROR] Error al sincronizar datos críticos tras reconexión: {e}")
+                        self.logger.error(f"Error al sincronizar datos críticos tras reconexión: {e}")
+                return None
+            # Otros errores
+            print(f"[DB][ERROR] Error inesperado: {exc}")
+            self.logger.error(f"[DB][ERROR] Error inesperado: {exc}")
             self.logger.error(f"Tipo de error: {type(exc).__name__}")
             self.logger.error(traceback.format_exc())
-            if not self.offline:
-                print("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
-                self.logger.info("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
-                self.offline = True
-                return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
-            else:
-                # Si se recupera la conexión, sincronizar datos críticos
-                try:
-                    print("[SYNC][INFO] Intentando reconexión con el servidor...")
-                    self.logger.info("[SYNC][INFO] Intentando reconexión con el servidor...")
-                    conn = self.connect()
-                    if conn and not self.offline:
-                        print("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
-                        self.logger.info("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
-                        self.sync_critical_data_to_local()
-                        print("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
-                        self.logger.info("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
-                        print("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
-                        self.logger.info("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
-                        self.sync_pending_reservations()
-                        print("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
-                        self.logger.info("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
-                        conn.close()
-                except Exception as e:
-                    print(f"[SYNC][ERROR] Error al sincronizar datos críticos tras reconexión: {e}")
-                    self.logger.error(f"Error al sincronizar datos críticos tras reconexión: {e}")
             return None
 
     def save_pending_reservation(self, data):

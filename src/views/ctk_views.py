@@ -30,12 +30,13 @@ class BaseCTKView(ctk.CTk):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
+        # Label de estado global, centrado arriba
+        self._status_label = ctk.CTkLabel(self, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label.pack(pady=(10,0))
         # Pestaña principal
         self.tab_principal = self.tabview.add("Principal")
         frame = ctk.CTkFrame(self.tabview.tab("Principal"), fg_color="#18191A")
         frame.pack(expand=True)
-        self._status_label = ctk.CTkLabel(frame, text="", font=("Arial", 15))
-        self._status_label.pack(pady=(20, 10))
         ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
         ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(pady=20)
         # Pestaña cambiar contraseña
@@ -82,10 +83,8 @@ class BaseCTKView(ctk.CTk):
     def _welcome_message(self):
         return f"Bienvenido, {self.user_data.get('usuario', '')}"
 
-    def _update_status_label(self):
-        online = not self.db_manager.offline
-        emoji = "🟢" if online else "🔴"
-        estado = "ONLINE" if online else "OFFLINE"
+    def _update_status_label(self, estado="Conectado", emoji="🟢"):
+        if self._status_label is not None:
         self._status_label.configure(text=f"{emoji} Estado: {estado}")
 
     def _start_status_updater(self):
@@ -112,14 +111,9 @@ class ClienteView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
-        # Pestaña: Mis reservas
+        # Pestaña: Mis reservas (ahora sí usa el método correcto)
         self.tab_reservas = self.tabview.add("Mis reservas")
-        frame = ctk.CTkFrame(self.tabview.tab("Mis reservas"))
-        frame.grid(row=0, column=0, sticky="ew")
-        self._status_label = ctk.CTkLabel(frame, text="", font=("Arial", 15))
-        self._status_label.grid(row=0, column=0, pady=(20, 10))
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).grid(row=1, column=0, pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).grid(row=99, column=0, pady=(30, 20), sticky="s")
+        self._build_tab_mis_reservas(self.tabview.tab("Mis reservas"))
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
@@ -137,17 +131,23 @@ class ClienteView(BaseCTKView):
         import tkinter as tk
         from tkinter import messagebox
         id_cliente = self.user_data.get('id_cliente')
+        # Frame principal centrado
         frame = ctk.CTkFrame(parent)
-        frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Mis reservas", font=("Arial", 18)).pack(pady=10)
-        self.reservas_listbox = tk.Listbox(frame, height=18, width=180)
+        frame.pack(expand=True, fill="both")
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        inner = ctk.CTkFrame(frame)
+        inner.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(inner, text="Mis reservas", font=("Arial", 18)).pack(pady=10)
+        self.reservas_listbox = tk.Listbox(inner, height=14, width=100)
         self.reservas_listbox.pack(pady=10)
-        self._cargar_reservas_cliente(id_cliente)
-        # Botones para cancelar y editar reserva
-        btn_frame = ctk.CTkFrame(frame)
+        ctk.CTkButton(inner, text="Recargar", command=lambda: self._cargar_reservas_cliente(id_cliente), fg_color="#3A86FF", hover_color="#265DAB").pack(pady=4)
+        # Botones de acción
+        btn_frame = ctk.CTkFrame(inner)
         btn_frame.pack(pady=10)
         ctk.CTkButton(btn_frame, text="Cancelar reserva", command=self._cancelar_reserva).pack(side="left", padx=10)
         ctk.CTkButton(btn_frame, text="Editar fechas", command=self._editar_reserva).pack(side="left", padx=10)
+        self._cargar_reservas_cliente(id_cliente)
 
     def _cargar_reservas_cliente(self, id_cliente):
         self.reservas_listbox.delete(0, 'end')
@@ -178,7 +178,6 @@ class ClienteView(BaseCTKView):
                 abono = r[8]
                 estado = r[9]
                 seguro = r[10] if r[10] else 'N/A'
-                seguro_desc = r[9] if r[9] else 'N/A'
                 descuento = r[12] if r[12] else 'N/A'
                 valor_descuento = r[13] if r[13] else 0
                 # Sumar abonos realizados
@@ -186,10 +185,20 @@ class ClienteView(BaseCTKView):
                 abonos = self.db_manager.execute_query(abono_query, (id_reserva,))
                 abonado = abonos[0][0] if abonos and abonos[0] else 0
                 saldo_real = saldo_pendiente - abonado
+                # Estado visual
+                estado_str = str(estado).lower()
+                if "pendiente" in estado_str:
+                    estado_vis = "⏳ PENDIENTE"
+                elif "confirm" in estado_str or "aprob" in estado_str:
+                    estado_vis = "✅ CONFIRMADA"
+                elif "cancel" in estado_str:
+                    estado_vis = "❌ CANCELADA"
+                else:
+                    estado_vis = estado
                 self.reservas_listbox.insert('end',
                     f"ID: {id_reserva} | Vehículo: {modelo} ({placa}) | Salida: {salida} | Entrada: {entrada} | "
                     f"Valor: ${valor} | Seguro: {seguro} | Descuento: {descuento} (-${valor_descuento}) | "
-                    f"Abonado: ${abonado} | Saldo pendiente: ${saldo_real} | Estado: {estado}")
+                    f"Abonado: ${abonado} | Saldo pendiente: ${saldo_real} | Estado: {estado_vis}")
         else:
             self.reservas_listbox.insert('end', "No tienes reservas registradas.")
 
@@ -198,7 +207,7 @@ class ClienteView(BaseCTKView):
         sel = self.reservas_listbox.curselection()
         if not sel:
             messagebox.showwarning("Aviso", "Seleccione una reserva para cancelar")
-            return
+                return
         texto = self.reservas_listbox.get(sel[0])
         if "ID: " not in texto:
             messagebox.showwarning("Aviso", "No hay reserva seleccionada")
@@ -216,7 +225,7 @@ class ClienteView(BaseCTKView):
             self.db_manager.execute_query(query, (id_reserva,), fetch=False)
             messagebox.showinfo("Éxito", "Reserva cancelada")
             self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
-        except Exception as exc:
+            except Exception as exc:
             messagebox.showerror("Error", f"No se pudo cancelar la reserva: {exc}")
 
     def _editar_reserva(self):
@@ -268,8 +277,8 @@ class ClienteView(BaseCTKView):
                 self.db_manager.execute_query(update_query, (nueva_salida, nueva_entrada, id_reserva), fetch=False)
                 messagebox.showinfo("Éxito", "Fechas actualizadas correctamente")
                 win.destroy()
-                self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
-            except Exception as exc:
+            self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+        except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo actualizar la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar cambios", command=guardar).pack(pady=15)
 
@@ -310,8 +319,6 @@ class ClienteView(BaseCTKView):
         from tkinter import messagebox
         from datetime import datetime
         from tkcalendar import DateEntry
-        from ttkbootstrap import Style
-        from ttkbootstrap.widgets import Combobox
         win = ctk.CTkToplevel(self)
         win.title("Nueva reserva")
         win.geometry("600x700")
@@ -333,28 +340,36 @@ class ClienteView(BaseCTKView):
         tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
         salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
         salida_date.pack(side="left", padx=2)
-        horas = [f"{h:02d}" for h in range(8, 21)]
+        # Combobox para hora (1-12), minutos y AM/PM usando solo tkinter
+        horas_12 = [f"{h:02d}" for h in range(1, 13)]
         minutos = ["00", "15", "30", "45"]
-        salida_hora_cb = Combobox(salida_frame, values=horas, width=3, bootstyle="info")
+        ampm = ["AM", "PM"]
+        salida_hora_cb = tk.ttk.Combobox(salida_frame, values=horas_12, width=3, state="readonly")
         salida_hora_cb.set("08")
         salida_hora_cb.pack(side="left", padx=2)
         tk.Label(salida_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
-        salida_min_cb = Combobox(salida_frame, values=minutos, width=3, bootstyle="info")
+        salida_min_cb = tk.ttk.Combobox(salida_frame, values=minutos, width=3, state="readonly")
         salida_min_cb.set("00")
         salida_min_cb.pack(side="left", padx=2)
+        salida_ampm_cb = tk.ttk.Combobox(salida_frame, values=ampm, width=3, state="readonly")
+        salida_ampm_cb.set("AM")
+        salida_ampm_cb.pack(side="left", padx=2)
         # Frame de fecha y hora entrada (solo uno, tipo tk.Frame)
         entrada_frame = tk.Frame(win, bg="#222831")
         entrada_frame.pack(fill="x", pady=8)
         tk.Label(entrada_frame, text="Fecha y hora entrada:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
         entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
         entrada_date.pack(side="left", padx=2)
-        entrada_hora_cb = Combobox(entrada_frame, values=horas, width=3, bootstyle="info")
+        entrada_hora_cb = tk.ttk.Combobox(entrada_frame, values=horas_12, width=3, state="readonly")
         entrada_hora_cb.set("09")
         entrada_hora_cb.pack(side="left", padx=2)
         tk.Label(entrada_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
-        entrada_min_cb = Combobox(entrada_frame, values=minutos, width=3, bootstyle="info")
+        entrada_min_cb = tk.ttk.Combobox(entrada_frame, values=minutos, width=3, state="readonly")
         entrada_min_cb.set("00")
         entrada_min_cb.pack(side="left", padx=2)
+        entrada_ampm_cb = tk.ttk.Combobox(entrada_frame, values=ampm, width=3, state="readonly")
+        entrada_ampm_cb.set("AM")
+        entrada_ampm_cb.pack(side="left", padx=2)
         # Seguros disponibles
         ctk.CTkLabel(win, text="Seguro:", font=("Arial", 12)).pack(pady=4)
         seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion, costo FROM Seguro_alquiler WHERE estado='Vigente'")
@@ -382,7 +397,7 @@ class ClienteView(BaseCTKView):
         abono_min_label.pack(pady=4)
         # Abono y método de pago
         ctk.CTkLabel(win, text="Abono inicial ($, mínimo 30%):", font=("Arial", 12)).pack(pady=4)
-        entry_abono = ctk.CTkEntry(win, width=20)
+        entry_abono = ctk.CTkEntry(win, width=120)  # Ampliado para mejor visibilidad
         entry_abono.pack(pady=4)
         ctk.CTkLabel(win, text="Método de pago:", font=("Arial", 12)).pack(pady=4)
         metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
@@ -390,12 +405,22 @@ class ClienteView(BaseCTKView):
         metodo_pago_var.set(metodos_pago[0])
         metodo_pago_menu = tk.OptionMenu(win, metodo_pago_var, *metodos_pago)
         metodo_pago_menu.pack(pady=4)
+        # Modifico la función para obtener la hora en formato 24h
+        def get_24h(date, hora_cb, min_cb, ampm_cb):
+            h = int(hora_cb.get())
+            m = int(min_cb.get())
+            ampm = ampm_cb.get()
+            if ampm == "PM" and h != 12:
+                h += 12
+            if ampm == "AM" and h == 12:
+                h = 0
+            return f"{date.get()} {h:02d}:{m:02d}"
         # Función para calcular y mostrar el total y abono mínimo
         def actualizar_total(*args):
             try:
                 fmt = "%Y-%m-%d %H:%M"
-                salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
-                entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+                salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+                entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
                 dt_salida = datetime.strptime(salida, fmt)
                 dt_entrada = datetime.strptime(entrada, fmt)
                 dias = (dt_entrada - dt_salida).days
@@ -416,7 +441,7 @@ class ClienteView(BaseCTKView):
                 total_label.configure(text="Total a pagar: $0")
                 abono_min_label.configure(text="Abono mínimo (30%): $0")
         # Asociar eventos para recalcular
-        for widget in [salida_date, salida_hora_cb, salida_min_cb, entrada_date, entrada_hora_cb, entrada_min_cb]:
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb, entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb]:
             widget.bind("<<ComboboxSelected>>", actualizar_total)
             widget.bind("<FocusOut>", actualizar_total)
         if seguros and len(seguros) > 0:
@@ -427,8 +452,8 @@ class ClienteView(BaseCTKView):
         actualizar_total()
         # Guardar reserva
         def guardar():
-            salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
-            entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+            salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+            entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
             abono = entry_abono.get().strip()
             metodo_pago = metodo_pago_var.get()
             if not salida or not entrada or not (seguros and seguro_var.get()) or not (descuentos and descuento_var.get()) or not abono or not metodo_pago:
@@ -500,11 +525,14 @@ class ClienteView(BaseCTKView):
                 # Simulación de pasarela de pago si corresponde
                 if metodo_pago in ("Tarjeta", "Transferencia"):
                     win.withdraw()
-                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago, on_finish=lambda: [win.destroy(), self._cargar_reservas_cliente(id_cliente)])
+                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
+                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
                     win.destroy()
-                    self._cargar_reservas_cliente(id_cliente)
+                    # Solo recargar si el widget existe
+                    if hasattr(self, 'reservas_listbox'):
+                        self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
@@ -666,6 +694,13 @@ class ClienteView(BaseCTKView):
         win.title("Pasarela de pago")
         win.geometry("420x400")
         win.configure(fg_color="#23272F")
+        win.grab_set()
+        win.focus_set()
+        win.update_idletasks()
+        # Centrar ventana
+        x = self.winfo_x() + (self.winfo_width() // 2) - (420 // 2)
+        y = self.winfo_y() + (self.winfo_height() // 2) - (400 // 2)
+        win.geometry(f"420x400+{x}+{y}")
         # Íconos realistas
         icono = "💳" if metodo == "Tarjeta" else ("🏦" if metodo == "Transferencia" else "💵")
         ctk.CTkLabel(win, text=icono, font=("Arial", 40)).pack(pady=2)
@@ -700,8 +735,12 @@ class ClienteView(BaseCTKView):
             status_label.configure(text="Pago autorizado ✔", text_color="#00FF99")
             win.update()
             time.sleep(1)
+            win.grab_release()
             win.destroy()
+            # Registrar abono y recargar reservas
             self._registrar_abono(id_reserva, monto, metodo)
+            if hasattr(self, 'reservas_listbox'):
+                self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
         threading.Thread(target=procesar, daemon=True).start()
 
 class GerenteView(BaseCTKView):
@@ -991,7 +1030,7 @@ class EmpleadoView(BaseCTKView):
         # Listar reservas
         query = "SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva"
         reservas = self.db_manager.execute_query(query)
-        listbox = tk.Listbox(frame, height=10, width=60)
+        listbox = tk.Listbox(frame, height=18, width=180)
         listbox.pack(pady=10)
         if reservas:
             for r in reservas:
@@ -1036,8 +1075,6 @@ class EmpleadoView(BaseCTKView):
         from tkinter import messagebox
         from datetime import datetime
         from tkcalendar import DateEntry
-        from ttkbootstrap import Style
-        from ttkbootstrap.widgets import Combobox
         win = ctk.CTkToplevel(self)
         win.title("Nueva reserva")
         win.geometry("600x700")
@@ -1059,28 +1096,36 @@ class EmpleadoView(BaseCTKView):
         tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
         salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
         salida_date.pack(side="left", padx=2)
-        horas = [f"{h:02d}" for h in range(8, 21)]
+        # Combobox para hora (1-12), minutos y AM/PM usando solo tkinter
+        horas_12 = [f"{h:02d}" for h in range(1, 13)]
         minutos = ["00", "15", "30", "45"]
-        salida_hora_cb = Combobox(salida_frame, values=horas, width=3, bootstyle="info")
+        ampm = ["AM", "PM"]
+        salida_hora_cb = tk.ttk.Combobox(salida_frame, values=horas_12, width=3, state="readonly")
         salida_hora_cb.set("08")
         salida_hora_cb.pack(side="left", padx=2)
         tk.Label(salida_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
-        salida_min_cb = Combobox(salida_frame, values=minutos, width=3, bootstyle="info")
+        salida_min_cb = tk.ttk.Combobox(salida_frame, values=minutos, width=3, state="readonly")
         salida_min_cb.set("00")
         salida_min_cb.pack(side="left", padx=2)
+        salida_ampm_cb = tk.ttk.Combobox(salida_frame, values=ampm, width=3, state="readonly")
+        salida_ampm_cb.set("AM")
+        salida_ampm_cb.pack(side="left", padx=2)
         # Frame de fecha y hora entrada (solo uno, tipo tk.Frame)
         entrada_frame = tk.Frame(win, bg="#222831")
         entrada_frame.pack(fill="x", pady=8)
         tk.Label(entrada_frame, text="Fecha y hora entrada:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
         entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
         entrada_date.pack(side="left", padx=2)
-        entrada_hora_cb = Combobox(entrada_frame, values=horas, width=3, bootstyle="info")
+        entrada_hora_cb = tk.ttk.Combobox(entrada_frame, values=horas_12, width=3, state="readonly")
         entrada_hora_cb.set("09")
         entrada_hora_cb.pack(side="left", padx=2)
         tk.Label(entrada_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
-        entrada_min_cb = Combobox(entrada_frame, values=minutos, width=3, bootstyle="info")
+        entrada_min_cb = tk.ttk.Combobox(entrada_frame, values=minutos, width=3, state="readonly")
         entrada_min_cb.set("00")
         entrada_min_cb.pack(side="left", padx=2)
+        entrada_ampm_cb = tk.ttk.Combobox(entrada_frame, values=ampm, width=3, state="readonly")
+        entrada_ampm_cb.set("AM")
+        entrada_ampm_cb.pack(side="left", padx=2)
         # Seguros disponibles
         ctk.CTkLabel(win, text="Seguro:", font=("Arial", 12)).pack(pady=4)
         seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion, costo FROM Seguro_alquiler WHERE estado='Vigente'")
@@ -1108,7 +1153,7 @@ class EmpleadoView(BaseCTKView):
         abono_min_label.pack(pady=4)
         # Abono y método de pago
         ctk.CTkLabel(win, text="Abono inicial ($, mínimo 30%):", font=("Arial", 12)).pack(pady=4)
-        entry_abono = ctk.CTkEntry(win, width=20)
+        entry_abono = ctk.CTkEntry(win, width=120)  # Ampliado para mejor visibilidad
         entry_abono.pack(pady=4)
         ctk.CTkLabel(win, text="Método de pago:", font=("Arial", 12)).pack(pady=4)
         metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
@@ -1116,12 +1161,22 @@ class EmpleadoView(BaseCTKView):
         metodo_pago_var.set(metodos_pago[0])
         metodo_pago_menu = tk.OptionMenu(win, metodo_pago_var, *metodos_pago)
         metodo_pago_menu.pack(pady=4)
+        # Modifico la función para obtener la hora en formato 24h
+        def get_24h(date, hora_cb, min_cb, ampm_cb):
+            h = int(hora_cb.get())
+            m = int(min_cb.get())
+            ampm = ampm_cb.get()
+            if ampm == "PM" and h != 12:
+                h += 12
+            if ampm == "AM" and h == 12:
+                h = 0
+            return f"{date.get()} {h:02d}:{m:02d}"
         # Función para calcular y mostrar el total y abono mínimo
         def actualizar_total(*args):
             try:
                 fmt = "%Y-%m-%d %H:%M"
-                salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
-                entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+                salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+                entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
                 dt_salida = datetime.strptime(salida, fmt)
                 dt_entrada = datetime.strptime(entrada, fmt)
                 dias = (dt_entrada - dt_salida).days
@@ -1142,7 +1197,7 @@ class EmpleadoView(BaseCTKView):
                 total_label.configure(text="Total a pagar: $0")
                 abono_min_label.configure(text="Abono mínimo (30%): $0")
         # Asociar eventos para recalcular
-        for widget in [salida_date, salida_hora_cb, salida_min_cb, entrada_date, entrada_hora_cb, entrada_min_cb]:
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb, entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb]:
             widget.bind("<<ComboboxSelected>>", actualizar_total)
             widget.bind("<FocusOut>", actualizar_total)
         if seguros and len(seguros) > 0:
@@ -1153,8 +1208,8 @@ class EmpleadoView(BaseCTKView):
         actualizar_total()
         # Guardar reserva
         def guardar():
-            salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
-            entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+            salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+            entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
             abono = entry_abono.get().strip()
             metodo_pago = metodo_pago_var.get()
             if not salida or not entrada or not (seguros and seguro_var.get()) or not (descuentos and descuento_var.get()) or not abono or not metodo_pago:
@@ -1226,11 +1281,14 @@ class EmpleadoView(BaseCTKView):
                 # Simulación de pasarela de pago si corresponde
                 if metodo_pago in ("Tarjeta", "Transferencia"):
                     win.withdraw()
-                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago, on_finish=lambda: [win.destroy(), self._cargar_reservas_cliente(id_cliente)])
+                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
+                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
                     win.destroy()
-                    self._cargar_reservas_cliente(id_cliente)
+                    # Solo recargar si el widget existe
+                    if hasattr(self, 'reservas_listbox'):
+                        self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
@@ -1577,11 +1635,14 @@ class EmpleadoVentasView(BaseCTKView):
                 # Simulación de pasarela de pago si corresponde
                 if metodo_pago in ("Tarjeta", "Transferencia"):
                     win.withdraw()
-                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago, on_finish=lambda: [win.destroy(), self._cargar_reservas_cliente(id_cliente)])
+                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
+                    self._simular_pasarela_pago(id_alquiler, abono_val, metodo_pago)
                 else:
                     messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
                     win.destroy()
-                    self._cargar_reservas_cliente(id_cliente)
+                    # Solo recargar si el widget existe
+                    if hasattr(self, 'reservas_listbox'):
+                        self._cargar_reservas_cliente(id_cliente)
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
         ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
