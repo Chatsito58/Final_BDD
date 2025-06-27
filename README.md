@@ -249,3 +249,61 @@ from PyQt5.QtWidgets import QApplication, ...
 ### Otros detalles
 - Se documentó el problema crítico de cuelgue por importar PyQt5 antes de conectar a la base remota y su solución.
 - Se mejoró la modularidad y la experiencia visual en todos los roles y vistas.
+
+## Control avanzado de roles y vistas personalizadas (2024)
+
+### Permisos y lógica centralizada
+- El sistema ahora cuenta con un módulo de permisos (`src/services/roles.py`) que centraliza la lógica de validación para la gestión de empleados y acciones críticas.
+- Solo el **admin** puede crear, editar o eliminar gerentes y tiene acceso a una pestaña exclusiva de SQL libre.
+- El **gerente** puede gestionar empleados (excepto gerentes y admin) y clientes, pero no puede crear/editar gerentes ni admin.
+- Los empleados de **ventas**, **caja** y **mantenimiento** solo pueden operar sobre las entidades de su área.
+- El **cliente** solo puede ver y modificar su propio perfil y reservas.
+
+### Vistas CustomTkinter con pestañas según el rol
+- Cada tipo de usuario tiene una interfaz con pestañas específicas, solo accesibles según su rol:
+
+#### Cliente
+- Mis reservas: ver, crear y cancelar solo sus reservas.
+- Vehículos disponibles: ver y reservar.
+- Editar perfil: solo su información.
+- Cambiar contraseña.
+
+#### Gerente
+- Empleados: ver y crear solo ventas, caja, mantenimiento.
+- Clientes: ver todos.
+- Reportes de sucursal.
+- Cambiar contraseña.
+
+#### Admin
+- Gerentes: ver y crear gerentes.
+- Empleados: ver todos.
+- Clientes: ver todos.
+- SQL Libre: ejecutar cualquier consulta SQL.
+- Cambiar contraseña.
+
+#### Empleado ventas
+- Clientes: ver, crear, editar.
+- Reservas: ver, crear, editar.
+- Vehículos: consultar.
+- Cambiar contraseña.
+
+#### Empleado caja
+- Pagos: procesar pagos.
+- Reservas: consultar.
+- Clientes: consultar.
+- Cambiar contraseña.
+
+#### Empleado mantenimiento
+- Vehículos asignados: ver.
+- Reportar mantenimiento.
+- Historial de vehículos.
+- Cambiar contraseña.
+
+### Seguridad y control de acceso
+- Todas las acciones de creación/edición de empleados y gerentes validan el rol y el cargo usando funciones centralizadas.
+- Los clientes solo pueden operar sobre su propio usuario (nunca sobre otros).
+- Los combos/listas de cargos se filtran según el rol actual.
+
+### Modularidad y extensibilidad
+- Cada pestaña tiene lógica base implementada y comentarios para facilitar la extensión posterior.
+- El sistema es fácilmente ampliable para agregar nuevas acciones o restricciones por rol.
