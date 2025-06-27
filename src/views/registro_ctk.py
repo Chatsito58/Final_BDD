@@ -94,7 +94,7 @@ class RegistroCTk(ctk.CTk):
 
     def volver(self):
         if self.on_back:
-            self.destroy()
+            self.withdraw()  # Oculta la ventana de registro
             self.on_back()
         else:
             messagebox.showwarning("Atención", "No se puede volver atrás porque no se definió una función de retorno al login. La ventana permanecerá abierta.")

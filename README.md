@@ -210,3 +210,42 @@ from PyQt5.QtWidgets import QApplication, ...
 ```
 
 **Esta solución garantiza que la app no se cuelgue y la conexión remota funcione correctamente en todos los entornos.**
+
+## Cambios y mejoras recientes (2024)
+
+### Sincronización automática de datos críticos
+- Al iniciar la app y cada vez que se recupera la conexión, se sincronizan automáticamente todas las tablas críticas (usuarios, clientes, empleados, vehículos, catálogos, etc.) de la base remota a la local (SQLite), permitiendo operar completamente offline.
+- El archivo `data/sqlite_schema.sql` fue ampliado para incluir todas las tablas necesarias para el funcionamiento offline.
+
+### Login y operación offline robustos
+- El login y las operaciones críticas funcionan en modo offline siempre que haya habido al menos una sincronización previa.
+- Los datos de usuarios, clientes, vehículos y catálogos se mantienen actualizados localmente para permitir login, reservas y gestión sin conexión.
+
+### Indicador visual de estado de conexión
+- Todas las vistas principales (login, MainView, CustomTkinter) muestran un indicador 🟢/🔴 que se actualiza automáticamente cada 2 segundos, informando si la app está online u offline.
+
+### Avisos automáticos de desconexión y reconexión
+- Cuando ocurre una desconexión del servidor, aparece una ventana emergente amigable informando al usuario y cambiando a modo offline.
+- Al reconectarse, aparece un aviso de que la conexión regresó y se sincronizan los cambios hechos offline.
+- Estos avisos funcionan en todas las vistas principales, no solo en el login.
+
+### Interfaz moderna y consistente
+- El login y las vistas PyQt5 ahora tienen un estilo oscuro y moderno, similar a CustomTkinter, que se mantiene incluso tras cerrar sesión y volver a abrir el login.
+- Se eliminaron estilos individuales de widgets para asegurar consistencia visual.
+
+### Navegación y flujo de ventanas mejorados
+- Al abrir una nueva ventana (por ejemplo, tras login o registro), la anterior se oculta o cierra correctamente, evitando múltiples ventanas abiertas o cierres inesperados.
+- El botón "Volver" en el registro de cliente ya no destruye la ventana ni cierra la app, solo la oculta y regresa al login de forma segura.
+
+### Cambio de contraseña para todos los usuarios
+- Se añadió una pestaña dedicada "Cambiar contraseña" en todas las vistas principales (PyQt5 y CustomTkinter), accesible para todos los roles.
+- El usuario puede cambiar su contraseña validando la actual y la nueva (con SHA-256), tanto en modo online como offline.
+- Se muestran mensajes claros de éxito o error y se registran los intentos en el log.
+
+### Logging y mensajes para desarrollador
+- Se agregaron mensajes claros por consola y en el log para eventos importantes: sincronización, desconexión, reconexión, subida de datos locales, errores, etc.
+- Esto facilita el monitoreo y la depuración del sistema en tiempo real.
+
+### Otros detalles
+- Se documentó el problema crítico de cuelgue por importar PyQt5 antes de conectar a la base remota y su solución.
+- Se mejoró la modularidad y la experiencia visual en todos los roles y vistas.
