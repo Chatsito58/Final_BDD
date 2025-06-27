@@ -99,6 +99,13 @@ CREATE TABLE Sucursal (
     REFERENCES Codigo_postal(id_codigo_postal)
 ) ENGINE=InnoDB;
 
+-- Tabla de tipos de empleado (jerarquía)
+CREATE TABLE Tipo_empleado (
+  id_tipo_empleado INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  descripcion VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+
 CREATE TABLE Empleado (
   id_empleado       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   documento         VARCHAR(20) NOT NULL,
@@ -109,8 +116,11 @@ CREATE TABLE Empleado (
   direccion         VARCHAR(150),
   correo            VARCHAR(100),
   id_tipo_documento INT UNSIGNED,
+  id_tipo_empleado  INT UNSIGNED,
   FOREIGN KEY (id_tipo_documento)
-    REFERENCES Tipo_documento(id_tipo_documento)
+    REFERENCES Tipo_documento(id_tipo_documento),
+  FOREIGN KEY (id_tipo_empleado)
+    REFERENCES Tipo_empleado(id_tipo_empleado)
 ) ENGINE=InnoDB;
 
 CREATE TABLE Licencia_conduccion (
@@ -377,7 +387,13 @@ AFTER INSERT ON Empleado
 FOR EACH ROW
 BEGIN
     DECLARE rid INT;
-    SELECT id_rol INTO rid FROM Rol WHERE nombre='empleado' LIMIT 1;
+    IF NEW.id_tipo_empleado = 1 THEN -- admin
+        SELECT id_rol INTO rid FROM Rol WHERE nombre='admin' LIMIT 1;
+    ELSEIF NEW.id_tipo_empleado = 2 THEN -- gerente
+        SELECT id_rol INTO rid FROM Rol WHERE nombre='gerente' LIMIT 1;
+    ELSE
+        SELECT id_rol INTO rid FROM Rol WHERE nombre='empleado' LIMIT 1;
+    END IF;
     INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado)
     VALUES (NEW.correo, SHA2(NEW.documento, 256), rid, NEW.id_empleado);
 END$$
