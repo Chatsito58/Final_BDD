@@ -26,6 +26,58 @@ CREATE TABLE IF NOT EXISTS Abono (
     pendiente INTEGER DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS Alquiler (
+    id_alquiler INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha_hora_salida TEXT,
+    valor REAL,
+    fecha_hora_entrada TEXT,
+    id_vehiculo TEXT,
+    id_cliente INTEGER,
+    id_sucursal INTEGER,
+    id_medio_pago INTEGER,
+    id_estado INTEGER,
+    id_seguro INTEGER,
+    id_descuento INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS Reserva_alquiler (
+    id_reserva INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha_hora TEXT,
+    abono REAL,
+    saldo_pendiente REAL,
+    id_estado_reserva INTEGER,
+    id_alquiler INTEGER,
+    FOREIGN KEY (id_alquiler) REFERENCES Alquiler(id_alquiler)
+);
+
+CREATE TABLE IF NOT EXISTS Abono_reserva (
+    id_abono INTEGER PRIMARY KEY AUTOINCREMENT,
+    valor REAL,
+    fecha_hora TEXT,
+    id_reserva INTEGER,
+    id_medio_pago INTEGER,
+    FOREIGN KEY (id_reserva) REFERENCES Reserva_alquiler(id_reserva)
+);
+
+CREATE TABLE IF NOT EXISTS Estado_reserva (
+    id_estado INTEGER PRIMARY KEY AUTOINCREMENT,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Descuento_alquiler (
+    id_descuento INTEGER PRIMARY KEY AUTOINCREMENT,
+    descripcion TEXT,
+    valor REAL
+);
+
+CREATE TABLE IF NOT EXISTS Seguro_alquiler (
+    id_seguro INTEGER PRIMARY KEY AUTOINCREMENT,
+    estado TEXT,
+    descripcion TEXT,
+    vencimiento TEXT,
+    costo REAL
+);
+
 CREATE TABLE IF NOT EXISTS Rol (
     id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT

@@ -130,35 +130,65 @@ class DBManager:
             cursor.execute(query, params or ())
             self.logger.info("Consulta ejecutada exitosamente en la base de datos")
             if return_lastrowid:
-                last_id = cursor.lastrowid if self.is_sqlite() else None
-                if not self.is_sqlite():
-                    cursor.execute("SELECT LAST_INSERT_ID()")
-                    last_id = cursor.fetchone()[0]
-            if fetch:
+                if self.is_sqlite():
+                    last_id = cursor.lastrowid
+                else:
+                    # Para MySQL, obtener el LAST_INSERT_ID() de manera segura
+                    try:
+                        # Hacer commit primero para asegurar que el INSERT se complete
+                        conn.commit()
+                        self.logger.info("Cambios confirmados en la base de datos")
+                        # Cerrar el cursor anterior y crear uno nuevo para evitar "Unread result found"
+                        cursor.close()
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT LAST_INSERT_ID()")
+                        last_id = cursor.fetchone()[0]
+                        cursor.close()
+                        conn.close()
+                        self.logger.info("Conexión cerrada exitosamente")
+                        return last_id
+                    except Exception as e:
+                        print(f"[DB][ERROR] Error obteniendo LAST_INSERT_ID: {e}")
+                        self.logger.error(f"[DB][ERROR] Error obteniendo LAST_INSERT_ID: {e}")
+                        cursor.close()
+                        conn.close()
+                        return None
+            if fetch and not return_lastrowid:
                 self.logger.info("Obteniendo resultados...")
                 result = cursor.fetchall()
                 self.logger.info(f"Resultado obtenido: {result}")
-            else:
+            elif not fetch:
                 result = None
                 conn.commit()
                 self.logger.info("Cambios confirmados en la base de datos")
+            else:
+                # Si return_lastrowid es True, no necesitamos fetch
+                result = None
+                if not self.is_sqlite():
+                    conn.commit()
+                    self.logger.info("Cambios confirmados en la base de datos")
             self.logger.info("Cerrando cursor...")
             cursor.close()
             self.logger.info("Cerrando conexión...")
             conn.close()
             self.logger.info("Conexión cerrada exitosamente")
-            if return_lastrowid:
-                return last_id
             return result
         except Exception as exc:
             import mysql.connector
             import sqlite3
             import sys
-            from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError, IntegrityError, ProgrammingError
-            # Si es un error de integridad o de sintaxis, NO cambiar a offline
+            from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError, IntegrityError, ProgrammingError, InternalError
+            # Si es un error de integridad, sintaxis o "Unread result found", NO cambiar a offline
             if isinstance(exc, (IntegrityError, ProgrammingError, sqlite3.IntegrityError, sqlite3.ProgrammingError)):
                 print(f"[DB][ERROR] Error de integridad o sintaxis: {exc}")
                 self.logger.error(f"[DB][ERROR] Error de integridad o sintaxis: {exc}")
+                self.logger.error(f"Tipo de error: {type(exc).__name__}")
+                self.logger.error(traceback.format_exc())
+                return None
+            # Si es un error "Unread result found", NO cambiar a offline
+            if isinstance(exc, InternalError) and "Unread result found" in str(exc):
+                print(f"[DB][ERROR] Error de cursor con resultados sin leer: {exc}")
+                self.logger.error(f"[DB][ERROR] Error de cursor con resultados sin leer: {exc}")
                 self.logger.error(f"Tipo de error: {type(exc).__name__}")
                 self.logger.error(traceback.format_exc())
                 return None
@@ -172,7 +202,12 @@ class DBManager:
                     print("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
                     self.logger.info("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
                     self.offline = True
-                    return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
+                    # Si la consulta original era un INSERT y necesitamos el ID, adaptar para SQLite
+                    if return_lastrowid and query.strip().upper().startswith('INSERT'):
+                        # Para SQLite, usar lastrowid directamente
+                        return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch=False, return_lastrowid=True)
+                    else:
+                        return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch, return_lastrowid)
                 else:
                     # Si se recupera la conexión, sincronizar datos críticos
                     try:
@@ -368,6 +403,23 @@ class DBManager:
         """Placeholder to keep API compatibility."""
         # Connections are opened and closed per query
         pass
+
+    def get_lastrowid(self, table_name):
+        """Obtener el último ID insertado en una tabla específica."""
+        try:
+            if self.offline:
+                # Para SQLite, usar el método del SQLiteManager
+                return self._sqlite.get_lastrowid(table_name)
+            else:
+                # Para MySQL, usar LAST_INSERT_ID()
+                result = self.execute_query("SELECT LAST_INSERT_ID()")
+                if result and result[0]:
+                    return result[0][0]
+                else:
+                    return None
+        except Exception as exc:
+            self.logger.error(f"Error obteniendo lastrowid para tabla {table_name}: {exc}")
+            return None
 
     def set_on_disconnect_callback(self, callback):
         """Permite a las vistas registrar un callback para mostrar una ventana emergente de desconexión inmediata."""

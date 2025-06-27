@@ -38,13 +38,15 @@ class SQLiteManager:
             print(f"[SQLiteManager] Error de conexión a SQLite: {exc}")
             return None
 
-    def execute_query(self, query, params=None, fetch=True):
+    def execute_query(self, query, params=None, fetch=True, return_lastrowid=False):
         try:
             conn = self.connect()
             if conn is None:
                 return None
             cursor = conn.cursor()
             cursor.execute(query, params or ())
+            if return_lastrowid:
+                last_id = cursor.lastrowid
             if fetch:
                 result = cursor.fetchall()
             else:
@@ -52,9 +54,40 @@ class SQLiteManager:
                 result = None
             cursor.close()
             conn.close()
+            if return_lastrowid:
+                return last_id
             return result
         except sqlite3.Error as exc:
             print(f"[SQLiteManager] Error ejecutando consulta: {exc}")
+            return None
+
+    def get_lastrowid(self, table_name):
+        """Obtener el último ID insertado en una tabla específica."""
+        try:
+            conn = self.connect()
+            if conn is None:
+                return None
+            cursor = conn.cursor()
+            # Obtener el último ID insertado en la tabla
+            # Mapear nombres de tabla a nombres de columna ID
+            id_column_map = {
+                'Alquiler': 'id_alquiler',
+                'Reserva': 'id_reserva',
+                'Cliente': 'id_cliente',
+                'Empleado': 'id_empleado',
+                'Usuario': 'id_usuario',
+                'Abono': 'id_abono',
+                'Reserva_alquiler': 'id_reserva',
+                'Abono_reserva': 'id_abono'
+            }
+            id_column = id_column_map.get(table_name, f'id_{table_name.lower()}')
+            cursor.execute(f"SELECT MAX({id_column}) FROM {table_name}")
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            return result[0] if result and result[0] else None
+        except sqlite3.Error as exc:
+            print(f"[SQLiteManager] Error obteniendo lastrowid para tabla {table_name}: {exc}")
             return None
 
     def save_pending_reservation(self, data):
