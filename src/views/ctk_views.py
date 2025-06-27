@@ -114,13 +114,22 @@ class ClienteView(BaseCTKView):
         self.tabview.pack(expand=True, fill="both")
         # Pestaña: Mis reservas
         self.tab_reservas = self.tabview.add("Mis reservas")
-        self._build_tab_mis_reservas(self.tabview.tab("Mis reservas"))
+        frame = ctk.CTkFrame(self.tabview.tab("Mis reservas"))
+        frame.grid(row=0, column=0, sticky="ew")
+        self._status_label = ctk.CTkLabel(frame, text="", font=("Arial", 15))
+        self._status_label.grid(row=0, column=0, pady=(20, 10))
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).grid(row=1, column=0, pady=30)
+        # Botón cerrar sesión al final, centrado
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).grid(row=99, column=0, pady=(30, 20), sticky="s")
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
         # Pestaña: Editar perfil
         self.tab_perfil = self.tabview.add("Editar perfil")
         self._build_tab_perfil(self.tabview.tab("Editar perfil"))
+        # Pestaña: Abonar reserva
+        self.tab_abonar = self.tabview.add("Abonar reserva")
+        self._build_tab_abonar(self.tabview.tab("Abonar reserva"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -143,7 +152,8 @@ class ClienteView(BaseCTKView):
 
     def _cargar_reservas_cliente(self, id_cliente):
         self.reservas_listbox.delete(0, 'end')
-        query = "SELECT id_reserva, fecha_hora_salida, fecha_hora_entrada, id_vehiculo FROM Reserva WHERE id_cliente = ?"
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"SELECT id_reserva, fecha_hora_salida, fecha_hora_entrada, id_vehiculo FROM Reserva WHERE id_cliente = {placeholder}"
         reservas = self.db_manager.execute_query(query, (id_cliente,))
         if reservas:
             for r in reservas:
@@ -174,7 +184,8 @@ class ClienteView(BaseCTKView):
                 messagebox.showwarning("Error", "Todos los campos son obligatorios")
                 return
             id_cliente = self.user_data.get('id_cliente')
-            query = "INSERT INTO Reserva (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES (?, ?, ?, ?)"
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            query = f"INSERT INTO Reserva (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
             try:
                 self.db_manager.execute_query(query, (salida, entrada, placa, id_cliente), fetch=False)
                 messagebox.showinfo("Éxito", "Reserva creada correctamente")
@@ -195,7 +206,8 @@ class ClienteView(BaseCTKView):
             messagebox.showwarning("Aviso", "No hay reserva seleccionada")
             return
         id_reserva = texto.split("ID: ")[1].split("|")[0].strip()
-        query = "DELETE FROM Reserva WHERE id_reserva = ? AND id_cliente = ?"
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"DELETE FROM Reserva WHERE id_reserva = {placeholder} AND id_cliente = {placeholder}"
         try:
             self.db_manager.execute_query(query, (id_reserva, self.user_data.get('id_cliente')), fetch=False)
             messagebox.showinfo("Éxito", "Reserva cancelada")
@@ -250,7 +262,8 @@ class ClienteView(BaseCTKView):
                 messagebox.showwarning("Error", "Todos los campos son obligatorios")
                 return
             id_cliente = self.user_data.get('id_cliente')
-            query = "INSERT INTO Reserva (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES (?, ?, ?, ?)"
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            query = f"INSERT INTO Reserva (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
             try:
                 self.db_manager.execute_query(query, (salida, entrada, placa, id_cliente), fetch=False)
                 messagebox.showinfo("Éxito", "Reserva creada correctamente")
@@ -268,7 +281,8 @@ class ClienteView(BaseCTKView):
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Editar perfil", font=("Arial", 16)).pack(pady=10)
         # Obtener datos actuales
-        datos = self.db_manager.execute_query("SELECT nombre, telefono, direccion, correo FROM Cliente WHERE id_cliente = ?", (id_cliente,))
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        datos = self.db_manager.execute_query(f"SELECT nombre, telefono, direccion, correo FROM Cliente WHERE id_cliente = {placeholder}", (id_cliente,))
         nombre = tk.StringVar(value=datos[0][0] if datos else "")
         telefono = tk.StringVar(value=datos[0][1] if datos else "")
         direccion = tk.StringVar(value=datos[0][2] if datos else "")
@@ -287,8 +301,9 @@ class ClienteView(BaseCTKView):
         entry_correo.pack()
         def guardar():
             try:
+                placeholder = '%s' if not self.db_manager.offline else '?'
                 self.db_manager.execute_query(
-                    "UPDATE Cliente SET nombre = ?, telefono = ?, direccion = ?, correo = ? WHERE id_cliente = ?",
+                    f"UPDATE Cliente SET nombre = {placeholder}, telefono = {placeholder}, direccion = {placeholder}, correo = {placeholder} WHERE id_cliente = {placeholder}",
                     (entry_nombre.get(), entry_telefono.get(), entry_direccion.get(), entry_correo.get(), id_cliente),
                     fetch=False
                 )
@@ -296,6 +311,75 @@ class ClienteView(BaseCTKView):
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo actualizar el perfil: {exc}")
         ctk.CTkButton(frame, text="Guardar cambios", command=guardar).pack(pady=10)
+
+    def _build_tab_abonar(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+        id_cliente = self.user_data.get('id_cliente')
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Reservas pendientes de abono", font=("Arial", 16)).pack(pady=10)
+        # Listar reservas pendientes (ejemplo: aquellas con saldo > 0)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"SELECT id_reserva, fecha_hora_salida, fecha_hora_entrada, saldo_pendiente FROM Reserva WHERE id_cliente = {placeholder} AND saldo_pendiente > 0"
+        reservas = self.db_manager.execute_query(query, (id_cliente,))
+        self.abono_listbox = tk.Listbox(frame, height=10, width=80)
+        self.abono_listbox.pack(pady=10)
+        if reservas:
+            for r in reservas:
+                self.abono_listbox.insert('end', f"ID: {r[0]} | Salida: {r[1]} | Entrada: {r[2]} | Saldo pendiente: {r[3]}")
+        else:
+            self.abono_listbox.insert('end', "No tienes reservas pendientes de abono.")
+        # Campo para monto a abonar
+        ctk.CTkLabel(frame, text="Monto a abonar:").pack(pady=5)
+        self.input_abono = ctk.CTkEntry(frame)
+        self.input_abono.pack(pady=5)
+        def abonar():
+            sel = self.abono_listbox.curselection()
+            if not sel:
+                messagebox.showwarning("Aviso", "Seleccione una reserva para abonar")
+                return
+            texto = self.abono_listbox.get(sel[0])
+            if "ID: " not in texto:
+                messagebox.showwarning("Aviso", "No hay reserva seleccionada")
+                return
+            id_reserva = texto.split("ID: ")[1].split("|")[0].strip()
+            try:
+                monto = float(self.input_abono.get())
+                if monto <= 0:
+                    raise ValueError
+            except Exception:
+                messagebox.showwarning("Error", "Ingrese un monto válido")
+                return
+            # Actualizar saldo pendiente
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            # Obtener saldo actual
+            q_saldo = f"SELECT saldo_pendiente FROM Reserva WHERE id_reserva = {placeholder}"
+            row = self.db_manager.execute_query(q_saldo, (id_reserva,))
+            if not row:
+                messagebox.showerror("Error", "No se encontró la reserva")
+                return
+            saldo_actual = float(row[0][0])
+            if monto > saldo_actual:
+                messagebox.showwarning("Error", "El monto excede el saldo pendiente")
+                return
+            nuevo_saldo = saldo_actual - monto
+            q_update = f"UPDATE Reserva SET saldo_pendiente = {placeholder} WHERE id_reserva = {placeholder}"
+            try:
+                self.db_manager.execute_query(q_update, (nuevo_saldo, id_reserva), fetch=False)
+                messagebox.showinfo("Éxito", "Abono realizado correctamente")
+                self.input_abono.delete(0, 'end')
+                # Recargar lista
+                self.abono_listbox.delete(0, 'end')
+                reservas = self.db_manager.execute_query(query, (id_cliente,))
+                if reservas:
+                    for r in reservas:
+                        self.abono_listbox.insert('end', f"ID: {r[0]} | Salida: {r[1]} | Entrada: {r[2]} | Saldo pendiente: {r[3]}")
+                else:
+                    self.abono_listbox.insert('end', "No tienes reservas pendientes de abono.")
+            except Exception as exc:
+                messagebox.showerror("Error", f"No se pudo realizar el abono: {exc}")
+        ctk.CTkButton(frame, text="Abonar", command=abonar).pack(pady=10)
 
 class GerenteView(BaseCTKView):
     def _welcome_message(self):
@@ -317,6 +401,12 @@ class GerenteView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Gestionar Empleados (excepto gerentes y admin)
         self.tab_empleados = self.tabview.add("Empleados")
         ctk.CTkLabel(self.tabview.tab("Empleados"), text="Gestión de empleados (ventas, caja, mantenimiento)").pack(pady=10)
@@ -409,6 +499,12 @@ class AdminView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Gestionar Gerentes
         self.tab_gerentes = self.tabview.add("Gerentes")
         ctk.CTkLabel(self.tabview.tab("Gerentes"), text="Gestión de gerentes (crear, editar, eliminar)").pack(pady=10)
@@ -526,6 +622,75 @@ class EmpleadoView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido empleado, {self.user_data.get('usuario', '')}"
 
+    def _build_ui(self):
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        # Pestaña: Clientes
+        self.tab_clientes = self.tabview.add("Clientes")
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
+        # Pestaña: Reservas
+        self.tab_reservas = self.tabview.add("Reservas")
+        self._build_tab_reservas(self.tabview.tab("Reservas"))
+        # Pestaña: Vehículos
+        self.tab_vehiculos = self.tabview.add("Vehículos")
+        self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
+        # Pestaña: Cambiar contraseña
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+    def _build_tab_clientes(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Clientes (crear, editar, ver)", font=("Arial", 16)).pack(pady=10)
+        # Listar clientes
+        query = "SELECT id_cliente, nombre, correo FROM Cliente"
+        clientes = self.db_manager.execute_query(query)
+        listbox = tk.Listbox(frame, height=10, width=60)
+        listbox.pack(pady=10)
+        if clientes:
+            for c in clientes:
+                listbox.insert('end', f"ID: {c[0]} | Nombre: {c[1]} | Correo: {c[2]}")
+        else:
+            listbox.insert('end', "No hay clientes registrados.")
+
+    def _build_tab_reservas(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
+        # Listar reservas
+        query = "SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva"
+        reservas = self.db_manager.execute_query(query)
+        listbox = tk.Listbox(frame, height=10, width=60)
+        listbox.pack(pady=10)
+        if reservas:
+            for r in reservas:
+                listbox.insert('end', f"ID: {r[0]} | Cliente: {r[1]} | Vehículo: {r[2]}")
+        else:
+            listbox.insert('end', "No hay reservas registradas.")
+
+    def _build_tab_vehiculos(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Vehículos disponibles", font=("Arial", 16)).pack(pady=10)
+        query = "SELECT placa, modelo, id_marca FROM Vehiculo WHERE id_estado_vehiculo = 1"
+        vehiculos = self.db_manager.execute_query(query)
+        listbox = tk.Listbox(frame, height=10, width=60)
+        listbox.pack(pady=10)
+        if vehiculos:
+            for v in vehiculos:
+                listbox.insert('end', f"Placa: {v[0]} | Modelo: {v[1]} | Marca: {v[2]}")
+        else:
+            listbox.insert('end', "No hay vehículos disponibles.")
+
 class EmpleadoVentasView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido empleado de ventas, {self.user_data.get('usuario', '')}"
@@ -533,15 +698,21 @@ class EmpleadoVentasView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
-        # Pestaña: Gestionar Clientes
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        # Pestaña: Clientes
         self.tab_clientes = self.tabview.add("Clientes")
-        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Gestión de clientes (crear, editar, ver)").pack(pady=10)
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
         # Pestaña: Reservas
         self.tab_reservas = self.tabview.add("Reservas")
-        ctk.CTkLabel(self.tabview.tab("Reservas"), text="Gestión de reservas").pack(pady=10)
+        self._build_tab_reservas(self.tabview.tab("Reservas"))
         # Pestaña: Vehículos
         self.tab_vehiculos = self.tabview.add("Vehículos")
-        ctk.CTkLabel(self.tabview.tab("Vehículos"), text="Consulta de vehículos").pack(pady=10)
+        self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -600,15 +771,21 @@ class EmpleadoCajaView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Pagos
         self.tab_pagos = self.tabview.add("Pagos")
-        ctk.CTkLabel(self.tabview.tab("Pagos"), text="Procesar pagos").pack(pady=10)
+        self._build_tab_pagos(self.tabview.tab("Pagos"))
         # Pestaña: Reservas
         self.tab_reservas = self.tabview.add("Reservas")
-        ctk.CTkLabel(self.tabview.tab("Reservas"), text="Consultar reservas").pack(pady=10)
+        self._build_tab_reservas(self.tabview.tab("Reservas"))
         # Pestaña: Clientes
         self.tab_clientes = self.tabview.add("Clientes")
-        ctk.CTkLabel(self.tabview.tab("Clientes"), text="Consultar clientes").pack(pady=10)
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -660,15 +837,21 @@ class EmpleadoMantenimientoView(BaseCTKView):
     def _build_ui(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
-        # Pestaña: Vehículos asignados
-        self.tab_vehiculos = self.tabview.add("Vehículos asignados")
-        ctk.CTkLabel(self.tabview.tab("Vehículos asignados"), text="Ver vehículos asignados").pack(pady=10)
-        # Pestaña: Reportar mantenimiento
-        self.tab_reportar = self.tabview.add("Reportar mantenimiento")
-        ctk.CTkLabel(self.tabview.tab("Reportar mantenimiento"), text="Reportar mantenimiento").pack(pady=10)
-        # Pestaña: Historial vehículos
-        self.tab_historial = self.tabview.add("Historial vehículos")
-        ctk.CTkLabel(self.tabview.tab("Historial vehículos"), text="Consultar historial de vehículos").pack(pady=10)
+        # Pestaña principal: Bienvenida y cerrar sesión
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        # Pestaña: Vehículos
+        self.tab_vehiculos = self.tabview.add("Vehículos")
+        self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
+        # Pestaña: Reportar
+        self.tab_reportar = self.tabview.add("Reportar")
+        self._build_tab_reportar(self.tabview.tab("Reportar"))
+        # Pestaña: Historial
+        self.tab_historial = self.tabview.add("Historial")
+        self._build_tab_historial(self.tabview.tab("Historial"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))

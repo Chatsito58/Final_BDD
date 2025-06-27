@@ -1,25 +1,91 @@
 from pathlib import Path
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QTimer
+import logging
 
 from ..db_manager import DBManager
 from ..auth import AuthManager
 
+# QSS moderno global (debe ser igual al de main.py)
+MODERN_QSS = """
+QMainWindow, QWidget {
+    background-color: #18191A;
+    color: #F5F6FA;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 15px;
+}
+QMenuBar, QMenu {
+    background-color: #242526;
+    color: #F5F6FA;
+}
+QMenuBar::item:selected, QMenu::item:selected {
+    background: #3A86FF;
+    color: white;
+}
+QTabWidget::pane {
+    border: 1px solid #3A3B3C;
+    border-radius: 8px;
+    background: #18191A;
+}
+QTabBar::tab {
+    background: #242526;
+    color: #F5F6FA;
+    border-radius: 8px;
+    padding: 8px 20px;
+    margin: 2px;
+}
+QTabBar::tab:selected {
+    background: #3A86FF;
+    color: white;
+}
+QPushButton {
+    background-color: #3A86FF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 0px;
+    font-size: 15px;
+}
+QPushButton:hover {
+    background-color: #265DAB;
+}
+QLineEdit, QTextEdit, QComboBox, QSpinBox {
+    background-color: #23272F;
+    color: #F5F6FA;
+    border: 1px solid #3A3B3C;
+    border-radius: 8px;
+    padding: 6px;
+}
+QLabel {
+    color: #F5F6FA;
+    font-size: 15px;
+}
+QStatusBar {
+    background: #23272F;
+    color: #F5F6FA;
+    border-top: 1px solid #3A3B3C;
+}
+"""
 
 class MainView(QtWidgets.QMainWindow):
     """Main application window handling role based menus and logout."""
 
     logged_out = pyqtSignal()
 
-    def __init__(self, username: str, role: str, parent=None):
+    def __init__(self, username: str, role: str, parent=None, db_manager=None, auth_manager=None, app=None):
         super().__init__(parent)
         ui_path = Path(__file__).resolve().parents[2] / 'ui' / 'main_window.ui'
+        print(f"[DEBUG] Cargando UI desde: {ui_path}")
         uic.loadUi(ui_path, self)
+
+        # Aplicar QSS si se pasa QApplication
+        if app is not None:
+            app.setStyleSheet(MODERN_QSS)
 
         self._username = username
         self._role = role
-        self._db_manager = DBManager()
-        self._auth_manager = AuthManager(self._db_manager)
+        self._db_manager = db_manager if db_manager is not None else DBManager()
+        self._auth_manager = auth_manager if auth_manager is not None else AuthManager(self._db_manager)
 
         self._sync_timer = QTimer(self)
         self._sync_timer.timeout.connect(self._sync_and_update_status)
@@ -41,13 +107,12 @@ class MainView(QtWidgets.QMainWindow):
         self.menu_vehiculos = self.findChild(QtWidgets.QMenu, 'menuVehiculos')
         self.menu_admin = self.findChild(QtWidgets.QMenu, 'menuAdministracion')
 
-        # Add logout action under Administración
+        # Add logout action under Administración (siempre visible)
         self.logout_action = QtWidgets.QAction('Cerrar sesión', self)
-        if self.menu_admin:
-            self.menu_admin.addAction(self.logout_action)
-        else:
-            self.menuBar().addAction(self.logout_action)
+        self.menuBar().addAction(self.logout_action)
         self.logout_action.triggered.connect(self.logout)
+        if self.menu_admin and self.menu_admin.actions() and self.logout_action not in self.menu_admin.actions():
+            self.menu_admin.addAction(self.logout_action)
 
         # Registrar callback de desconexión para mostrar alerta inmediata en toda la app
         try:
@@ -66,25 +131,74 @@ class MainView(QtWidgets.QMainWindow):
 
         self._apply_role_visibility(role)
 
+        # --- Depuración: mostrar pestañas disponibles ---
+        if self.tabWidget:
+            print(f"[DEBUG] tabWidget.count(): {self.tabWidget.count()}")
+            for i in range(self.tabWidget.count()):
+                print(f"[DEBUG] tabWidget.tabText({i}): {self.tabWidget.tabText(i)}")
+
+        # --- Agregar botón 'Cerrar sesión' en la pestaña principal ---
+        tab_principal = self.findChild(QtWidgets.QWidget, 'tabPrincipal')
+        if tab_principal is not None:
+            layout_principal = tab_principal.layout()
+            if layout_principal is not None:
+                from PyQt5.QtWidgets import QPushButton
+                self.btn_logout_tab = QPushButton('Cerrar sesión')
+                self.btn_logout_tab.setStyleSheet('background-color: #3A86FF; color: white; border-radius: 8px; padding: 8px 0px; font-size: 15px;')
+                self.btn_logout_tab.clicked.connect(self.logout)
+                layout_principal.addWidget(self.btn_logout_tab)
+
         # --- Agregar widgets de la pestaña Cambiar contraseña ---
-        self.tabWidget = self.findChild(QtWidgets.QTabWidget, 'tabWidget')
+        from PyQt5.QtWidgets import QVBoxLayout
         self.tabCambiarContrasena = self.findChild(QtWidgets.QWidget, 'tabCambiarContrasena')
-        self.verticalLayoutTabCambiarContrasena = self.findChild(QtWidgets.QVBoxLayout, 'verticalLayoutTabCambiarContrasena')
+        if self.tabCambiarContrasena is not None:
+            self.verticalLayoutTabCambiarContrasena = self.tabCambiarContrasena.layout()
+            if self.verticalLayoutTabCambiarContrasena is None:
+                print('[DEBUG] Layout de Cambiar contraseña era None, creando QVBoxLayout manualmente')
+                self.verticalLayoutTabCambiarContrasena = QVBoxLayout(self.tabCambiarContrasena)
+        else:
+            self.verticalLayoutTabCambiarContrasena = None
+        print(f"[DEBUG] tabCambiarContrasena: {self.tabCambiarContrasena}")
+        print(f"[DEBUG] verticalLayoutTabCambiarContrasena: {self.verticalLayoutTabCambiarContrasena}")
         if self.tabCambiarContrasena and self.verticalLayoutTabCambiarContrasena:
-            from PyQt5.QtWidgets import QLineEdit, QPushButton, QLabel
-            self.label_actual = QLabel('Contraseña actual:')
-            self.input_actual = QLineEdit()
-            self.input_actual.setEchoMode(QLineEdit.Password)
-            self.label_nueva = QLabel('Nueva contraseña:')
-            self.input_nueva = QLineEdit()
-            self.input_nueva.setEchoMode(QLineEdit.Password)
-            self.label_confirmar = QLabel('Confirmar nueva contraseña:')
-            self.input_confirmar = QLineEdit()
-            self.input_confirmar.setEchoMode(QLineEdit.Password)
-            self.btn_cambiar = QPushButton('Cambiar')
-            self.btn_cambiar.clicked.connect(self._cambiar_contrasena)
-            for w in [self.label_actual, self.input_actual, self.label_nueva, self.input_nueva, self.label_confirmar, self.input_confirmar, self.btn_cambiar]:
-                self.verticalLayoutTabCambiarContrasena.addWidget(w)
+            try:
+                # Limpiar el layout antes de agregar widgets (evita duplicados)
+                while self.verticalLayoutTabCambiarContrasena.count():
+                    item = self.verticalLayoutTabCambiarContrasena.takeAt(0)
+                    widget = item.widget()
+                    if widget is not None:
+                        widget.deleteLater()
+                from PyQt5.QtWidgets import QLineEdit, QPushButton, QLabel
+                # Agregar un label de prueba visible
+                self.label_prueba = QLabel('PRUEBA CAMBIO CONTRASEÑA')
+                self.label_prueba.setStyleSheet('color: #FF5555; font-size: 18px; font-weight: bold;')
+                self.verticalLayoutTabCambiarContrasena.addWidget(self.label_prueba)
+                self.label_actual = QLabel('Contraseña actual:')
+                self.input_actual = QLineEdit()
+                self.input_actual.setEchoMode(QLineEdit.Password)
+                self.label_nueva = QLabel('Nueva contraseña:')
+                self.input_nueva = QLineEdit()
+                self.input_nueva.setEchoMode(QLineEdit.Password)
+                self.label_confirmar = QLabel('Confirmar nueva contraseña:')
+                self.input_confirmar = QLineEdit()
+                self.input_confirmar.setEchoMode(QLineEdit.Password)
+                self.btn_cambiar = QPushButton('Cambiar')
+                self.btn_cambiar.clicked.connect(self._cambiar_contrasena)
+                for w in [self.label_actual, self.input_actual, self.label_nueva, self.input_nueva, self.label_confirmar, self.input_confirmar, self.btn_cambiar]:
+                    self.verticalLayoutTabCambiarContrasena.addWidget(w)
+                # Forzar actualización y repintado
+                self.tabCambiarContrasena.update()
+                self.tabCambiarContrasena.repaint()
+                self.verticalLayoutTabCambiarContrasena.update()
+                self.verticalLayoutTabCambiarContrasena.invalidate()
+            except Exception as e:
+                from PyQt5.QtWidgets import QMessageBox
+                import traceback
+                tb = traceback.format_exc()
+                QMessageBox.critical(self, "Error de UI", f"Error al inicializar la pestaña de cambio de contraseña:\n{e}\n{tb}")
+        else:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error de UI", "No se pudo inicializar la pestaña de cambio de contraseña. Por favor revisa el archivo main_window.ui y los nombres de los layouts.")
 
     def _apply_role_visibility(self, role: str):
         """Show or hide menus depending on the user role."""
@@ -95,6 +209,7 @@ class MainView(QtWidgets.QMainWindow):
         """Emit logout signal and close the window."""
         self.logged_out.emit()
         self.close()
+        self.deleteLater()
 
     def _update_status_bar(self):
         estado = "ONLINE" if not self._db_manager.offline else "OFFLINE"
@@ -107,16 +222,29 @@ class MainView(QtWidgets.QMainWindow):
 
     def _cambiar_contrasena(self):
         from PyQt5.QtWidgets import QMessageBox
+        logger = logging.getLogger(__name__)
         actual = self.input_actual.text()
         nueva = self.input_nueva.text()
         confirmar = self.input_confirmar.text()
+        print(f"[DEBUG] _cambiar_contrasena llamado para usuario: {self._username}")
+        print(f"[DEBUG] actual: {actual}, nueva: {nueva}, confirmar: {confirmar}")
+        logger.info(f"[DEBUG] _cambiar_contrasena llamado para usuario: {self._username}")
+        logger.info(f"[DEBUG] actual: {actual}, nueva: {nueva}, confirmar: {confirmar}")
         if not actual or not nueva or not confirmar:
+            print("[DEBUG] Faltan campos")
+            logger.warning("[DEBUG] Faltan campos en el cambio de contraseña")
             QMessageBox.warning(self, 'Error', 'Complete todos los campos')
             return
         if nueva != confirmar:
+            print("[DEBUG] Nueva y confirmación no coinciden")
+            logger.warning("[DEBUG] Nueva y confirmación no coinciden")
             QMessageBox.warning(self, 'Error', 'La nueva contraseña y la confirmación no coinciden')
             return
+        print(f"[DEBUG] Llamando a self._auth_manager.cambiar_contrasena({self._username}, actual, nueva)")
+        logger.info(f"[DEBUG] Llamando a self._auth_manager.cambiar_contrasena({self._username}, actual, nueva)")
         resultado = self._auth_manager.cambiar_contrasena(self._username, actual, nueva)
+        print(f"[DEBUG] Resultado de cambiar_contrasena: {resultado}")
+        logger.info(f"[DEBUG] Resultado de cambiar_contrasena: {resultado}")
         if resultado is True:
             QMessageBox.information(self, 'Éxito', 'Contraseña cambiada correctamente')
             self.input_actual.clear()
@@ -124,3 +252,39 @@ class MainView(QtWidgets.QMainWindow):
             self.input_confirmar.clear()
         else:
             QMessageBox.warning(self, 'Error', str(resultado))
+
+class AdminViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'admin', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(True)
+
+class GerenteViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'gerente', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(False)
+
+class EmpleadoViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'empleado', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(False)
+
+class EmpleadoVentasViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'empleado_ventas', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(False)
+
+class EmpleadoCajaViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'empleado_caja', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(False)
+
+class EmpleadoMantenimientoViewQt(MainView):
+    def __init__(self, username, parent=None, db_manager=None, auth_manager=None, app=None):
+        super().__init__(username, 'empleado_mantenimiento', parent, db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if self.menu_admin:
+            self.menu_admin.menuAction().setVisible(False)

@@ -85,7 +85,7 @@ class LoginView(QDialog):
             self.setWindowTitle("Login - Sistema de Alquiler")
             self.setModal(True)
             
-            # Agregar label de estado
+            # Agregar label de estado de conexión arriba del todo
             self._status_label = QLabel(self)
             self._status_label.setText("")
             self._status_label.setAlignment(Qt.AlignCenter)

@@ -28,7 +28,18 @@
        <attribute name="title">
         <string>Cambiar contraseña</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayoutTabCambiarContrasena"/>
+       <layout class="QVBoxLayout" name="verticalLayoutTabCambiarContrasena">
+        <item>
+         <widget class="QLabel" name="dummyLabelCambiarContrasena">
+          <property name="text">
+           <string>Coloca aquí el formulario de cambio de contraseña</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>

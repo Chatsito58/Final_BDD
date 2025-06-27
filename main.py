@@ -54,6 +54,63 @@ from src.views.ctk_views import (
     EmpleadoVentasView, EmpleadoMantenimientoView, EmpleadoCajaView
 )
 
+MODERN_QSS = """
+QMainWindow, QWidget {
+    background-color: #18191A;
+    color: #F5F6FA;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 15px;
+}
+QMenuBar, QMenu {
+    background-color: #242526;
+    color: #F5F6FA;
+}
+QMenuBar::item:selected, QMenu::item:selected {
+    background: #3A86FF;
+    color: white;
+}
+QTabWidget::pane {
+    border: 1px solid #3A3B3C;
+    border-radius: 8px;
+    background: #18191A;
+}
+QTabBar::tab {
+    background: #242526;
+    color: #F5F6FA;
+    border-radius: 8px;
+    padding: 8px 20px;
+    margin: 2px;
+}
+QTabBar::tab:selected {
+    background: #3A86FF;
+    color: white;
+}
+QPushButton {
+    background-color: #3A86FF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 0px;
+    font-size: 15px;
+}
+QPushButton:hover {
+    background-color: #265DAB;
+}
+QLineEdit, QComboBox, QSpinBox {
+    background: #242526;
+    color: #F5F6FA;
+    border: 1px solid #3A3B3C;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 15px;
+}
+QStatusBar {
+    background: #242526;
+    color: #F5F6FA;
+    border-top: 1px solid #3A3B3C;
+}
+"""
+
 class AlquilerApp:
     def __init__(self):
         logger.info("Inicializando AlquilerApp...")
@@ -65,6 +122,7 @@ class AlquilerApp:
     def run(self):
         logger.info("Iniciando aplicación...")
         app = QApplication(sys.argv)
+        app.setStyleSheet(MODERN_QSS)
         # Crear y mostrar vista de login
         def show_login():
             login_view = LoginView(self.auth_manager)
@@ -73,38 +131,56 @@ class AlquilerApp:
                 user_data = login_view.user_data
                 logger.info(f"Login exitoso para usuario: {user_data}")
                 print(f"¡Login exitoso! Bienvenido {user_data['usuario']}")
-                self.show_role_view(user_data, show_login)
+                self.show_role_view(user_data, show_login, self.db_manager, self.auth_manager)
             else:
                 logger.info("Login cancelado por el usuario")
                 sys.exit()
         show_login()
 
-    def show_role_view(self, user_data, on_logout):
+    def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
+        from PyQt5.QtCore import QTimer
         rol = (user_data.get('rol') or '').lower()
         tipo_empleado = (user_data.get('tipo_empleado') or '').lower() if user_data.get('tipo_empleado') else None
-        db_manager = self.db_manager
-        if rol == 'cliente':
-            ClienteView(user_data, db_manager, on_logout).mainloop()
+        username = user_data.get('usuario')
+        app = QApplication.instance()
+        def handle_logout():
+            QTimer.singleShot(0, on_logout)
+        view_kwargs = dict(db_manager=db_manager, auth_manager=auth_manager, app=app)
+        if rol == 'admin':
+            from src.views.main_view import AdminViewQt
+            win = AdminViewQt(username, **view_kwargs)
+            win.logged_out.connect(handle_logout)
+            win.show()
+            win.exec_() if hasattr(win, 'exec_') else app.exec_()
         elif rol == 'gerente':
-            GerenteView(user_data, db_manager, on_logout).mainloop()
-        elif rol == 'admin':
-            AdminView(user_data, db_manager, on_logout).mainloop()
+            from src.views.main_view import GerenteViewQt
+            win = GerenteViewQt(username, **view_kwargs)
+            win.logged_out.connect(handle_logout)
+            win.show()
+            win.exec_() if hasattr(win, 'exec_') else app.exec_()
         elif rol == 'empleado':
-            # Consultar tipo de empleado si no viene en user_data
             if not tipo_empleado and user_data.get('id_empleado'):
                 query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
                 params = (user_data['id_empleado'],)
                 result = db_manager.execute_query(query, params)
                 tipo_empleado = result[0][0].lower() if result else ""
             if tipo_empleado == 'ventas':
-                EmpleadoVentasView(user_data, db_manager, on_logout).mainloop()
+                from src.views.main_view import EmpleadoVentasViewQt
+                win = EmpleadoVentasViewQt(username, **view_kwargs)
             elif tipo_empleado == 'mantenimiento':
-                EmpleadoMantenimientoView(user_data, db_manager, on_logout).mainloop()
+                from src.views.main_view import EmpleadoMantenimientoViewQt
+                win = EmpleadoMantenimientoViewQt(username, **view_kwargs)
             elif tipo_empleado == 'caja':
-                EmpleadoCajaView(user_data, db_manager, on_logout).mainloop()
+                from src.views.main_view import EmpleadoCajaViewQt
+                win = EmpleadoCajaViewQt(username, **view_kwargs)
             else:
-                EmpleadoView(user_data, db_manager, on_logout).mainloop()
+                from src.views.main_view import EmpleadoViewQt
+                win = EmpleadoViewQt(username, **view_kwargs)
+            win.logged_out.connect(handle_logout)
+            win.show()
+            win.exec_() if hasattr(win, 'exec_') else app.exec_()
         else:
+            from src.views.ctk_views import ClienteView
             ClienteView(user_data, db_manager, on_logout).mainloop()
 
 if __name__ == "__main__":

@@ -238,9 +238,36 @@ from PyQt5.QtWidgets import QApplication, ...
 - El botón "Volver" en el registro de cliente ya no destruye la ventana ni cierra la app, solo la oculta y regresa al login de forma segura.
 
 ### Cambio de contraseña para todos los usuarios
-- Se añadió una pestaña dedicada "Cambiar contraseña" en todas las vistas principales (PyQt5 y CustomTkinter), accesible para todos los roles.
-- El usuario puede cambiar su contraseña validando la actual y la nueva (con SHA-256), tanto en modo online como offline.
-- Se muestran mensajes claros de éxito o error y se registran los intentos en el log.
+
+A partir de la versión 2024, la aplicación incluye una funcionalidad robusta de **cambio de contraseña** accesible para todos los roles (cliente, empleado, gerente, admin), tanto en la interfaz PyQt5 como en CustomTkinter.
+
+### ¿Cómo funciona?
+- En todas las vistas principales, encontrarás una pestaña llamada **"Cambiar contraseña"**.
+- El formulario solicita:
+  - Contraseña actual
+  - Nueva contraseña
+  - Confirmación de la nueva contraseña
+- El sistema valida que:
+  - Todos los campos estén completos
+  - La nueva contraseña y la confirmación coincidan
+  - La contraseña actual sea correcta
+  - La nueva contraseña no sea igual a la anterior
+- Si todo es correcto, la contraseña se actualiza (usando SHA-256) y se muestra un mensaje de éxito.
+- Si hay algún error (campos vacíos, contraseñas no coinciden, contraseña actual incorrecta, etc.), se muestra un mensaje claro al usuario.
+- Todos los intentos y cambios quedan registrados en el log (`app.log`).
+
+### ¿Funciona offline?
+Sí. El cambio de contraseña está disponible tanto en modo online (MariaDB/MySQL) como offline (SQLite). El sistema detecta automáticamente el modo y realiza la operación en la base de datos correspondiente.
+
+### ¿Dónde está el código?
+- Lógica backend: `src/auth.py` (`AuthManager.cambiar_contrasena`)
+- Interfaz PyQt5: `src/views/main_view.py` (pestaña "Cambiar contraseña")
+- Interfaz CustomTkinter: `src/views/ctk_views.py` (pestaña "Cambiar contraseña")
+
+### Mensajes y experiencia de usuario
+- Mensajes claros de éxito o error en la propia interfaz.
+- Los campos se limpian tras un cambio exitoso.
+- El formulario es accesible y consistente en todos los roles y modos.
 
 ### Logging y mensajes para desarrollador
 - Se agregaron mensajes claros por consola y en el log para eventos importantes: sincronización, desconexión, reconexión, subida de datos locales, errores, etc.
