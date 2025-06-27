@@ -327,38 +327,31 @@ class ClienteView(BaseCTKView):
         placa, modelo, marca, tipo, tarifa_dia = vehiculo
         ctk.CTkLabel(win, text=f"Placa: {placa} | {modelo} {marca} ({tipo})", font=("Arial", 15, "bold")).pack(pady=8)
         ctk.CTkLabel(win, text=f"Tarifa por día: ${tarifa_dia}", font=("Arial", 13)).pack(pady=4)
-        # Frame de fecha y hora salida
+        # Frame de fecha y hora salida (solo uno, tipo tk.Frame)
         salida_frame = tk.Frame(win, bg="#222831")
-        salida_frame.pack(pady=8)
+        salida_frame.pack(fill="x", pady=8)
         tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
         salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
         salida_date.pack(side="left", padx=2)
-        horas = [f"{h:02d}" for h in range(8, 21)]
-        ctk.CTkLabel(win, text="Fecha y hora salida:", font=("Arial", 12)).pack(pady=4)
-        salida_frame = ctk.CTkFrame(win)
-        salida_frame.pack(pady=2)
-        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=16)
-        salida_date.pack(side="left", padx=2)
-        # Combobox para hora y minutos de salida
-        style = Style("darkly")
         horas = [f"{h:02d}" for h in range(8, 21)]
         minutos = ["00", "15", "30", "45"]
         salida_hora_cb = Combobox(salida_frame, values=horas, width=3, bootstyle="info")
         salida_hora_cb.set("08")
         salida_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(salida_frame, text=":").pack(side="left")
+        tk.Label(salida_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
         salida_min_cb = Combobox(salida_frame, values=minutos, width=3, bootstyle="info")
         salida_min_cb.set("00")
         salida_min_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(win, text="Fecha y hora entrada:", font=("Arial", 12)).pack(pady=4)
-        entrada_frame = ctk.CTkFrame(win)
-        entrada_frame.pack(pady=2)
-        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=16)
+        # Frame de fecha y hora entrada (solo uno, tipo tk.Frame)
+        entrada_frame = tk.Frame(win, bg="#222831")
+        entrada_frame.pack(fill="x", pady=8)
+        tk.Label(entrada_frame, text="Fecha y hora entrada:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
         entrada_date.pack(side="left", padx=2)
         entrada_hora_cb = Combobox(entrada_frame, values=horas, width=3, bootstyle="info")
         entrada_hora_cb.set("09")
         entrada_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(entrada_frame, text=":").pack(side="left")
+        tk.Label(entrada_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
         entrada_min_cb = Combobox(entrada_frame, values=minutos, width=3, bootstyle="info")
         entrada_min_cb.set("00")
         entrada_min_cb.pack(side="left", padx=2)
@@ -369,6 +362,7 @@ class ClienteView(BaseCTKView):
         if seguros and len(seguros) > 0:
             seguro_menu = tk.OptionMenu(win, seguro_var, *[f"{s[1]} (${s[2]})" for s in seguros])
             seguro_menu.pack(pady=4)
+            seguro_var.set(f"{seguros[0][1]} (${seguros[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
@@ -378,8 +372,14 @@ class ClienteView(BaseCTKView):
         if descuentos and len(descuentos) > 0:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
             descuento_menu.pack(pady=4)
+            descuento_var.set(f"{descuentos[0][1]} (-${descuentos[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay descuentos disponibles", text_color="#FF5555").pack(pady=4)
+        # Etiquetas para mostrar el total y el abono mínimo
+        total_label = ctk.CTkLabel(win, text="Total a pagar: $0", font=("Arial", 14, "bold"), text_color="#00FF99")
+        total_label.pack(pady=8)
+        abono_min_label = ctk.CTkLabel(win, text="Abono mínimo (30%): $0", font=("Arial", 13), text_color="#FFD700")
+        abono_min_label.pack(pady=4)
         # Abono y método de pago
         ctk.CTkLabel(win, text="Abono inicial ($, mínimo 30%):", font=("Arial", 12)).pack(pady=4)
         entry_abono = ctk.CTkEntry(win, width=20)
@@ -390,6 +390,41 @@ class ClienteView(BaseCTKView):
         metodo_pago_var.set(metodos_pago[0])
         metodo_pago_menu = tk.OptionMenu(win, metodo_pago_var, *metodos_pago)
         metodo_pago_menu.pack(pady=4)
+        # Función para calcular y mostrar el total y abono mínimo
+        def actualizar_total(*args):
+            try:
+                fmt = "%Y-%m-%d %H:%M"
+                salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
+                entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+                dt_salida = datetime.strptime(salida, fmt)
+                dt_entrada = datetime.strptime(entrada, fmt)
+                dias = (dt_entrada - dt_salida).days
+                if dias < 1:
+                    dias = 1
+                precio = dias * float(tarifa_dia)
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
+                total = precio + costo_seguro - valor_descuento
+                if total < 0:
+                    total = 0
+                abono_min = round(total * 0.3, 2)
+                total_label.configure(text=f"Total a pagar: ${total:,.2f}")
+                abono_min_label.configure(text=f"Abono mínimo (30%): ${abono_min:,.2f}")
+            except Exception:
+                total_label.configure(text="Total a pagar: $0")
+                abono_min_label.configure(text="Abono mínimo (30%): $0")
+        # Asociar eventos para recalcular
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, entrada_date, entrada_hora_cb, entrada_min_cb]:
+            widget.bind("<<ComboboxSelected>>", actualizar_total)
+            widget.bind("<FocusOut>", actualizar_total)
+        if seguros and len(seguros) > 0:
+            seguro_var.trace_add('write', lambda *a: actualizar_total())
+        if descuentos and len(descuentos) > 0:
+            descuento_var.trace_add('write', lambda *a: actualizar_total())
+        # Inicializar valores
+        actualizar_total()
         # Guardar reserva
         def guardar():
             salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
@@ -413,12 +448,12 @@ class ClienteView(BaseCTKView):
                 if dias < 1:
                     dias = 1
                 precio = dias * float(tarifa_dia)
-                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()][0]
-                id_seguro = seguros[idx_seg][0]
-                costo_seguro = float(seguros[idx_seg][2])
-                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()][0]
-                id_descuento = descuentos[idx_desc][0]
-                valor_descuento = float(descuentos[idx_desc][2])
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                id_seguro = seguros[idx_seg[0]][0] if idx_seg else None
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                id_descuento = descuentos[idx_desc[0]][0] if idx_desc else None
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
@@ -430,7 +465,7 @@ class ClienteView(BaseCTKView):
                     return
                 abono_min = round(total * 0.3, 2)
                 if abono_val < abono_min:
-                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min}")
+                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min:,.2f}")
                     return
                 id_cliente = self.user_data.get('id_cliente')
                 placeholder = '%s' if not self.db_manager.offline else '?'
@@ -1018,31 +1053,31 @@ class EmpleadoView(BaseCTKView):
         placa, modelo, marca, tipo, tarifa_dia = vehiculo
         ctk.CTkLabel(win, text=f"Placa: {placa} | {modelo} {marca} ({tipo})", font=("Arial", 15, "bold")).pack(pady=8)
         ctk.CTkLabel(win, text=f"Tarifa por día: ${tarifa_dia}", font=("Arial", 13)).pack(pady=4)
-        ctk.CTkLabel(win, text="Fecha y hora salida:", font=("Arial", 12)).pack(pady=4)
-        salida_frame = ctk.CTkFrame(win)
-        salida_frame.pack(pady=2)
-        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=16)
+        # Frame de fecha y hora salida (solo uno, tipo tk.Frame)
+        salida_frame = tk.Frame(win, bg="#222831")
+        salida_frame.pack(fill="x", pady=8)
+        tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
         salida_date.pack(side="left", padx=2)
-        # Combobox para hora y minutos de salida
-        style = Style("darkly")
         horas = [f"{h:02d}" for h in range(8, 21)]
         minutos = ["00", "15", "30", "45"]
         salida_hora_cb = Combobox(salida_frame, values=horas, width=3, bootstyle="info")
         salida_hora_cb.set("08")
         salida_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(salida_frame, text=":").pack(side="left")
+        tk.Label(salida_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
         salida_min_cb = Combobox(salida_frame, values=minutos, width=3, bootstyle="info")
         salida_min_cb.set("00")
         salida_min_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(win, text="Fecha y hora entrada:", font=("Arial", 12)).pack(pady=4)
-        entrada_frame = ctk.CTkFrame(win)
-        entrada_frame.pack(pady=2)
-        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=16)
+        # Frame de fecha y hora entrada (solo uno, tipo tk.Frame)
+        entrada_frame = tk.Frame(win, bg="#222831")
+        entrada_frame.pack(fill="x", pady=8)
+        tk.Label(entrada_frame, text="Fecha y hora entrada:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
         entrada_date.pack(side="left", padx=2)
         entrada_hora_cb = Combobox(entrada_frame, values=horas, width=3, bootstyle="info")
         entrada_hora_cb.set("09")
         entrada_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(entrada_frame, text=":").pack(side="left")
+        tk.Label(entrada_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
         entrada_min_cb = Combobox(entrada_frame, values=minutos, width=3, bootstyle="info")
         entrada_min_cb.set("00")
         entrada_min_cb.pack(side="left", padx=2)
@@ -1053,6 +1088,7 @@ class EmpleadoView(BaseCTKView):
         if seguros and len(seguros) > 0:
             seguro_menu = tk.OptionMenu(win, seguro_var, *[f"{s[1]} (${s[2]})" for s in seguros])
             seguro_menu.pack(pady=4)
+            seguro_var.set(f"{seguros[0][1]} (${seguros[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
@@ -1062,8 +1098,14 @@ class EmpleadoView(BaseCTKView):
         if descuentos and len(descuentos) > 0:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
             descuento_menu.pack(pady=4)
+            descuento_var.set(f"{descuentos[0][1]} (-${descuentos[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay descuentos disponibles", text_color="#FF5555").pack(pady=4)
+        # Etiquetas para mostrar el total y el abono mínimo
+        total_label = ctk.CTkLabel(win, text="Total a pagar: $0", font=("Arial", 14, "bold"), text_color="#00FF99")
+        total_label.pack(pady=8)
+        abono_min_label = ctk.CTkLabel(win, text="Abono mínimo (30%): $0", font=("Arial", 13), text_color="#FFD700")
+        abono_min_label.pack(pady=4)
         # Abono y método de pago
         ctk.CTkLabel(win, text="Abono inicial ($, mínimo 30%):", font=("Arial", 12)).pack(pady=4)
         entry_abono = ctk.CTkEntry(win, width=20)
@@ -1074,6 +1116,41 @@ class EmpleadoView(BaseCTKView):
         metodo_pago_var.set(metodos_pago[0])
         metodo_pago_menu = tk.OptionMenu(win, metodo_pago_var, *metodos_pago)
         metodo_pago_menu.pack(pady=4)
+        # Función para calcular y mostrar el total y abono mínimo
+        def actualizar_total(*args):
+            try:
+                fmt = "%Y-%m-%d %H:%M"
+                salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
+                entrada = f"{entrada_date.get()} {entrada_hora_cb.get()}:{entrada_min_cb.get()}"
+                dt_salida = datetime.strptime(salida, fmt)
+                dt_entrada = datetime.strptime(entrada, fmt)
+                dias = (dt_entrada - dt_salida).days
+                if dias < 1:
+                    dias = 1
+                precio = dias * float(tarifa_dia)
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
+                total = precio + costo_seguro - valor_descuento
+                if total < 0:
+                    total = 0
+                abono_min = round(total * 0.3, 2)
+                total_label.configure(text=f"Total a pagar: ${total:,.2f}")
+                abono_min_label.configure(text=f"Abono mínimo (30%): ${abono_min:,.2f}")
+            except Exception:
+                total_label.configure(text="Total a pagar: $0")
+                abono_min_label.configure(text="Abono mínimo (30%): $0")
+        # Asociar eventos para recalcular
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, entrada_date, entrada_hora_cb, entrada_min_cb]:
+            widget.bind("<<ComboboxSelected>>", actualizar_total)
+            widget.bind("<FocusOut>", actualizar_total)
+        if seguros and len(seguros) > 0:
+            seguro_var.trace_add('write', lambda *a: actualizar_total())
+        if descuentos and len(descuentos) > 0:
+            descuento_var.trace_add('write', lambda *a: actualizar_total())
+        # Inicializar valores
+        actualizar_total()
         # Guardar reserva
         def guardar():
             salida = f"{salida_date.get()} {salida_hora_cb.get()}:{salida_min_cb.get()}"
@@ -1097,12 +1174,12 @@ class EmpleadoView(BaseCTKView):
                 if dias < 1:
                     dias = 1
                 precio = dias * float(tarifa_dia)
-                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()][0]
-                id_seguro = seguros[idx_seg][0]
-                costo_seguro = float(seguros[idx_seg][2])
-                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()][0]
-                id_descuento = descuentos[idx_desc][0]
-                valor_descuento = float(descuentos[idx_desc][2])
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                id_seguro = seguros[idx_seg[0]][0] if idx_seg else None
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                id_descuento = descuentos[idx_desc[0]][0] if idx_desc else None
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
@@ -1114,7 +1191,7 @@ class EmpleadoView(BaseCTKView):
                     return
                 abono_min = round(total * 0.3, 2)
                 if abono_val < abono_min:
-                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min}")
+                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min:,.2f}")
                     return
                 id_cliente = self.user_data.get('id_cliente')
                 placeholder = '%s' if not self.db_manager.offline else '?'
@@ -1353,6 +1430,7 @@ class EmpleadoVentasView(BaseCTKView):
         if seguros and len(seguros) > 0:
             seguro_menu = tk.OptionMenu(win, seguro_var, *[f"{s[1]} (${s[2]})" for s in seguros])
             seguro_menu.pack(pady=4)
+            seguro_var.set(f"{seguros[0][1]} (${seguros[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
@@ -1362,6 +1440,7 @@ class EmpleadoVentasView(BaseCTKView):
         if descuentos and len(descuentos) > 0:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
             descuento_menu.pack(pady=4)
+            descuento_var.set(f"{descuentos[0][1]} (-${descuentos[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay descuentos disponibles", text_color="#FF5555").pack(pady=4)
         # Método de pago
