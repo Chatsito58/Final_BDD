@@ -334,3 +334,20 @@ Sí. El cambio de contraseña está disponible tanto en modo online (MariaDB/MyS
 ### Modularidad y extensibilidad
 - Cada pestaña tiene lógica base implementada y comentarios para facilitar la extensión posterior.
 - El sistema es fácilmente ampliable para agregar nuevas acciones o restricciones por rol.
+
+## Selección visual de fecha y hora en reservas
+
+La interfaz de cliente ahora permite seleccionar la **fecha** con un calendario (tkcalendar) y la **hora** con un selector visual tipo TimePicker (ttkbootstrap), haciendo el proceso mucho más intuitivo y moderno.
+
+- **Fecha:** Selecciona el día usando un calendario emergente.
+- **Hora:** Selecciona la hora y minutos con un widget visual (intervalos de 15 minutos, de 8:00 a 20:00).
+
+### Dependencias necesarias
+- tkcalendar
+- ttkbootstrap
+
+Instala todas las dependencias con:
+
+```bash
+pip install -r requirements.txt
+```

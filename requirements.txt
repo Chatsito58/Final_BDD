@@ -3,3 +3,5 @@ mysql-connector-python
 python-dotenv
 pytest
 customtkinter
+tkcalendar
+ttkbootstrap

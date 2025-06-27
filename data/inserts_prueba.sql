@@ -19,6 +19,9 @@ INSERT INTO Transmision_vehiculo (descripcion) VALUES ('Manual'), ('Automática'
 INSERT INTO Cilindraje_vehiculo (descripcion) VALUES ('1600cc'), ('2000cc');
 INSERT INTO Estado_alquiler (descripcion) VALUES ('Activa'), ('Finalizada');
 
+-- Estados de reserva
+INSERT INTO Estado_reserva (descripcion) VALUES ('Pendiente'), ('Confirmada'), ('Cancelada');
+
 -- Sucursal y proveedor
 INSERT INTO Sucursal (nombre, direccion, telefono, gerente, id_codigo_postal) VALUES ('Sucursal Norte', 'Av 68 #100-20, Bogotá', '3209876543', 'Ana Gerente', '110111');
 INSERT INTO Proveedor_vehiculo (nombre, direccion, telefono, correo) VALUES ('Autocolombia', 'Calle 80 #30-15, Bogotá', '3152223344', 'ventas@autocolombia.com');
@@ -39,3 +42,41 @@ INSERT INTO Empleado (documento, nombre, salario, cargo, telefono, direccion, co
 ('100000003', 'Vendedor Uno', 2500000, 'Ventas', '3000000003', 'Calle 3 #3-03', 'ventas@email.com', 1, 3),
 ('100000004', 'Cajero Uno', 2200000, 'Caja', '3000000004', 'Calle 4 #4-04', 'caja@email.com', 1, 4),
 ('100000005', 'Mantenimiento Uno', 2300000, 'Mantenimiento', '3000000005', 'Calle 5 #5-05', 'mantenimiento@email.com', 1, 5);
+
+-- Seguros de vehículos
+INSERT INTO Seguro_vehiculo (estado, descripcion, vencimiento, costo) VALUES
+('Vigente', 'SOAT', '2025-12-31', 150000),
+('Vigente', 'Todo riesgo', '2025-12-31', 300000);
+
+-- Vehículos de prueba
+INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, id_marca, id_color, id_tipo_vehiculo, id_blindaje, id_transmision, id_cilindraje, id_seguro_vehiculo, id_estado_vehiculo, id_proveedor, id_sucursal)
+VALUES
+('ABC123', 'CHS123456', 'Logan 2020', 25000, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1),
+('XYZ789', 'CHS654321', 'Captiva 2022', 12000, 2, 2, 2, 2, 1, 2, 2, 1, 1, 1);
+
+-- Seguros de alquiler
+INSERT INTO Seguro_alquiler (estado, descripcion, vencimiento, costo) VALUES
+('Vigente', 'Seguro todo riesgo', '2025-12-31', 50000),
+('Vigente', 'Seguro básico', '2025-12-31', 20000);
+
+-- Descuentos de alquiler
+INSERT INTO Descuento_alquiler (descripcion, valor) VALUES
+('Descuento 10%', 30000),
+('Sin descuento', 0);
+
+-- Alquileres de Carlos Ramírez
+INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento)
+VALUES
+('2024-06-01 10:00:00', 210000, '2024-06-03 10:00:00', 'ABC123', 1, 1, 1, 1, 1, 1),
+('2024-06-10 09:00:00', 200000, '2024-06-11 09:00:00', 'XYZ789', 1, 1, 2, 1, 2, 2);
+
+-- Reservas de Carlos Ramírez
+INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler)
+VALUES
+('2024-05-30 09:00:00', 100000, 110000, 1, 1),
+('2024-06-08 08:00:00', 50000, 150000, 1, 2);
+
+-- Abonos a reservas
+INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) VALUES
+(100000, '2024-05-30 10:00:00', 1, 1),
+(50000, '2024-06-08 09:00:00', 2, 2);
