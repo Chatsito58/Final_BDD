@@ -327,6 +327,13 @@ class ClienteView(BaseCTKView):
         placa, modelo, marca, tipo, tarifa_dia = vehiculo
         ctk.CTkLabel(win, text=f"Placa: {placa} | {modelo} {marca} ({tipo})", font=("Arial", 15, "bold")).pack(pady=8)
         ctk.CTkLabel(win, text=f"Tarifa por día: ${tarifa_dia}", font=("Arial", 13)).pack(pady=4)
+        # Frame de fecha y hora salida
+        salida_frame = tk.Frame(win, bg="#222831")
+        salida_frame.pack(pady=8)
+        tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
+        salida_date.pack(side="left", padx=2)
+        horas = [f"{h:02d}" for h in range(8, 21)]
         ctk.CTkLabel(win, text="Fecha y hora salida:", font=("Arial", 12)).pack(pady=4)
         salida_frame = ctk.CTkFrame(win)
         salida_frame.pack(pady=2)
