@@ -19,6 +19,19 @@ class DBManager:
         self.logger = logging.getLogger(__name__)
         self.offline = False  # Inicializa en modo remoto por defecto
         self._sqlite = SQLiteManager()
+        # Intentar sincronizar datos críticos al iniciar si hay conexión
+        try:
+            conn = self.connect()
+            if conn and not self.offline:
+                print("[SYNC] Sincronizando datos críticos al iniciar aplicación...")
+                self.logger.info("[SYNC] Sincronizando datos críticos al iniciar aplicación...")
+                self.sync_critical_data_to_local()
+                print("[SYNC] Datos críticos sincronizados correctamente al iniciar.")
+                self.logger.info("[SYNC] Datos críticos sincronizados correctamente al iniciar.")
+                conn.close()
+        except Exception as e:
+            print(f"[SYNC][ERROR] Error al sincronizar datos críticos al iniciar: {e}")
+            self.logger.error(f"Error al sincronizar datos críticos al iniciar: {e}")
 
     def is_sqlite(self):
         """Return True if operating in offline SQLite mode."""
@@ -65,17 +78,34 @@ class DBManager:
             print("[DEBUG] Autocommit activado")
             self.logger.info("Conexión exitosa a la base de datos")
             print("[DEBUG] Conexión exitosa a la base de datos")
+            # Si estaba offline y ahora conecta, lanzar callback de reconexión
+            if hasattr(self, 'was_offline') and self.was_offline:
+                try:
+                    if hasattr(self, 'on_reconnect_callback') and self.on_reconnect_callback:
+                        self.on_reconnect_callback()
+                except Exception as e:
+                    self.logger.error(f"Error notificando reconexión a la vista: {e}")
+                self.was_offline = False
+            elif not hasattr(self, 'was_offline'):
+                self.was_offline = False
             return connection
         except Exception as exc:
             self.logger.error(f"Error de conexión a la base de datos: {exc}")
             self.logger.error(traceback.format_exc())
             try:
                 import PyQt5.QtWidgets as QtWidgets
-                QtWidgets.QMessageBox.critical(None, "Error de conexión", f"{exc}\n\n{traceback.format_exc()}")
+                QtWidgets.QMessageBox.critical(None, "Desconexión detectada", "Ocurrió una desconexión del servidor principal y ahora estás en modo offline. Puedes seguir trabajando y los cambios se sincronizarán automáticamente cuando vuelva la conexión.")
             except Exception as e:
                 self.logger.error(f"No se pudo mostrar el QMessageBox: {e}")
             self.logger.info("Cambiando a modo offline...")
             self.offline = True
+            self.was_offline = True
+            # Notificar a las vistas si es necesario
+            try:
+                if hasattr(self, 'on_disconnect_callback') and self.on_disconnect_callback:
+                    self.on_disconnect_callback()
+            except Exception as e:
+                self.logger.error(f"Error notificando desconexión a la vista: {e}")
             return self._sqlite.connect()
 
     def execute_query(self, query, params=None, fetch=True):
@@ -93,6 +123,7 @@ class DBManager:
                 self.logger.info(f"Consulta adaptada para SQLite: {query}")
             
             if conn is None:
+                print("[SYNC][ERROR] No se pudo establecer conexión con la base de datos. Cambiando a modo offline.")
                 self.logger.error("No se pudo establecer conexión con la base de datos")
                 return None
                 
@@ -120,13 +151,36 @@ class DBManager:
             self.logger.info("Conexión cerrada exitosamente")
             return result
         except Exception as exc:
+            print("[SYNC][ERROR] Desconexión detectada. Cambiando a modo offline.")
             self.logger.error(f"Error ejecutando consulta: {exc}")
             self.logger.error(f"Tipo de error: {type(exc).__name__}")
             self.logger.error(traceback.format_exc())
             if not self.offline:
-                self.logger.info("Cambiando a modo offline...")
+                print("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
+                self.logger.info("[SYNC][INFO] Servidor desconectado. Ahora en modo offline.")
                 self.offline = True
                 return self._sqlite.execute_query(query.replace('%s', '?'), params, fetch)
+            else:
+                # Si se recupera la conexión, sincronizar datos críticos
+                try:
+                    print("[SYNC][INFO] Intentando reconexión con el servidor...")
+                    self.logger.info("[SYNC][INFO] Intentando reconexión con el servidor...")
+                    conn = self.connect()
+                    if conn and not self.offline:
+                        print("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
+                        self.logger.info("[SYNC][INFO] Reconexión exitosa. Sincronizando datos críticos...")
+                        self.sync_critical_data_to_local()
+                        print("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
+                        self.logger.info("[SYNC][INFO] Datos críticos sincronizados tras reconexión.")
+                        print("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
+                        self.logger.info("[SYNC][INFO] Subiendo datos locales pendientes al servidor...")
+                        self.sync_pending_reservations()
+                        print("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
+                        self.logger.info("[SYNC][INFO] Todos los datos locales pendientes han sido subidos.")
+                        conn.close()
+                except Exception as e:
+                    print(f"[SYNC][ERROR] Error al sincronizar datos críticos tras reconexión: {e}")
+                    self.logger.error(f"Error al sincronizar datos críticos tras reconexión: {e}")
             return None
 
     def save_pending_reservation(self, data):
@@ -158,10 +212,11 @@ class DBManager:
     def sync_pending_reservations(self):
         """Sincronizar todas las tablas con columna 'pendiente' de SQLite a MariaDB."""
         if self.offline:
-            self.logger.info("[DBManager] Sincronización omitida, modo sin conexión")
-            print("[DBManager] Sincronización omitida, modo sin conexión")
+            print("[SYNC][INFO] Sincronización de pendientes omitida, modo sin conexión.")
+            self.logger.info("[SYNC][INFO] Sincronización de pendientes omitida, modo sin conexión.")
             return
-
+        print("[SYNC][INFO] Iniciando subida de datos locales pendientes...")
+        self.logger.info("[SYNC][INFO] Iniciando subida de datos locales pendientes...")
         tablas = [
             {
                 'tabla': 'Reserva',
@@ -221,9 +276,84 @@ class DBManager:
         cursor.close()
         conn.close()
         self.logger.info("[DBManager] Sincronización finalizada")
-        print("[DBManager] Sincronización finalizada")
+        print("[SYNC][INFO] Subida de datos locales pendientes finalizada.")
+        self.logger.info("[SYNC][INFO] Subida de datos locales pendientes finalizada.")
+
+    def sync_critical_data_to_local(self):
+        """Sincroniza datos críticos de la base remota a la base local SQLite."""
+        if self.offline:
+            print("[SYNC][INFO] Sincronización omitida, modo sin conexión.")
+            self.logger.info("[SYNC][INFO] Sincronización omitida, modo sin conexión.")
+            return
+        print("[SYNC][INFO] Iniciando sincronización de datos críticos...")
+        self.logger.info("[SYNC][INFO] Iniciando sincronización de datos críticos...")
+        tablas = [
+            # (nombre_tabla, columnas, clave primaria, si es autoincrement)
+            ("Rol", ["id_rol", "nombre"], "id_rol", True),
+            ("Tipo_documento", ["id_tipo_documento", "descripcion"], "id_tipo_documento", True),
+            ("Codigo_postal", ["id_codigo_postal", "pais", "departamento", "ciudad"], "id_codigo_postal", False),
+            ("Tipo_cliente", ["id_tipo", "descripcion"], "id_tipo", True),
+            ("Estado_vehiculo", ["id_estado", "descripcion"], "id_estado", True),
+            ("Marca_vehiculo", ["id_marca", "nombre_marca"], "id_marca", True),
+            ("Color_vehiculo", ["id_color", "nombre_color"], "id_color", True),
+            ("Tipo_vehiculo", ["id_tipo", "descripcion", "capacidad", "combustible", "tarifa_dia"], "id_tipo", True),
+            ("Blindaje_vehiculo", ["id_blindaje", "descripcion"], "id_blindaje", True),
+            ("Transmision_vehiculo", ["id_transmision", "descripcion"], "id_transmision", True),
+            ("Cilindraje_vehiculo", ["id_cilindraje", "descripcion"], "id_cilindraje", True),
+            ("Sucursal", ["id_sucursal", "nombre", "direccion", "telefono", "gerente", "id_codigo_postal"], "id_sucursal", True),
+            ("Seguro_vehiculo", ["id_seguro", "estado", "descripcion", "vencimiento", "costo"], "id_seguro", True),
+            ("Tipo_empleado", ["id_tipo_empleado", "descripcion"], "id_tipo_empleado", True),
+            ("Empleado", ["id_empleado", "documento", "nombre", "telefono", "correo", "cargo"], "id_empleado", True),
+            ("Cliente", ["id_cliente", "documento", "nombre", "telefono", "correo"], "id_cliente", True),
+            ("Usuario", ["id_usuario", "usuario", "contrasena", "id_rol", "id_cliente", "id_empleado"], "id_usuario", True),
+            ("Vehiculo", ["placa", "n_chasis", "modelo", "kilometraje", "id_marca", "id_color", "id_tipo_vehiculo", "id_blindaje", "id_transmision", "id_cilindraje", "id_seguro_vehiculo", "id_estado_vehiculo", "id_proveedor", "id_sucursal"], "placa", False),
+            ("Medio_pago", ["id_medio_pago", "descripcion"], "id_medio_pago", True),
+            ("Estado_alquiler", ["id_estado", "descripcion"], "id_estado", True),
+            ("Licencia_conduccion", ["id_licencia", "estado", "fecha_emision", "fecha_vencimiento", "id_categoria"], "id_licencia", True),
+            ("Categoria_licencia", ["id_categoria", "descripcion"], "id_categoria", True),
+            ("Taller_mantenimiento", ["id_taller", "nombre", "direccion", "telefono"], "id_taller", True),
+            ("Tipo_mantenimiento", ["id_tipo", "descripcion"], "id_tipo", True),
+            ("Proveedor_vehiculo", ["id_proveedor", "nombre", "direccion", "telefono", "correo"], "id_proveedor", True),
+        ]
+        conn_remota = self.connect()
+        conn_local = self._sqlite.connect()
+        for nombre, columnas, pk, autoinc in tablas:
+            try:
+                cursor_remota = conn_remota.cursor()
+                cursor_local = conn_local.cursor()
+                cols_str = ', '.join(columnas)
+                cursor_remota.execute(f"SELECT {cols_str} FROM {nombre}")
+                rows = cursor_remota.fetchall()
+                for row in rows:
+                    placeholders = ', '.join(['?'] * len(columnas))
+                    update_str = ', '.join([f'{col}=?' for col in columnas])
+                    # Intentar update primero
+                    cursor_local.execute(f"UPDATE {nombre} SET {update_str} WHERE {pk}=?", tuple(row) + (row[columnas.index(pk)],))
+                    if cursor_local.rowcount == 0:
+                        # Si no existe, insertar
+                        cursor_local.execute(f"INSERT OR IGNORE INTO {nombre} ({cols_str}) VALUES ({placeholders})", row)
+                conn_local.commit()
+                cursor_remota.close()
+                cursor_local.close()
+                print(f"[SYNC][INFO] Sincronizada tabla {nombre} ({len(rows)} registros)")
+                self.logger.info(f"[SYNC][INFO] Sincronizada tabla {nombre} ({len(rows)} registros)")
+            except Exception as exc:
+                print(f"[SYNC][ERROR] Error sincronizando tabla {nombre}: {exc}")
+                self.logger.error(f"[SYNC][ERROR] Error sincronizando tabla {nombre}: {exc}")
+        conn_remota.close()
+        conn_local.close()
+        print("[SYNC][INFO] Sincronización de datos críticos finalizada.")
+        self.logger.info("[SYNC][INFO] Sincronización de datos críticos finalizada.")
 
     def close(self):
         """Placeholder to keep API compatibility."""
         # Connections are opened and closed per query
         pass
+
+    def set_on_disconnect_callback(self, callback):
+        """Permite a las vistas registrar un callback para mostrar una ventana emergente de desconexión inmediata."""
+        self.on_disconnect_callback = callback
+
+    def set_on_reconnect_callback(self, callback):
+        """Permite a las vistas registrar un callback para mostrar una ventana emergente de reconexión inmediata."""
+        self.on_reconnect_callback = callback

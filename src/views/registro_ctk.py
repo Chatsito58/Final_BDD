@@ -1,6 +1,8 @@
 import re
 import customtkinter as ctk
 from tkinter import messagebox
+import threading
+import time
 
 from ..db_manager import DBManager
 
@@ -8,16 +10,24 @@ from ..db_manager import DBManager
 class RegistroCTk(ctk.CTk):
     """Formulario de registro de clientes usando CustomTkinter."""
 
-    def __init__(self, db_manager: DBManager):
+    def __init__(self, db_manager: DBManager, on_back=None):
         super().__init__()
         self.db = db_manager
+        self.on_back = on_back
         self.title("Registro de cliente")
         self.geometry("400x500")
-
+        self._status_label = None
+        self._stop_status = False
         self.is_sqlite = getattr(self.db, "offline", False)
-
         self._load_options()
         self._build_form()
+        self._update_status_label()
+        self._start_status_updater()
+        self.after(100, self._maximize_and_focus)
+
+    def _maximize_and_focus(self):
+        self.after(100, lambda: self.wm_state('zoomed'))
+        self.focus_force()
 
     def _load_options(self):
         """Cargar listas de tipos de documento y códigos postales."""
@@ -37,6 +47,8 @@ class RegistroCTk(ctk.CTk):
 
     def _build_form(self):
         pad = {"padx": 10, "pady": 5}
+        self._status_label = ctk.CTkLabel(self, text="", text_color="#F5F6FA", font=("Arial", 13))
+        self._status_label.pack(pady=(10, 0))
         ctk.CTkLabel(self, text="Documento *").pack(**pad)
         self.doc_entry = ctk.CTkEntry(self)
         self.doc_entry.pack(**pad)
@@ -77,6 +89,28 @@ class RegistroCTk(ctk.CTk):
 
         self.btn = ctk.CTkButton(self, text="Registrar", command=self.registrar)
         self.btn.pack(pady=15)
+        self.btn_volver = ctk.CTkButton(self, text="Volver", command=self.volver, fg_color="#3A86FF", hover_color="#265DAB")
+        self.btn_volver.pack(pady=5)
+
+    def volver(self):
+        if self.on_back:
+            self.destroy()
+            self.on_back()
+        else:
+            messagebox.showwarning("Atención", "No se puede volver atrás porque no se definió una función de retorno al login. La ventana permanecerá abierta.")
+
+    def _update_status_label(self):
+        estado = "ONLINE" if not getattr(self.db, 'offline', False) else "OFFLINE"
+        if self._status_label:
+            self._status_label.configure(text=f"Estado: {estado}")
+
+    def _start_status_updater(self):
+        def updater():
+            while not self._stop_status:
+                self._update_status_label()
+                time.sleep(2)
+        t = threading.Thread(target=updater, daemon=True)
+        t.start()
 
     def _get_regular_tipo(self):
         if self.is_sqlite:
@@ -109,7 +143,7 @@ class RegistroCTk(ctk.CTk):
             messagebox.showwarning("Error", "Correo no válido")
             return
 
-        count_q = "SELECT COUNT(*) FROM Cliente WHERE correo = ?" if self.is_sqlite else "SELECT COUNT(*) FROM Cliente WHERE correo = %s"
+        count_q = "SELECT COUNT(*) FROM Cliente WHERE correo = ? " if self.is_sqlite else "SELECT COUNT(*) FROM Cliente WHERE correo = %s"
         if self.db.execute_query(count_q, (correo,)) and self.db.execute_query(count_q, (correo,))[0][0] > 0:
             messagebox.showwarning("Error", "El correo ya está registrado")
             return
@@ -153,4 +187,8 @@ class RegistroCTk(ctk.CTk):
             self.destroy()
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar: {exc}")
+
+    def destroy(self):
+        self._stop_status = True
+        super().destroy()
 

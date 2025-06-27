@@ -1,4 +1,6 @@
 import customtkinter as ctk
+import threading
+import time
 
 class BaseCTKView(ctk.CTk):
     def __init__(self, user_data, db_manager, on_logout=None):
@@ -6,16 +8,47 @@ class BaseCTKView(ctk.CTk):
         self.user_data = user_data
         self.db_manager = db_manager
         self.on_logout = on_logout
+        self._status_label = None
+        self._stop_status = False
         self.geometry("400x300")
         self.configure(bg="#18191A")
         self._build_ui()
+        self._update_status_label()
+        self._start_status_updater()
+        self.after(100, self._maximize_and_focus)
+
+    def _maximize_and_focus(self):
+        self.after(100, lambda: self.wm_state('zoomed'))
+        self.focus_force()
 
     def _build_ui(self):
-        ctk.CTkLabel(self, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 18)).pack(pady=30)
-        ctk.CTkButton(self, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=20)
+        frame = ctk.CTkFrame(self, fg_color="#18191A")
+        frame.pack(expand=True)
+        self._status_label = ctk.CTkLabel(frame, text="", font=("Arial", 15))
+        self._status_label.pack(pady=(20, 10))
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(pady=20)
 
     def _welcome_message(self):
         return f"Bienvenido, {self.user_data.get('usuario', '')}"
+
+    def _update_status_label(self):
+        online = not self.db_manager.offline
+        emoji = "🟢" if online else "🔴"
+        estado = "ONLINE" if online else "OFFLINE"
+        self._status_label.configure(text=f"{emoji} Estado: {estado}")
+
+    def _start_status_updater(self):
+        def updater():
+            while not self._stop_status:
+                self._update_status_label()
+                time.sleep(2)
+        t = threading.Thread(target=updater, daemon=True)
+        t.start()
+
+    def destroy(self):
+        self._stop_status = True
+        super().destroy()
 
     def logout(self):
         self.destroy()

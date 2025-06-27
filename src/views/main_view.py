@@ -24,6 +24,11 @@ class MainView(QtWidgets.QMainWindow):
         self._sync_timer.start(5 * 60 * 1000)
         self._update_status_bar()
 
+        # Timer para actualizar el estado de conexión cada 2 segundos
+        self._status_timer = QTimer(self)
+        self._status_timer.timeout.connect(self._update_status_bar)
+        self._status_timer.start(2000)
+
         # Setup status bar information
         if self.statusBar():
             self.statusBar().showMessage(f"Usuario: {username} | Rol: {role}")
@@ -41,6 +46,21 @@ class MainView(QtWidgets.QMainWindow):
         else:
             self.menuBar().addAction(self.logout_action)
         self.logout_action.triggered.connect(self.logout)
+
+        # Registrar callback de desconexión para mostrar alerta inmediata en toda la app
+        try:
+            if hasattr(self._db_manager, 'set_on_disconnect_callback'):
+                def mostrar_alerta_desconexion():
+                    from PyQt5.QtWidgets import QMessageBox
+                    QMessageBox.critical(self, "Desconexión detectada", "Ocurrió una desconexión del servidor principal y ahora estás en modo offline. Puedes seguir trabajando y los cambios se sincronizarán automáticamente cuando vuelva la conexión.")
+                self._db_manager.set_on_disconnect_callback(mostrar_alerta_desconexion)
+            if hasattr(self._db_manager, 'set_on_reconnect_callback'):
+                def mostrar_alerta_reconexion():
+                    from PyQt5.QtWidgets import QMessageBox
+                    QMessageBox.information(self, "Reconexión exitosa", "Tu conexión con el servidor principal regresó, ahora se sincronizarán los cambios hechos en modo offline.")
+                self._db_manager.set_on_reconnect_callback(mostrar_alerta_reconexion)
+        except Exception as e:
+            print(f"[SYNC][ERROR] No se pudo registrar el callback de desconexión en MainView: {e}")
 
         self._apply_role_visibility(role)
 

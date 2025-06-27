@@ -69,3 +69,124 @@ BEGIN
     INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado)
     VALUES (NEW.correo, NEW.documento, 2, NEW.id_empleado);
 END;
+
+-- Tablas críticas para sincronización offline
+CREATE TABLE IF NOT EXISTS Tipo_documento (
+    id_tipo_documento INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Codigo_postal (
+    id_codigo_postal TEXT PRIMARY KEY,
+    pais TEXT,
+    departamento TEXT,
+    ciudad TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Tipo_cliente (
+    id_tipo INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Estado_vehiculo (
+    id_estado INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Marca_vehiculo (
+    id_marca INTEGER PRIMARY KEY,
+    nombre_marca TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Color_vehiculo (
+    id_color INTEGER PRIMARY KEY,
+    nombre_color TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Tipo_vehiculo (
+    id_tipo INTEGER PRIMARY KEY,
+    descripcion TEXT,
+    capacidad INTEGER,
+    combustible TEXT,
+    tarifa_dia REAL
+);
+
+CREATE TABLE IF NOT EXISTS Blindaje_vehiculo (
+    id_blindaje INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Transmision_vehiculo (
+    id_transmision INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Cilindraje_vehiculo (
+    id_cilindraje INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Sucursal (
+    id_sucursal INTEGER PRIMARY KEY,
+    nombre TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    gerente TEXT,
+    id_codigo_postal TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Seguro_vehiculo (
+    id_seguro INTEGER PRIMARY KEY,
+    estado TEXT,
+    descripcion TEXT,
+    vencimiento TEXT,
+    costo REAL
+);
+
+CREATE TABLE IF NOT EXISTS Tipo_empleado (
+    id_tipo_empleado INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Medio_pago (
+    id_medio_pago INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Estado_alquiler (
+    id_estado INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Licencia_conduccion (
+    id_licencia INTEGER PRIMARY KEY,
+    estado TEXT,
+    fecha_emision TEXT,
+    fecha_vencimiento TEXT,
+    id_categoria INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS Categoria_licencia (
+    id_categoria INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Taller_mantenimiento (
+    id_taller INTEGER PRIMARY KEY,
+    nombre TEXT,
+    direccion TEXT,
+    telefono TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Tipo_mantenimiento (
+    id_tipo INTEGER PRIMARY KEY,
+    descripcion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Proveedor_vehiculo (
+    id_proveedor INTEGER PRIMARY KEY,
+    nombre TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    correo TEXT
+);
