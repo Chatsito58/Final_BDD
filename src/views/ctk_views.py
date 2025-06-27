@@ -85,7 +85,7 @@ class BaseCTKView(ctk.CTk):
 
     def _update_status_label(self, estado="Conectado", emoji="🟢"):
         if self._status_label is not None:
-        self._status_label.configure(text=f"{emoji} Estado: {estado}")
+            self._status_label.configure(text=f"{emoji} Estado: {estado}")
 
     def _start_status_updater(self):
         def updater():
