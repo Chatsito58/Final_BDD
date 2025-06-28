@@ -99,7 +99,8 @@ class RegistroCTk(ctk.CTk):
         if self.on_back:
             self._stop_status = True
             self.withdraw()
-            self.on_back(self.correo_entry.get().strip())
+            correo_registrado = self.correo_entry.get().strip()
+            self.on_back(correo_registrado)
         else:
             messagebox.showwarning("Atención", "No se puede volver atrás porque no se definió una función de retorno al login. La ventana permanecerá abierta.")
 
@@ -188,12 +189,10 @@ class RegistroCTk(ctk.CTk):
                 "Registro exitoso",
                 "Cliente registrado exitosamente.\n\nSu contraseña inicial es su número de documento.\nPodrá cambiarla después de iniciar sesión.\n\nSerá redirigido al login para iniciar sesión.",
             )
-            # Pasar el correo registrado exitosamente al callback
             if self.on_back:
                 self._stop_status = True
-                self.withdraw()  # Ocultar la ventana primero
-                # Usar after() para llamar al callback de manera segura
-                self.after(100, lambda: self.on_back(correo))
+                self.withdraw()
+                self.on_back(correo)
             else:
                 self.volver()
         except Exception as exc:

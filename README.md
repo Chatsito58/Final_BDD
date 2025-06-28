@@ -11,6 +11,7 @@ Este repositorio contiene una aplicación completa de alquiler de vehículos des
 - **Gestión completa** de clientes, empleados, vehículos y reservas
 - **Sistema de pagos** integrado
 - **Interfaz responsiva** y fácil de usar
+- **Flujo de registro mejorado** con retorno automático al login
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -415,6 +416,12 @@ chmod +x main.py
 - Manejo robusto de desconexiones
 - Logging detallado de todas las operaciones
 - Validación de integridad de datos
+
+### Flujo de Registro Mejorado
+- Registro de clientes con retorno automático al login
+- Prellenado del correo electrónico después del registro
+- Triggers automáticos para crear usuarios con contraseñas seguras
+- Validación de correos únicos en tiempo real
 
 ## 🤝 Contribuir
 
