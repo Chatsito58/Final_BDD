@@ -26,61 +26,247 @@ Este repositorio contiene una aplicación completa de alquiler de vehículos des
 - MariaDB/MySQL (opcional, para modo online)
 - Conexión a internet (para sincronización inicial)
 
-## ⚙️ Instalación
+## 🚀 Instalación y Configuración Completa
 
-### 1. Clonar el repositorio
+### Paso 1: Instalar Python
+
+#### Windows:
+1. Ve a [python.org](https://www.python.org/downloads/)
+2. Descarga la versión más reciente de Python (3.8 o superior)
+3. Ejecuta el instalador
+4. **IMPORTANTE**: Marca la casilla "Add Python to PATH"
+5. Haz clic en "Install Now"
+
+#### Linux (Ubuntu/Debian):
+```bash
+sudo apt update
+sudo apt install python3 python3-pip python3-venv
+```
+
+#### Linux (CentOS/RHEL/Fedora):
+```bash
+sudo dnf install python3 python3-pip python3-venv
+# O para versiones más antiguas:
+sudo yum install python3 python3-pip python3-venv
+```
+
+#### macOS:
+```bash
+# Con Homebrew (recomendado)
+brew install python3
+
+# O descarga desde python.org
+```
+
+### Paso 2: Verificar la instalación
+
+Abre una terminal (Command Prompt en Windows) y ejecuta:
+
+```bash
+python --version
+# Debe mostrar Python 3.8.x o superior
+
+pip --version
+# Debe mostrar pip instalado
+```
+
+### Paso 3: Descargar el proyecto
+
+#### Opción A: Clonar con Git
 ```bash
 git clone <url-del-repositorio>
 cd Final_BDD
 ```
 
-### 2. Crear entorno virtual
-```bash
+#### Opción B: Descargar ZIP
+1. Ve al repositorio en GitHub
+2. Haz clic en "Code" → "Download ZIP"
+3. Extrae el archivo ZIP
+4. Abre una terminal en la carpeta extraída
+
+### Paso 4: Crear entorno virtual
+
+#### Windows:
+```cmd
 python -m venv venv
+venv\Scripts\activate
 ```
 
-### 3. Activar entorno virtual
+#### Linux/macOS:
 ```bash
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
+python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 4. Instalar dependencias
+**Nota**: Deberías ver `(venv)` al inicio de la línea de comandos, indicando que el entorno virtual está activado.
+
+### Paso 5: Instalar dependencias
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. Configurar variables de entorno
-Copia el archivo `.env.example` a `.env` y configura las variables:
+### Paso 6: Configurar variables de entorno
+
+1. Copia el archivo de ejemplo:
+   ```bash
+   # Windows
+   copy .env.example .env
+   
+   # Linux/macOS
+   cp .env.example .env
+   ```
+
+2. Edita el archivo `.env` con tus configuraciones:
 
 ```env
-# Configuración de base de datos remota
-DB_REMOTE_HOST=tu_servidor_mysql
-DB_REMOTE_USER=tu_usuario
+# Configuración de base de datos remota (opcional)
+DB_REMOTE_HOST=localhost
+DB_REMOTE_PORT=3306
+DB_REMOTE_USER=root
 DB_REMOTE_PASSWORD=tu_contraseña
-DB_REMOTE_NAME=nombre_base_datos
+DB_REMOTE_NAME=alquiler_vehiculos
 
 # Configuración de base de datos local
 LOCAL_DB_PATH=data/local.sqlite
 ```
 
-### 6. Configurar base de datos
-```bash
-# Ejecutar script de base de datos remota
-mysql -u tu_usuario -p tu_base_datos < data/sql_bases-2.sql
+**Nota**: Si no tienes MySQL/MariaDB, puedes dejar las configuraciones por defecto. La aplicación funcionará en modo offline con SQLite.
 
-# Insertar datos de prueba (opcional)
-mysql -u tu_usuario -p tu_base_datos < data/inserts_prueba.sql
-```
+### Paso 7: Configurar base de datos (Opcional)
 
-## 🚀 Ejecutar la Aplicación
+#### Si tienes MySQL/MariaDB instalado:
+
+1. **Instalar MySQL/MariaDB**:
+
+   **Windows**:
+   - Descarga MySQL Installer desde [mysql.com](https://dev.mysql.com/downloads/installer/)
+   - Ejecuta el instalador y sigue las instrucciones
+   - Anota la contraseña del usuario root
+
+   **Linux (Ubuntu/Debian)**:
+   ```bash
+   sudo apt install mysql-server
+   sudo mysql_secure_installation
+   ```
+
+   **Linux (CentOS/RHEL/Fedora)**:
+   ```bash
+   sudo dnf install mysql-server
+   sudo systemctl start mysqld
+   sudo mysql_secure_installation
+   ```
+
+   **macOS**:
+   ```bash
+   brew install mysql
+   brew services start mysql
+   ```
+
+2. **Crear la base de datos**:
+   ```bash
+   mysql -u root -p
+   ```
+   ```sql
+   CREATE DATABASE alquiler_vehiculos;
+   USE alquiler_vehiculos;
+   SOURCE data/sql_bases-2.sql;
+   SOURCE data/inserts_prueba.sql;
+   EXIT;
+   ```
+
+#### Si NO tienes MySQL/MariaDB:
+La aplicación funcionará automáticamente en modo offline con SQLite. No necesitas hacer nada más.
+
+### Paso 8: Ejecutar la aplicación
 
 ```bash
 python main.py
 ```
+
+¡Listo! La aplicación debería abrirse con la ventana de login.
+
+## 👥 Usuarios de Prueba
+
+La aplicación incluye usuarios de prueba para cada rol:
+
+| Usuario | Contraseña | Rol |
+|---------|------------|-----|
+| `admin` | `admin123` | Administrador |
+| `gerente1` | `gerente123` | Gerente |
+| `ventas1` | `ventas123` | Empleado de Ventas |
+| `caja1` | `caja123` | Empleado de Caja |
+| `mantenimiento1` | `mantenimiento123` | Empleado de Mantenimiento |
+| `cliente1` | `cliente123` | Cliente |
+
+## 🔧 Configuración del Puerto
+
+El puerto de la base de datos se configura en el archivo `.env`:
+
+```env
+DB_REMOTE_PORT=3306
+```
+
+**Puertos comunes**:
+- **3306**: Puerto estándar de MySQL/MariaDB
+- **3307**: Puerto alternativo común
+- **33060**: Puerto X Protocol de MySQL
+
+## 🚀 Comandos Rápidos por Sistema Operativo
+
+### Windows (Command Prompt)
+```cmd
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Activar entorno virtual
+venv\Scripts\activate
+
+# Ejecutar aplicación
+python main.py
+```
+
+### Windows (PowerShell)
+```powershell
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Activar entorno virtual
+.\venv\Scripts\Activate.ps1
+
+# Ejecutar aplicación
+python main.py
+```
+
+### Linux/macOS
+```bash
+# Instalar dependencias
+pip3 install -r requirements.txt
+
+# Activar entorno virtual
+source venv/bin/activate
+
+# Ejecutar aplicación
+python main.py
+```
+
+## 🔄 Sistema de Base de Datos Redundante
+
+### Modo Online (MariaDB/MySQL)
+- Base de datos principal
+- Todas las operaciones se realizan aquí
+- Sincronización automática con SQLite
+
+### Modo Offline (SQLite)
+- Base de datos local de respaldo
+- Se activa automáticamente cuando no hay conexión
+- Permite continuar trabajando sin internet
+- Sincronización automática cuando vuelve la conexión
+
+### Sincronización Automática
+- Los datos se sincronizan automáticamente entre ambas bases
+- Las reservas creadas offline se suben cuando hay conexión
+- No se pierden datos por problemas de conectividad
 
 ## 👥 Roles y Permisos
 
@@ -121,24 +307,6 @@ python main.py
 - Ejecutar consultas SQL libres
 - Cambiar contraseña
 
-## 🔄 Sistema de Base de Datos Redundante
-
-### Modo Online (MariaDB/MySQL)
-- Base de datos principal
-- Todas las operaciones se realizan aquí
-- Sincronización automática con SQLite
-
-### Modo Offline (SQLite)
-- Base de datos local de respaldo
-- Se activa automáticamente cuando no hay conexión
-- Permite continuar trabajando sin internet
-- Sincronización automática cuando vuelve la conexión
-
-### Sincronización Automática
-- Los datos se sincronizan automáticamente entre ambas bases
-- Las reservas creadas offline se suben cuando hay conexión
-- No se pierden datos por problemas de conectividad
-
 ## 🔐 Sistema de Autenticación
 
 ### Características de Seguridad
@@ -156,7 +324,6 @@ python main.py
 ```
 Final_BDD/
 ├── src/
-│   ├── models/          # Modelos de datos
 │   ├── services/        # Lógica de negocio
 │   ├── views/           # Interfaces de usuario
 │   ├── auth.py          # Autenticación
@@ -168,26 +335,10 @@ Final_BDD/
 │   ├── sqlite_schema.sql # Esquema SQLite
 │   └── inserts_prueba.sql # Datos de prueba
 ├── ui/                  # Archivos de interfaz
-├── tests/               # Pruebas automáticas
 ├── main.py              # Punto de entrada
-└── requirements.txt     # Dependencias
-```
-
-## 🧪 Pruebas
-
-### Ejecutar todas las pruebas
-```bash
-pytest tests/
-```
-
-### Prueba específica de reservas offline
-```bash
-pytest tests/test_reserva_offline.py
-```
-
-### Prueba de conexión a base de datos
-```bash
-python test_db_connection.py
+├── requirements.txt     # Dependencias
+├── .env.example         # Configuración de ejemplo
+└── README.md           # Este archivo
 ```
 
 ## 📝 Logging
@@ -200,55 +351,51 @@ La aplicación registra todos los eventos importantes en `app.log`:
 - Sincronización de datos
 - Cambios de contraseña
 
-### Configuración de logging
-```python
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler("app.log"),
-        logging.StreamHandler(),
-    ],
-)
-```
-
-## 🔧 Configuración Avanzada
-
-### Variables de Entorno Disponibles
+## 🔧 Variables de Entorno Disponibles
 
 | Variable | Descripción | Valor por Defecto |
 |----------|-------------|-------------------|
 | `DB_REMOTE_HOST` | Servidor de base de datos | localhost |
+| `DB_REMOTE_PORT` | Puerto de base de datos | 3306 |
 | `DB_REMOTE_USER` | Usuario de base de datos | root |
 | `DB_REMOTE_PASSWORD` | Contraseña de base de datos | - |
 | `DB_REMOTE_NAME` | Nombre de la base de datos | alquiler_vehiculos |
 | `LOCAL_DB_PATH` | Ruta de SQLite local | data/local.sqlite |
 
-### Configuración de Timeout
-- Timeout de conexión: 10 segundos
-- Reintentos automáticos de conexión
-- Cambio automático a modo offline
+## 🐛 Solución de Problemas Comunes
 
-## 🐛 Solución de Problemas
+### Error: "python no se reconoce como comando"
+**Solución**: 
+1. Reinstala Python marcando "Add Python to PATH"
+2. O usa `python3` en lugar de `python`
 
-### Error: "Unread result found"
-**Problema**: Error al obtener el ID del último registro insertado en MySQL.
+### Error: "pip no se reconoce como comando"
+**Solución**:
+```bash
+# Windows
+python -m pip install -r requirements.txt
 
-**Solución**: Ya corregido en la versión actual. El sistema usa `return_lastrowid=True` para evitar este error.
+# Linux/macOS
+python3 -m pip install -r requirements.txt
+```
 
-### Error: PyQt5 se cuelga al conectar a MySQL
-**Problema**: PyQt5 interfiere con la conexión MySQL en Windows.
-
-**Solución**: La aplicación prueba la conexión antes de importar PyQt5.
-
-### Error: No se puede conectar a la base de datos
+### Error: "No se puede conectar a la base de datos"
 **Solución**:
 1. Verificar que el servidor MySQL esté ejecutándose
 2. Comprobar las credenciales en `.env`
 3. Verificar la conectividad de red
 4. La aplicación funcionará en modo offline si no hay conexión
+
+### Error: "ModuleNotFoundError"
+**Solución**:
+1. Asegúrate de que el entorno virtual esté activado
+2. Reinstala las dependencias: `pip install -r requirements.txt`
+
+### Error: "Permission denied" (Linux/macOS)
+**Solución**:
+```bash
+chmod +x main.py
+```
 
 ## 📈 Características Recientes (2024)
 

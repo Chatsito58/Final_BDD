@@ -24,6 +24,30 @@ class AuthManager:
             self.blocked_users.pop(correo, None)
         return False
 
+    def verificar_correo_existe(self, correo):
+        """
+        Verifica si un correo existe en la tabla Usuario.
+        Retorna True si existe, False si no existe.
+        """
+        try:
+            is_sqlite = getattr(self.db, 'offline', False)
+            
+            if is_sqlite:
+                query = "SELECT COUNT(*) FROM Usuario WHERE usuario = ?"
+            else:
+                query = "SELECT COUNT(*) FROM Usuario WHERE usuario = %s"
+                
+            result = self.db.execute_query(query, (correo,))
+            
+            if result and len(result) > 0:
+                count = result[0][0]
+                return count > 0
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error verificando si el correo existe: {e}")
+            return False
+
     def login(self, correo, contrasena):
         if self._is_blocked(correo):
             self.logger.warning("Intento de acceso de usuario bloqueado: %s", correo)

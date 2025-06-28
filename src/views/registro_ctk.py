@@ -10,10 +10,11 @@ from ..db_manager import DBManager
 class RegistroCTk(ctk.CTk):
     """Formulario de registro de clientes usando CustomTkinter."""
 
-    def __init__(self, db_manager: DBManager, on_back=None):
+    def __init__(self, db_manager: DBManager, on_back=None, correo_inicial=None):
         super().__init__()
         self.db = db_manager
         self.on_back = on_back
+        self.correo_inicial = correo_inicial
         self.title("Registro de cliente")
         self.geometry("400x500")
         self._status_label = None
@@ -68,6 +69,8 @@ class RegistroCTk(ctk.CTk):
         ctk.CTkLabel(self, text="Correo *").pack(**pad)
         self.correo_entry = ctk.CTkEntry(self)
         self.correo_entry.pack(**pad)
+        if self.correo_inicial:
+            self.correo_entry.insert(0, self.correo_inicial)
 
         if self.tipo_doc_opts:
             ctk.CTkLabel(self, text="Tipo documento").pack(**pad)
@@ -94,8 +97,9 @@ class RegistroCTk(ctk.CTk):
 
     def volver(self):
         if self.on_back:
-            self.withdraw()  # Oculta la ventana de registro
-            self.on_back()
+            self._stop_status = True
+            self.withdraw()
+            self.on_back(self.correo_entry.get().strip())
         else:
             messagebox.showwarning("Atención", "No se puede volver atrás porque no se definió una función de retorno al login. La ventana permanecerá abierta.")
 
@@ -182,9 +186,9 @@ class RegistroCTk(ctk.CTk):
             cliente_id = row[0][0] if row else ""
             messagebox.showinfo(
                 "Registro exitoso",
-                "Cliente registrado. Su contraseña inicial es su número de documento. Podrá cambiarla después de iniciar sesión.",
+                "Cliente registrado exitosamente.\n\nSu contraseña inicial es su número de documento.\nPodrá cambiarla después de iniciar sesión.\n\nSerá redirigido al login para iniciar sesión.",
             )
-            self.destroy()
+            self.volver()
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar: {exc}")
 

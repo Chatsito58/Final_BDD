@@ -57,7 +57,7 @@ class DBManager:
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'port': 3306,  # Puerto por defecto de MySQL/MariaDB
+            'port': os.getenv('DB_REMOTE_PORT'),  # Puerto por defecto de MySQL/MariaDB
             'connection_timeout': 10,  # Aumentar timeout a 10 segundos
         }
         
@@ -305,7 +305,7 @@ class DBManager:
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'port': 3306,
+            'port': os.getenv('DB_REMOTE_PORT'),
             'connection_timeout': 10,
         }
         try:

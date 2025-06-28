@@ -24,7 +24,7 @@ try:
         'user': os.getenv('DB_REMOTE_USER'),
         'password': os.getenv('DB_REMOTE_PASSWORD'),
         'database': os.getenv('DB_REMOTE_NAME'),
-        'port': 3306,
+        'port': os.getenv('DB_REMOTE_PORT'),
         'connection_timeout': 10,
     }
     print("[TEST-CONN-MAIN] Intentando conectar antes de importar PyQt5...")

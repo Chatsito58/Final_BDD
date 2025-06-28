@@ -134,12 +134,27 @@ class LoginView(QDialog):
             return
 
         try:
-            logger.info("Intentando autenticar usuario...")
+            logger.info("Verificando si el correo existe...")
+            correo_existe = self.auth_manager.verificar_correo_existe(correo)
+            
+            if not correo_existe:
+                logger.info(f"Correo {correo} no está registrado")
+                reply = QMessageBox.question(
+                    self,
+                    "Usuario no registrado",
+                    f"El correo '{correo}' no está registrado en el sistema.\n\n¿Deseas registrarte como nuevo cliente?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes
+                )
+                if reply == QMessageBox.Yes:
+                    logger.info("Usuario eligió registrarse")
+                    self.open_registration(correo_pendiente=correo)
+                return
+            logger.info("Correo existe, intentando autenticar usuario...")
             user_data = self.auth_manager.login(correo, contrasena)
             logger.info(f"Resultado de autenticación: {user_data}")
         except Exception as e:
             logger.error(f"Error en login: {e}")
-            # Si la app ya está en modo offline, no mostrar otro mensaje (ya lo muestra el callback global)
             db = getattr(self.auth_manager, 'db', None)
             if db is not None and not getattr(db, 'offline', False):
                 QMessageBox.critical(
@@ -154,28 +169,46 @@ class LoginView(QDialog):
             logger.info(f"Login exitoso para usuario: {user_data['usuario']}")
             self.accept()
         else:
-            logger.warning("Credenciales incorrectas")
-            QMessageBox.warning(self, "Error", "Credenciales incorrectas")
+            logger.warning("Contraseña incorrecta")
+            QMessageBox.warning(self, "Error", "Contraseña incorrecta")
     
-    def open_registration(self):
+    def open_registration(self, correo_pendiente=None):
         if RegistroCTk is None:
             QMessageBox.warning(self, "Error", "Módulo de registro no disponible")
             return
         try:
             self._stop_status = True
             self.hide()
-            def volver_a_login():
+
+            def volver_a_login(correo_registrado=None):
+                if hasattr(self, '_registro_window'):
+                    self._registro_window.destroy()
+                    delattr(self, '_registro_window')
                 self.show()
+                self.raise_()
+                self.activateWindow()
                 self._stop_status = False
                 self._start_status_updater()
-            registro = RegistroCTk(self.auth_manager.db, on_back=volver_a_login)
-            registro.mainloop()
-            self.show()
-            self._stop_status = False
-            self._start_status_updater()
+                self.emailLineEdit.clear()
+                self.passwordLineEdit.clear()
+                if correo_registrado:
+                    self.emailLineEdit.setText(correo_registrado)
+                elif correo_pendiente:
+                    self.emailLineEdit.setText(correo_pendiente)
+                self.emailLineEdit.setFocus()
+
+            self._registro_window = RegistroCTk(
+                self.auth_manager.db,
+                on_back=volver_a_login,
+                correo_inicial=correo_pendiente
+            )
+            self._registro_window.mainloop()
         except Exception as e:
             logger.error(f"Error abriendo registro: {e}")
             QMessageBox.critical(self, "Error", f"Error al abrir registro: {e}")
+            self.show()
+            self._stop_status = False
+            self._start_status_updater()
 
     def _update_status_label(self):
         online = not getattr(self.auth_manager.db, 'offline', False)
