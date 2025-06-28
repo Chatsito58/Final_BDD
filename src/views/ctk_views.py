@@ -118,7 +118,9 @@ class BaseCTKView(ctk.CTk):
 
     def logout(self):
         self._stop_status = True
-        self.withdraw()  # Ocultar en lugar de destruir
+        # Destruir la ventana actual completamente
+        self.destroy()
+        # Llamar al callback para volver al login
         if self.on_logout:
             self.on_logout()
 
