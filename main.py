@@ -127,15 +127,17 @@ class AlquilerApp:
         def show_login():
             login_view = LoginView(self.auth_manager)
             logger.info("Vista de login creada")
-            if login_view.exec_() == QDialog.Accepted:
+            result = login_view.exec_()
+            if result == QDialog.Accepted:
                 user_data = login_view.user_data
                 logger.info(f"Login exitoso para usuario: {user_data}")
                 print(f"¡Login exitoso! Bienvenido {user_data['usuario']}")
                 self.show_role_view(user_data, show_login, self.db_manager, self.auth_manager)
             else:
-                logger.info("Login cancelado por el usuario")
-                # En lugar de cerrar la aplicación, volver a mostrar el login
-                show_login()
+                logger.info("Login cancelado por el usuario - cerrando aplicación")
+                # Cerrar completamente la aplicación cuando se rechaza el login
+                app.quit()
+                sys.exit(0)
         show_login()
 
     def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
