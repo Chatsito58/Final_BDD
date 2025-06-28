@@ -276,45 +276,229 @@ class ClienteView(BaseCTKView):
     def _editar_reserva_card(self, id_reserva):
         import tkinter as tk
         from tkinter import messagebox
+        from datetime import datetime
+        from tkcalendar import DateEntry
         placeholder = '%s' if not self.db_manager.offline else '?'
-        fechas_query = (
-            f"SELECT a.fecha_hora_salida, a.fecha_hora_entrada FROM Reserva_alquiler ra "
-            f"JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler WHERE ra.id_reserva = {placeholder}"
-        )
-        fechas = self.db_manager.execute_query(fechas_query, (id_reserva,))
-        if not fechas:
+        
+        # Obtener información completa de la reserva
+        reserva_query = """
+            SELECT a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, a.id_seguro, a.id_descuento, a.valor
+            FROM Reserva_alquiler ra 
+            JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler 
+            WHERE ra.id_reserva = %s
+        """
+        reserva_data = self.db_manager.execute_query(reserva_query, (id_reserva,))
+        if not reserva_data:
             messagebox.showerror("Error", "No se pudo obtener la información de la reserva.")
             return
-        salida_actual, entrada_actual = fechas[0]
-        win = tk.Toplevel(self)
+        
+        salida_actual, entrada_actual, id_vehiculo, id_seguro, id_descuento, valor_actual = reserva_data[0]
+        
+        # Convertir fechas a formato más amigable
+        def formatear_fecha(fecha):
+            if isinstance(fecha, str):
+                fecha = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
+            return fecha.strftime("%Y-%m-%d %H:%M")
+        
+        salida_formateada = formatear_fecha(salida_actual)
+        entrada_formateada = formatear_fecha(entrada_actual)
+        
+        win = ctk.CTkToplevel(self)
         win.title("Editar fechas de reserva")
-        win.geometry("350x200")
-        ctk.CTkLabel(win, text="Nueva fecha y hora salida (YYYY-MM-DD HH:MM):").pack(pady=5)
-        entry_salida = ctk.CTkEntry(win)
-        entry_salida.insert(0, str(salida_actual))
-        entry_salida.pack(pady=5)
-        ctk.CTkLabel(win, text="Nueva fecha y hora entrada (YYYY-MM-DD HH:MM):").pack(pady=5)
-        entry_entrada = ctk.CTkEntry(win)
-        entry_entrada.insert(0, str(entrada_actual))
-        entry_entrada.pack(pady=5)
-        def guardar():
-            nueva_salida = entry_salida.get().strip()
-            nueva_entrada = entry_entrada.get().strip()
-            if not nueva_salida or not nueva_entrada:
-                messagebox.showwarning("Error", "Todos los campos son obligatorios")
-                return
-            update_query = (
-                f"UPDATE Alquiler SET fecha_hora_salida = {placeholder}, fecha_hora_entrada = {placeholder} "
-                f"WHERE id_alquiler = (SELECT id_alquiler FROM Reserva_alquiler WHERE id_reserva = {placeholder})"
-            )
+        win.geometry("500x400")
+        win.configure(fg_color="#222831")
+        
+        # Centrar ventana
+        win.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() // 2) - (500 // 2)
+        y = self.winfo_y() + (self.winfo_height() // 2) - (400 // 2)
+        win.geometry(f"500x400+{x}+{y}")
+        
+        ctk.CTkLabel(win, text="Editar Fechas de Reserva", font=("Arial", 16, "bold")).pack(pady=10)
+        
+        # Frame para fechas con DateEntry y comboboxes como en crear reserva
+        fechas_frame = ctk.CTkFrame(win)
+        fechas_frame.pack(fill="x", padx=20, pady=10)
+        
+        # Fecha y hora salida
+        ctk.CTkLabel(fechas_frame, text="Nueva fecha y hora salida:", font=("Arial", 12, "bold")).pack(anchor="w", pady=5)
+        salida_frame = tk.Frame(fechas_frame, bg="#2A2D35")
+        salida_frame.pack(fill="x", pady=5)
+        
+        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
+        salida_date.pack(side="left", padx=2)
+        
+        horas_12 = [f"{h:02d}" for h in range(1, 13)]
+        minutos = ["00", "15", "30", "45"]
+        ampm = ["AM", "PM"]
+        
+        salida_hora_cb = tk.ttk.Combobox(salida_frame, values=horas_12, width=3, state="readonly")
+        salida_hora_cb.pack(side="left", padx=2)
+        tk.Label(salida_frame, text=":", bg="#2A2D35", fg="#F5F6FA").pack(side="left")
+        salida_min_cb = tk.ttk.Combobox(salida_frame, values=minutos, width=3, state="readonly")
+        salida_min_cb.pack(side="left", padx=2)
+        salida_ampm_cb = tk.ttk.Combobox(salida_frame, values=ampm, width=3, state="readonly")
+        salida_ampm_cb.pack(side="left", padx=2)
+        
+        # Fecha y hora entrada
+        ctk.CTkLabel(fechas_frame, text="Nueva fecha y hora entrada:", font=("Arial", 12, "bold")).pack(anchor="w", pady=5)
+        entrada_frame = tk.Frame(fechas_frame, bg="#2A2D35")
+        entrada_frame.pack(fill="x", pady=5)
+        
+        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
+        entrada_date.pack(side="left", padx=2)
+        
+        entrada_hora_cb = tk.ttk.Combobox(entrada_frame, values=horas_12, width=3, state="readonly")
+        entrada_hora_cb.pack(side="left", padx=2)
+        tk.Label(entrada_frame, text=":", bg="#2A2D35", fg="#F5F6FA").pack(side="left")
+        entrada_min_cb = tk.ttk.Combobox(entrada_frame, values=minutos, width=3, state="readonly")
+        entrada_min_cb.pack(side="left", padx=2)
+        entrada_ampm_cb = tk.ttk.Combobox(entrada_frame, values=ampm, width=3, state="readonly")
+        entrada_ampm_cb.pack(side="left", padx=2)
+        
+        # Establecer valores por defecto
+        salida_dt = datetime.strptime(salida_formateada, "%Y-%m-%d %H:%M")
+        entrada_dt = datetime.strptime(entrada_formateada, "%Y-%m-%d %H:%M")
+        
+        # Configurar fecha de salida
+        salida_date.set_date(salida_dt.date())
+        hora_salida = salida_dt.hour
+        if hora_salida == 0:
+            salida_hora_cb.set("12")
+            salida_ampm_cb.set("AM")
+        elif hora_salida < 12:
+            salida_hora_cb.set(f"{hora_salida:02d}")
+            salida_ampm_cb.set("AM")
+        elif hora_salida == 12:
+            salida_hora_cb.set("12")
+            salida_ampm_cb.set("PM")
+        else:
+            salida_hora_cb.set(f"{hora_salida-12:02d}")
+            salida_ampm_cb.set("PM")
+        salida_min_cb.set(f"{salida_dt.minute:02d}")
+        
+        # Configurar fecha de entrada
+        entrada_date.set_date(entrada_dt.date())
+        hora_entrada = entrada_dt.hour
+        if hora_entrada == 0:
+            entrada_hora_cb.set("12")
+            entrada_ampm_cb.set("AM")
+        elif hora_entrada < 12:
+            entrada_hora_cb.set(f"{hora_entrada:02d}")
+            entrada_ampm_cb.set("AM")
+        elif hora_entrada == 12:
+            entrada_hora_cb.set("12")
+            entrada_ampm_cb.set("PM")
+        else:
+            entrada_hora_cb.set(f"{hora_entrada-12:02d}")
+            entrada_ampm_cb.set("PM")
+        entrada_min_cb.set(f"{entrada_dt.minute:02d}")
+        
+        # Etiqueta para mostrar el nuevo valor calculado
+        nuevo_valor_label = ctk.CTkLabel(win, text=f"Valor actual: ${valor_actual:,.0f}", font=("Arial", 12, "bold"), text_color="#FFD700")
+        nuevo_valor_label.pack(pady=10)
+        
+        def get_24h(date, hora_cb, min_cb, ampm_cb):
+            h = int(hora_cb.get())
+            m = int(min_cb.get())
+            ampm = ampm_cb.get()
+            if ampm == "PM" and h != 12:
+                h += 12
+            if ampm == "AM" and h == 12:
+                h = 0
+            return f"{date.get()} {h:02d}:{m:02d}"
+        
+        def calcular_nuevo_valor(*args):
             try:
-                self.db_manager.execute_query(update_query, (nueva_salida, nueva_entrada, id_reserva), fetch=False)
-                messagebox.showinfo("Éxito", "Fechas actualizadas correctamente")
-                win.destroy()
-                self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+                nueva_salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+                nueva_entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
+                
+                # Validar formato de fechas
+                fmt = "%Y-%m-%d %H:%M"
+                fecha_salida_dt = datetime.strptime(nueva_salida, fmt)
+                fecha_entrada_dt = datetime.strptime(nueva_entrada, fmt)
+                
+                if fecha_entrada_dt <= fecha_salida_dt:
+                    nuevo_valor_label.configure(text="Error: Fecha entrada debe ser posterior a salida")
+                    return
+                
+                # Calcular días
+                dias = (fecha_entrada_dt - fecha_salida_dt).days
+                if dias < 1:
+                    dias = 1
+                
+                # Obtener tarifa del vehículo
+                tarifa_query = """
+                    SELECT t.tarifa_dia
+                    FROM Vehiculo v
+                    JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+                    WHERE v.placa = %s
+                """
+                tarifa_result = self.db_manager.execute_query(tarifa_query, (id_vehiculo,))
+                if not tarifa_result:
+                    nuevo_valor_label.configure(text="Error: No se pudo obtener la tarifa")
+                    return
+                
+                tarifa_dia = float(tarifa_result[0][0])
+                nuevo_valor = dias * tarifa_dia
+                
+                # Agregar costo del seguro
+                if id_seguro:
+                    seguro_query = "SELECT costo FROM Seguro_alquiler WHERE id_seguro = %s"
+                    seguro_result = self.db_manager.execute_query(seguro_query, (id_seguro,))
+                    if seguro_result:
+                        nuevo_valor += float(seguro_result[0][0])
+                
+                # Restar descuento
+                if id_descuento:
+                    descuento_query = "SELECT valor FROM Descuento_alquiler WHERE id_descuento = %s"
+                    descuento_result = self.db_manager.execute_query(descuento_query, (id_descuento,))
+                    if descuento_result:
+                        nuevo_valor -= float(descuento_result[0][0])
+                
+                if nuevo_valor < 0:
+                    nuevo_valor = 0
+                
+                nuevo_valor_label.configure(text=f"Nuevo valor: ${nuevo_valor:,.0f}")
+                
+            except ValueError:
+                nuevo_valor_label.configure(text="Error: Formato de fecha inválido")
+            except Exception as e:
+                nuevo_valor_label.configure(text=f"Error: {str(e)}")
+        
+        # Vincular eventos para recalcular
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb, entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb]:
+            widget.bind("<<ComboboxSelected>>", calcular_nuevo_valor)
+            widget.bind("<FocusOut>", calcular_nuevo_valor)
+        
+        # Calcular valor inicial
+        calcular_nuevo_valor()
+        
+        def guardar():
+            nueva_salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+            nueva_entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
+            
+            try:
+                # Validar fechas
+                fmt = "%Y-%m-%d %H:%M"
+                fecha_salida_dt = datetime.strptime(nueva_salida, fmt)
+                fecha_entrada_dt = datetime.strptime(nueva_entrada, fmt)
+                
+                if fecha_entrada_dt <= fecha_salida_dt:
+                    messagebox.showwarning("Error", "La fecha de entrada debe ser posterior a la de salida")
+                    return
+                
+                # Usar el método _actualizar_reserva que ya incluye validación de abonos
+                if self._actualizar_reserva(id_reserva, nueva_salida, nueva_entrada, id_vehiculo, id_seguro, id_descuento):
+                    win.destroy()
+                    self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+                
+            except ValueError:
+                messagebox.showerror("Error", "Formato de fecha inválido. Use YYYY-MM-DD HH:MM")
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo actualizar la reserva: {exc}")
-        ctk.CTkButton(win, text="Guardar cambios", command=guardar).pack(pady=15)
+        
+        ctk.CTkButton(win, text="Guardar cambios", command=guardar, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=15)
 
     def _build_tab_vehiculos(self, parent):
         import tkinter as tk
@@ -699,18 +883,37 @@ class ClienteView(BaseCTKView):
             """
             self.db_manager.execute_query(abono_query, (monto, id_reserva, id_medio_pago), fetch=False)
             
+            # Obtener el valor total de la reserva y calcular el nuevo saldo pendiente correctamente
+            reserva_query = f"""
+                SELECT a.valor, COALESCE(SUM(ar.valor), 0) as total_abonado
+                FROM Reserva_alquiler ra
+                JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler
+                LEFT JOIN Abono_reserva ar ON ra.id_reserva = ar.id_reserva
+                WHERE ra.id_reserva = {placeholder}
+                GROUP BY a.valor
+            """
+            result = self.db_manager.execute_query(reserva_query, (id_reserva,))
+            
+            if not result:
+                messagebox.showerror("Error", "No se pudo obtener la información de la reserva")
+                return
+            
+            valor_total = float(result[0][0])
+            total_abonado = float(result[0][1])  # Este total ya incluye el abono que acabamos de insertar
+            
+            # Calcular nuevo saldo pendiente
+            nuevo_saldo_pendiente = max(0, valor_total - total_abonado)
+            
             # Actualizar saldo pendiente en la reserva
             update_query = f"""
                 UPDATE Reserva_alquiler 
-                SET saldo_pendiente = saldo_pendiente - {placeholder}
+                SET saldo_pendiente = {placeholder}
                 WHERE id_reserva = {placeholder}
             """
-            self.db_manager.execute_query(update_query, (monto, id_reserva), fetch=False)
+            self.db_manager.execute_query(update_query, (nuevo_saldo_pendiente, id_reserva), fetch=False)
             
             # Verificar si la reserva está completamente pagada
-            check_query = f"SELECT saldo_pendiente FROM Reserva_alquiler WHERE id_reserva = {placeholder}"
-            result = self.db_manager.execute_query(check_query, (id_reserva,))
-            if result and result[0][0] <= 0:
+            if nuevo_saldo_pendiente <= 0:
                 # Cambiar estado a pagada
                 estado_query = f"""
                     UPDATE Reserva_alquiler 
@@ -729,12 +932,13 @@ class ClienteView(BaseCTKView):
             # Recargar la lista de reservas
             self._cargar_reservas_pendientes(self.user_data.get('id_cliente'))
             
-            # Limpiar campos
+            # Limpiar campos y HABILITAR para nuevo abono
             self.input_abono.delete(0, 'end')
             self._abono_seleccionado = None
-            self.input_abono.configure(state="disabled")
-            self.metodo_pago_menu.configure(state="disabled")
-            self.btn_abonar.configure(state="disabled")
+            # NO deshabilitar los campos, mantener habilitados para nuevo abono
+            # self.input_abono.configure(state="disabled")
+            # self.metodo_pago_menu.configure(state="disabled")
+            # self.btn_abonar.configure(state="disabled")
             
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar el abono: {exc}")
@@ -770,7 +974,6 @@ class ClienteView(BaseCTKView):
         
         def procesar_pago():
             import time
-            import random
             
             # Simular tiempo de procesamiento
             for i in range(3):
@@ -778,22 +981,15 @@ class ClienteView(BaseCTKView):
                 win.update()
                 time.sleep(0.5)
             
-            # Simular resultado (90% éxito)
-            if random.random() < 0.9:
-                progress_label.configure(text="✅ Pago procesado exitosamente", text_color="#00FF99")
-                win.update()
-                time.sleep(1)
-                
-                # Registrar el abono
-                self._registrar_abono(id_reserva, monto, metodo, f"REF_{random.randint(10000, 99999)}")
-                
-                win.destroy()
-            else:
-                progress_label.configure(text="❌ Error en el procesamiento", text_color="#FF5555")
-                win.update()
-                time.sleep(2)
-                messagebox.showerror("Error de Pago", "Hubo un error procesando el pago. Intente nuevamente.")
-                win.destroy()
+            # Siempre aprobar el pago (eliminado el random)
+            progress_label.configure(text="✅ Pago procesado exitosamente", text_color="#00FF99")
+            win.update()
+            time.sleep(1)
+            
+            # Registrar el abono
+            self._registrar_abono(id_reserva, monto, metodo, f"REF_{int(time.time())}")
+            
+            win.destroy()
         
         # Iniciar procesamiento después de un breve delay
         win.after(1000, procesar_pago)
@@ -1767,7 +1963,8 @@ Debe contactar a la empresa para solicitar el reembolso del exceso.
             self.db_manager.execute_query(reserva_query, (nuevo_saldo, id_reserva), fetch=False)
             
             messagebox.showinfo("Éxito", f"Reserva actualizada correctamente.\nNuevo valor: ${nuevo_valor:,.0f}\nSaldo pendiente: ${nuevo_saldo:,.0f}")
-            self._cargar_reservas()  # Recargar la lista
+            # Corregir el nombre del método
+            self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
             return True
             
         except Exception as e:
