@@ -49,9 +49,9 @@ from src.db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.main_view import MainView
-from src.views.ctk_views import (
-    ClienteView, GerenteView, AdminView, EmpleadoView,
-    EmpleadoVentasView, EmpleadoMantenimientoView, EmpleadoCajaView
+from src.views.ctk_views import ClienteView
+from src.views.main_view import (
+    GerenteViewQt, AdminViewQt, EmpleadoViewQt, EmpleadoVentasViewQt, EmpleadoMantenimientoViewQt, EmpleadoCajaViewQt
 )
 
 MODERN_QSS = """
