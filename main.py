@@ -199,6 +199,9 @@ class AlquilerApp:
             # Ejecutar la vista de cliente en un hilo separado
             cliente_thread = threading.Thread(target=run_cliente_view, daemon=True)
             cliente_thread.start()
+            
+            # Mantener la aplicación PyQt5 ejecutándose
+            app.exec_()
 
 if __name__ == "__main__":
     logger.info("=== Iniciando aplicación de alquiler ===")

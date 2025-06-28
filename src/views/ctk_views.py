@@ -45,6 +45,9 @@ class BaseCTKView(ctk.CTk):
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
+        # Pestaña: Realizar abonos
+        self.tab_abonos = self.tabview.add("Realizar abonos")
+        self._build_tab_abonos(self.tabview.tab("Realizar abonos"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -141,6 +144,9 @@ class ClienteView(BaseCTKView):
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
+        # Pestaña: Realizar abonos
+        self.tab_abonos = self.tabview.add("Realizar abonos")
+        self._build_tab_abonos(self.tabview.tab("Realizar abonos"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -488,55 +494,80 @@ class ClienteView(BaseCTKView):
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
+                
+                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${descuento_val})")
+                
                 # Validar abono mínimo
-                try:
-                    abono_val = float(abono)
-                except ValueError:
-                    messagebox.showwarning("Error", "El monto de abono debe ser un número válido")
+                abono_min = int(total * 0.3)
+                abono = int(entry_abono.get().strip())
+                if abono < abono_min:
+                    messagebox.showwarning("Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:,.0f}")
                     return
-                abono_min = round(total * 0.3, 2)
-                if abono_val < abono_min:
-                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min:,.2f}")
-                    return
+                
+                metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
-                placeholder = '%s' if not self.db_manager.offline else '?'
+                
+                print(f"Insertando en Alquiler...")
                 # Insertar en Alquiler
-                query_alquiler = (f"INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento) "
-                                  f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 1, 1, 1, {placeholder}, {placeholder})")
-                id_alquiler = self.db_manager.execute_query(query_alquiler, (salida, total, entrada, placa, id_cliente, id_seguro, id_descuento), fetch=False, return_lastrowid=True)
+                placeholder = '%s' if not self.db_manager.offline else '?'
+                alquiler_query = f"""
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
+                    id_seguro, id_descuento, valor) 
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                """
+                id_alquiler = self.db_manager.execute_query(alquiler_query, (
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    id_seguro, id_descuento, total
+                ), fetch=False, return_lastrowid=True)
+                
                 if not id_alquiler:
-                    raise Exception("No se pudo obtener el ID del alquiler")
-                # Estado de reserva según método de pago
-                if metodo_pago == "Efectivo":
-                    estado_reserva = 1  # Pendiente de aprobación
-                else:
-                    estado_reserva = 2  # Confirmada
+                    messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
+                    return
+                
+                print(f"ID Alquiler obtenido: {id_alquiler}")
+                
                 # Insertar en Reserva_alquiler
-                query_reserva = (f"INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler) "
-                                 f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                saldo_pendiente = total - abono_val
-                id_reserva = self.db_manager.execute_query(query_reserva, (salida, abono_val, saldo_pendiente, estado_reserva, id_alquiler), fetch=False, return_lastrowid=True)
+                saldo_pendiente = total - abono
+                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                reserva_query = f"""
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                """
+                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
-                # Insertar abono
-                query_abono = (f"INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) "
-                               f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                id_medio_pago = 1 if metodo_pago == "Efectivo" else (2 if metodo_pago == "Tarjeta" else 3)
-                self.db_manager.execute_query(query_abono, (abono_val, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), id_reserva, id_medio_pago), fetch=False)
-                # Simulación de pasarela de pago si corresponde
-                if metodo_pago in ("Tarjeta", "Transferencia"):
-                    win.withdraw()
-                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
-                    self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
+                
+                print(f"ID Reserva obtenido: {id_reserva}")
+                
+                # Insertar abono inicial
+                id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
+                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                abono_query = f"""
+                    INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
+                    VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
+                """
+                self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
+                
+                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                
+                # Mostrar mensaje según método de pago
+                if metodo in ("Tarjeta", "Transferencia"):
+                    self._simular_pasarela_pago(id_reserva, abono, metodo)
                 else:
-                    messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                win.destroy()
-                # Solo recargar si el widget existe
-                if hasattr(self, 'reservas_listbox'):
-                    self._cargar_reservas_cliente(id_cliente)
+                    messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
+                
+                # Recargar lista de reservas
+                print(f"Recargando lista de reservas...")
+                self._cargar_reservas_cliente(id_cliente)
+                
+                # Limpiar formulario
+                entry_abono.delete(0, 'end')
+                
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-        ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
+                print(f"Error detallado: {exc}")
+        
+        ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
     def _build_tab_perfil(self, parent):
         import tkinter as tk
@@ -581,23 +612,45 @@ class ClienteView(BaseCTKView):
         import tkinter as tk
         from tkinter import messagebox
         id_cliente = self.user_data.get('id_cliente')
+        # Frame principal
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Reservas pendientes de pago", font=("Arial", 18)).pack(pady=10)
-        self.abonos_listbox = tk.Listbox(frame, height=18, width=180)
-        self.abonos_listbox.pack(pady=10)
+        # Título
+        ctk.CTkLabel(frame, text="Realizar Abonos", font=("Arial", 18, "bold")).pack(pady=10)
+        # Información sobre abonos
+        info_frame = ctk.CTkFrame(frame, fg_color="#2A2D35")
+        info_frame.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(info_frame, text="ℹ️ Información importante:", font=("Arial", 12, "bold"), text_color="#FFD700").pack(pady=5)
+        ctk.CTkLabel(info_frame, text="• El primer abono debe ser al menos el 30% del valor total", font=("Arial", 11)).pack(pady=2)
+        ctk.CTkLabel(info_frame, text="• Los siguientes abonos pueden ser de cualquier valor", font=("Arial", 11)).pack(pady=2)
+        ctk.CTkLabel(info_frame, text="• Seleccione una reserva y complete los campos para abonar", font=("Arial", 11)).pack(pady=2)
+        # Lista de reservas pendientes
+        ctk.CTkLabel(frame, text="Reservas pendientes de pago:", font=("Arial", 14, "bold")).pack(pady=(15,5))
+        self.abonos_listbox = tk.Listbox(frame, height=12, width=120, font=("Arial", 10))
+        self.abonos_listbox.pack(pady=5, padx=10)
+        # Frame para entrada de monto y método de pago
+        input_frame = ctk.CTkFrame(frame)
+        input_frame.pack(pady=15)
+        ctk.CTkLabel(input_frame, text="Monto a abonar ($):", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.input_abono = ctk.CTkEntry(input_frame, width=120, placeholder_text="Ej: 50000")
+        self.input_abono.grid(row=0, column=1, padx=5, pady=5)
+        ctk.CTkLabel(input_frame, text="Método de pago:", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
+        self.metodo_pago_var = tk.StringVar()
+        self.metodo_pago_var.set(self.metodos_pago[0])
+        self.metodo_pago_menu = tk.OptionMenu(input_frame, self.metodo_pago_var, *self.metodos_pago)
+        self.metodo_pago_menu.grid(row=0, column=3, padx=5, pady=5)
+        # Botón para realizar abono
+        ctk.CTkButton(frame, text="💳 Realizar Abono", command=self._realizar_abono, fg_color="#00AA00", hover_color="#008800", font=("Arial", 13, "bold")).pack(pady=10)
+        # Cargar reservas inicialmente
         self._cargar_reservas_pendientes(id_cliente)
-        ctk.CTkLabel(frame, text="Monto a abonar:").pack(pady=5)
-        self.input_abono = ctk.CTkEntry(frame, width=20)
-        self.input_abono.pack(pady=5)
-        ctk.CTkButton(frame, text="Abonar", command=self._realizar_abono, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=10)
 
     def _cargar_reservas_pendientes(self, id_cliente):
         self.abonos_listbox.delete(0, 'end')
         placeholder = '%s' if not self.db_manager.offline else '?'
         # Nueva consulta: obtener reservas pendientes del cliente usando Reserva_alquiler y Alquiler
         query = (
-            f"SELECT ra.id_reserva, a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, v.modelo, v.placa, ra.saldo_pendiente "
+            f"SELECT ra.id_reserva, a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, v.modelo, v.placa, ra.saldo_pendiente, a.valor "
             f"FROM Reserva_alquiler ra "
             f"JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
             f"JOIN Vehiculo v ON a.id_vehiculo = v.placa "
@@ -613,13 +666,28 @@ class ClienteView(BaseCTKView):
                 placa = r[5]
                 modelo = r[4]
                 saldo_pendiente = r[6]
+                valor_total = r[7]
+                
                 # Sumar abonos realizados
                 abono_query = f"SELECT COALESCE(SUM(valor), 0) FROM Abono_reserva WHERE id_reserva = {placeholder}"
                 abonos = self.db_manager.execute_query(abono_query, (id_reserva,))
                 abonado = abonos[0][0] if abonos and abonos[0] else 0
                 saldo_real = saldo_pendiente - abonado
+                
                 if saldo_real > 0:
-                    self.abonos_listbox.insert('end', f"ID: {id_reserva} | Vehículo: {modelo} ({placa}) | Saldo pendiente: ${saldo_real} | Salida: {salida} | Entrada: {entrada}")
+                    # Calcular porcentaje abonado
+                    porcentaje_abonado = (abonado / valor_total) * 100 if valor_total > 0 else 0
+                    
+                    # Determinar si es el primer abono
+                    es_primer_abono = abonado == 0
+                    monto_minimo = valor_total * 0.30 if es_primer_abono else 0
+                    
+                    info_abono = f"ID: {id_reserva} | {modelo} ({placa}) | Saldo: ${saldo_real:,.0f} | Abonado: ${abonado:,.0f} ({porcentaje_abonado:.1f}%)"
+                    if es_primer_abono:
+                        info_abono += f" | Mínimo 1er abono: ${monto_minimo:,.0f}"
+                    
+                    self.abonos_listbox.insert('end', info_abono)
+                    
             if self.abonos_listbox.size() == 0:
                 self.abonos_listbox.insert('end', "No tienes reservas pendientes de pago.")
         else:
@@ -639,35 +707,60 @@ class ClienteView(BaseCTKView):
             return
         id_reserva = texto.split("ID: ")[1].split("|")[0].strip()
         monto = self.input_abono.get().strip()
-        if not monto or not monto.replace('.', '', 1).isdigit() or float(monto) <= 0:
-            messagebox.showwarning("Error", "Ingrese un monto válido")
+        metodo = self.metodo_pago_var.get()
+        # Validaciones del monto
+        if not monto:
+            messagebox.showwarning("Error", "Ingrese un monto")
             return
-        # Selección de método de pago
-        win_pago = ctk.CTkToplevel(self)
-        win_pago.title("Seleccionar método de pago")
-        win_pago.geometry("400x320")
-        win_pago.configure(fg_color="#222831")
-        win_pago.transient(self)
-        win_pago.grab_set()
-        win_pago.focus_set()
-        win_pago.update_idletasks()
-        x = self.winfo_x() + (self.winfo_width() // 2) - (400 // 2)
-        y = self.winfo_y() + (self.winfo_height() // 2) - (320 // 2)
-        win_pago.geometry(f"400x320+{x}+{y}")
-        ctk.CTkLabel(win_pago, text="Método de pago", font=("Arial", 15, "bold")).pack(pady=10)
-        metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
-        metodo_pago_var = tk.StringVar()
-        metodo_pago_var.set(metodos_pago[0])
-        metodo_pago_menu = tk.OptionMenu(win_pago, metodo_pago_var, *metodos_pago)
-        metodo_pago_menu.pack(pady=10)
-        def continuar():
-            metodo = metodo_pago_var.get()
-            win_pago.destroy()
-            if metodo == "Efectivo":
-                self._registrar_abono(id_reserva, monto, metodo, None)
-            else:
-                self._simular_pasarela_pago(id_reserva, monto, metodo)
-        ctk.CTkButton(win_pago, text="Continuar", command=continuar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
+        try:
+            monto_float = float(monto)
+        except ValueError:
+            messagebox.showwarning("Error", "El monto debe ser un número válido")
+            return
+        if monto_float <= 0:
+            messagebox.showwarning("Error", "El monto debe ser mayor a 0")
+            return
+        # Obtener información de la reserva para validaciones
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        valor_query = f"""
+            SELECT a.valor, ra.saldo_pendiente 
+            FROM Reserva_alquiler ra 
+            JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler 
+            WHERE ra.id_reserva = {placeholder}
+        """
+        valor_result = self.db_manager.execute_query(valor_query, (id_reserva,))
+        if not valor_result:
+            messagebox.showerror("Error", "No se pudo obtener información de la reserva")
+            return
+        valor_total = valor_result[0][0]
+        saldo_pendiente = valor_result[0][1]
+        abonos_query = f"SELECT COALESCE(SUM(valor), 0) FROM Abono_reserva WHERE id_reserva = {placeholder}"
+        abonos_result = self.db_manager.execute_query(abonos_query, (id_reserva,))
+        abonado_anterior = abonos_result[0][0] if abonos_result and abonos_result[0] else 0
+        # Validar 30% mínimo para el primer abono
+        if abonado_anterior == 0:
+            monto_minimo = valor_total * 0.30
+            if monto_float < monto_minimo:
+                messagebox.showwarning("Error", f"El primer abono debe ser al menos el 30% del valor total (${monto_minimo:,.0f})")
+                return
+        # Validar que no exceda el saldo pendiente
+        if isinstance(saldo_pendiente, float) or isinstance(saldo_pendiente, int):
+            saldo_pendiente_float = float(saldo_pendiente)
+        else:
+            saldo_pendiente_float = float(saldo_pendiente)
+        if isinstance(abonado_anterior, float) or isinstance(abonado_anterior, int):
+            abonado_anterior_float = float(abonado_anterior)
+        else:
+            abonado_anterior_float = float(abonado_anterior)
+        saldo_real = saldo_pendiente_float - abonado_anterior_float
+        if monto_float > saldo_real:
+            messagebox.showwarning("Error", f"El monto excede el saldo pendiente (${saldo_real:,.0f})")
+            return
+        # Lógica de abono según método de pago
+        if metodo == "Efectivo":
+            self._registrar_abono(id_reserva, monto_float, metodo, None)
+        else:
+            self._simular_pasarela_pago(id_reserva, monto_float, metodo)
 
     def _registrar_abono(self, id_reserva, monto, metodo, datos_pago=None):
         from tkinter import messagebox
@@ -677,16 +770,26 @@ class ClienteView(BaseCTKView):
             id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
             query = f"INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
             self.db_manager.execute_query(query, (float(monto), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), id_reserva, id_medio_pago), fetch=False)
+            
             if metodo == "Efectivo":
-                messagebox.showinfo("Abono en espera", "Abono registrado. Debe acercarse a la oficina para validar el pago.")
+                messagebox.showinfo("Abono registrado", 
+                    f"Abono de ${monto:,.0f} registrado exitosamente.\n\n"
+                    "Debe acercarse a la oficina para validar el pago en efectivo.\n"
+                    "Su reserva quedará en espera hasta confirmar el pago.")
             else:
-                messagebox.showinfo("Éxito", "Abono realizado y validado correctamente.")
-            # Solo limpiar input_abono si existe (pestaña de abonos)
+                messagebox.showinfo("Abono exitoso", 
+                    f"Abono de ${monto:,.0f} realizado y validado correctamente.\n\n"
+                    f"Método de pago: {metodo}\n"
+                    "Su reserva ha sido actualizada.")
+            
+            # Limpiar input_abono si existe
             if hasattr(self, 'input_abono'):
                 self.input_abono.delete(0, 'end')
-            # Actualizar abonos inmediatamente si existe la pestaña
+            
+            # Actualizar lista de reservas pendientes
             if hasattr(self, 'abonos_listbox'):
                 self._cargar_reservas_pendientes(self.user_data.get('id_cliente'))
+                
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo realizar el abono: {exc}")
 
@@ -728,7 +831,7 @@ class ClienteView(BaseCTKView):
             entry_cuenta.insert(0, "1234567890")
             entry_cuenta.pack(pady=4)
             ctk.CTkLabel(win, text="Banco: Banco Simulado", font=("Arial", 12)).pack(pady=4)
-        ctk.CTkLabel(win, text=f"Monto a pagar: ${monto}", font=("Arial", 13, "bold"), text_color="#FFD700").pack(pady=10)
+        ctk.CTkLabel(win, text=f"Monto a pagar: ${monto:,.0f}", font=("Arial", 13, "bold"), text_color="#FFD700").pack(pady=10)
         status_label = ctk.CTkLabel(win, text="Procesando pago...", font=("Arial", 12), text_color="#3A86FF")
         status_label.pack(pady=10)
         def procesar():
@@ -741,12 +844,8 @@ class ClienteView(BaseCTKView):
             time.sleep(1)
             win.grab_release()
             win.destroy()
-            # Solo mostrar mensaje de éxito, no registrar abono adicional
-            from tkinter import messagebox
-            messagebox.showinfo("Éxito", "Reserva creada y pago procesado correctamente.")
-            # Recargar lista de reservas
-            if hasattr(self, 'reservas_listbox'):
-                self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+            # Registrar el abono después del pago exitoso
+            self._registrar_abono(id_reserva, monto, metodo, None)
         threading.Thread(target=procesar, daemon=True).start()
 
     def _build_tab_crear_reserva(self, parent):
@@ -1601,55 +1700,80 @@ class EmpleadoView(BaseCTKView):
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
+                
+                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${descuento_val})")
+                
                 # Validar abono mínimo
-                try:
-                    abono_val = float(abono)
-                except ValueError:
-                    messagebox.showwarning("Error", "El monto de abono debe ser un número válido")
+                abono_min = int(total * 0.3)
+                abono = int(entry_abono.get().strip())
+                if abono < abono_min:
+                    messagebox.showwarning("Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:,.0f}")
                     return
-                abono_min = round(total * 0.3, 2)
-                if abono_val < abono_min:
-                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min:,.2f}")
-                    return
+                
+                metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
-                placeholder = '%s' if not self.db_manager.offline else '?'
+                
+                print(f"Insertando en Alquiler...")
                 # Insertar en Alquiler
-                query_alquiler = (f"INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento) "
-                                  f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 1, 1, 1, {placeholder}, {placeholder})")
-                id_alquiler = self.db_manager.execute_query(query_alquiler, (salida, total, entrada, placa, id_cliente, id_seguro, id_descuento), fetch=False, return_lastrowid=True)
+                placeholder = '%s' if not self.db_manager.offline else '?'
+                alquiler_query = f"""
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
+                    id_seguro, id_descuento, valor) 
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                """
+                id_alquiler = self.db_manager.execute_query(alquiler_query, (
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    id_seguro, id_descuento, total
+                ), fetch=False, return_lastrowid=True)
+                
                 if not id_alquiler:
-                    raise Exception("No se pudo obtener el ID del alquiler")
-                # Estado de reserva según método de pago
-                if metodo_pago == "Efectivo":
-                    estado_reserva = 1  # Pendiente de aprobación
-                else:
-                    estado_reserva = 2  # Confirmada
+                    messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
+                    return
+                
+                print(f"ID Alquiler obtenido: {id_alquiler}")
+                
                 # Insertar en Reserva_alquiler
-                query_reserva = (f"INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler) "
-                                 f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                saldo_pendiente = total - abono_val
-                id_reserva = self.db_manager.execute_query(query_reserva, (salida, abono_val, saldo_pendiente, estado_reserva, id_alquiler), fetch=False, return_lastrowid=True)
+                saldo_pendiente = total - abono
+                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                reserva_query = f"""
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                """
+                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
-                # Insertar abono
-                query_abono = (f"INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) "
-                               f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                id_medio_pago = 1 if metodo_pago == "Efectivo" else (2 if metodo_pago == "Tarjeta" else 3)
-                self.db_manager.execute_query(query_abono, (abono_val, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), id_reserva, id_medio_pago), fetch=False)
-                # Simulación de pasarela de pago si corresponde
-                if metodo_pago in ("Tarjeta", "Transferencia"):
-                    win.withdraw()
-                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
-                    self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
+                
+                print(f"ID Reserva obtenido: {id_reserva}")
+                
+                # Insertar abono inicial
+                id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
+                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                abono_query = f"""
+                    INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
+                    VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
+                """
+                self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
+                
+                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                
+                # Mostrar mensaje según método de pago
+                if metodo in ("Tarjeta", "Transferencia"):
+                    self._simular_pasarela_pago(id_reserva, abono, metodo)
                 else:
-                    messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                win.destroy()
-                # Solo recargar si el widget existe
-                if hasattr(self, 'reservas_listbox'):
-                    self._cargar_reservas_cliente(id_cliente)
+                    messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
+                
+                # Recargar lista de reservas
+                print(f"Recargando lista de reservas...")
+                self._cargar_reservas_cliente(id_cliente)
+                
+                # Limpiar formulario
+                entry_abono.delete(0, 'end')
+                
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-        ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
+                print(f"Error detallado: {exc}")
+        
+        ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
     def _build_tab_reservas(self, parent):
         import tkinter as tk

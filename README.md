@@ -200,6 +200,32 @@ La aplicación incluye usuarios de prueba para cada rol:
 | `mantenimiento1` | `mantenimiento123` | Empleado de Mantenimiento |
 | `cliente1` | `cliente123` | Cliente |
 
+## 💳 Realizar Abonos a Reservas
+
+### Instrucciones para Clientes
+
+1. **Acceder a la pestaña "Realizar abonos"**:
+   - Inicia sesión como cliente
+   - Ve a la pestaña "Realizar abonos"
+
+2. **Seleccionar reserva**:
+   - La lista muestra todas las reservas con saldo pendiente
+   - Selecciona la reserva a la que quieres hacer abono
+
+3. **Ingresar monto**:
+   - **Primer abono**: Debe ser al menos el 30% del valor total
+   - **Abonos posteriores**: Pueden ser de cualquier valor
+   - El sistema valida que no exceda el saldo pendiente
+
+4. **Seleccionar método de pago**:
+   - **Efectivo**: Registra el abono y muestra mensaje para validar en oficina
+   - **Tarjeta/Transferencia**: Abre pasarela de pagos simulada
+
+5. **Confirmar abono**:
+   - El sistema registra el abono automáticamente
+   - Actualiza el saldo pendiente de la reserva
+   - Muestra confirmación del pago realizado
+
 ## 🔧 Configuración del Puerto
 
 El puerto de la base de datos se configura en el archivo `.env`:
@@ -275,7 +301,7 @@ python main.py
 - Ver y crear reservas propias
 - Ver vehículos disponibles
 - Editar perfil personal
-- Realizar abonos
+- Realizar abonos a reservas pendientes
 - Cambiar contraseña
 
 ### Empleado de Ventas
@@ -423,6 +449,15 @@ chmod +x main.py
 - Triggers automáticos para crear usuarios con contraseñas seguras
 - Validación de correos únicos en tiempo real
 
+### Sistema de Abonos para Clientes
+- Pestaña dedicada para realizar abonos a reservas pendientes
+- Validación del 30% mínimo para el primer abono
+- Abonos posteriores de cualquier valor
+- Selección de método de pago (Efectivo, Tarjeta, Transferencia)
+- Pasarela de pagos simulada para tarjeta y transferencia
+- Mensajes informativos según el método de pago seleccionado
+- Actualización automática del saldo pendiente
+
 ## 🤝 Contribuir
 
 1. Fork el proyecto
@@ -447,3 +482,30 @@ Para reportar bugs o solicitar nuevas características, por favor abre un issue 
 ---
 
 **¡Gracias por usar nuestro Sistema de Alquiler de Vehículos!** 🚗✨ 
+
+2. **Contraseña inicial**: El número de documento del cliente
+3. **Cambio de contraseña**: Disponible después del primer login
+
+### Realizar Abonos a Reservas
+
+1. **Acceder a la pestaña "Realizar abonos"**:
+   - Inicia sesión como cliente
+   - Ve a la pestaña "Realizar abonos"
+
+2. **Seleccionar reserva**:
+   - La lista muestra todas las reservas con saldo pendiente
+   - Selecciona la reserva a la que quieres hacer abono
+
+3. **Ingresar monto**:
+   - **Primer abono**: Debe ser al menos el 30% del valor total
+   - **Abonos posteriores**: Pueden ser de cualquier valor
+   - El sistema valida que no exceda el saldo pendiente
+
+4. **Seleccionar método de pago**:
+   - **Efectivo**: Registra el abono y muestra mensaje para validar en oficina
+   - **Tarjeta/Transferencia**: Abre pasarela de pagos simulada
+
+5. **Confirmar abono**:
+   - El sistema registra el abono automáticamente
+   - Actualiza el saldo pendiente de la reserva
+   - Muestra confirmación del pago realizado 
