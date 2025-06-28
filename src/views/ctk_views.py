@@ -324,26 +324,123 @@ class ClienteView(BaseCTKView):
         # Contenedor de tarjetas
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
-        # Listar vehículos disponibles con info completa
-        query = ("SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion, t.tarifa_dia "
-                 "FROM Vehiculo v "
-                 "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
-                 "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
-                 "WHERE v.id_estado_vehiculo = 1")
+        # Listar vehículos disponibles con TODA la información relevante
+        query = ("""
+            SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
+                   m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
+                   c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
+                   b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+            FROM Vehiculo v 
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
+            LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
+            LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
+            LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
+            WHERE v.id_estado_vehiculo = 1
+        """)
         vehiculos = self.db_manager.execute_query(query)
-        self._vehiculos_cache = []
-        if vehiculos:
-            for idx, v in enumerate(vehiculos):
-                self._vehiculos_cache.append(v)
-                # Tarjeta visual
-                card = ctk.CTkFrame(self.cards_vehiculos, fg_color="white", corner_radius=12)
-                card.pack(fill="x", padx=10, pady=8)
-                ctk.CTkLabel(card, text=f"{v[1]} {v[2]} ({v[3]})", font=("Arial", 14, "bold")).pack(anchor="w", padx=12, pady=(6,0))
-                ctk.CTkLabel(card, text=f"Placa: {v[0]}", font=("Arial", 12)).pack(anchor="w", padx=12)
-                ctk.CTkLabel(card, text=f"Tarifa por día: ${v[4]:,.0f}", font=("Arial", 12), text_color="#1976D2").pack(anchor="w", padx=12, pady=(0,6))
-                ctk.CTkButton(card, text="Reservar este vehículo", command=lambda i=idx: self._abrir_nueva_reserva_vehiculo(self._vehiculos_cache[i]), fg_color="#3A86FF", hover_color="#265DAB").pack(pady=6)
-        else:
-            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles.", font=("Arial", 13), text_color="#C62828").pack(pady=20)
+        
+        if not vehiculos:
+            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
+            return
+        
+        # Crear scrollable frame para las tarjetas
+        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
+        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        for i, vehiculo in enumerate(vehiculos):
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
+             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+            
+            # Crear tarjeta con información completa
+            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card.pack(fill="x", padx=10, pady=5)
+            
+            # Header de la tarjeta
+            header_frame = ctk.CTkFrame(card, fg_color="#2196F3", corner_radius=10)
+            header_frame.pack(fill="x", padx=10, pady=(10, 5))
+            
+            ctk.CTkLabel(header_frame, text=f"{marca} {modelo}", 
+                        font=("Arial", 16, "bold"), text_color="white").pack(pady=5)
+            ctk.CTkLabel(header_frame, text=f"Placa: {placa}", 
+                        font=("Arial", 12), text_color="white").pack()
+            
+            # Información principal
+            main_frame = ctk.CTkFrame(card, fg_color="transparent")
+            main_frame.pack(fill="x", padx=10, pady=5)
+            
+            # Primera fila de información
+            row1 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row1.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row1, text=f"💰 Tarifa: ${tarifa_dia:,.0f}/día", 
+                        font=("Arial", 12, "bold"), text_color="#2E7D32").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"👥 Capacidad: {capacidad} personas", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"⛽ Combustible: {combustible}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Segunda fila de información
+            row2 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row2.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row2, text=f"🎨 Color: {color or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"⚙️ Transmisión: {transmision or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"🔧 Cilindraje: {cilindraje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Tercera fila de información
+            row3 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row3.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row3, text=f"🛡️ Blindaje: {blindaje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"📊 Kilometraje: {kilometraje:,} km", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"🔒 Seguro: {seguro_estado or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Información de sucursal
+            if sucursal:
+                row4 = ctk.CTkFrame(main_frame, fg_color="#F5F5F5", corner_radius=5)
+                row4.pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(row4, text=f"🏢 Sucursal: {sucursal}", 
+                            font=("Arial", 11, "bold"), text_color="#1976D2").pack(anchor="w", padx=5, pady=2)
+                if sucursal_dir:
+                    ctk.CTkLabel(row4, text=f"📍 {sucursal_dir}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_tel:
+                    ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+            
+            # Botón de reservar
+            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+            btn_frame.pack(fill="x", padx=10, pady=(5, 10))
+            
+            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
+                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                         fg_color="#4CAF50", hover_color="#388E3C", 
+                         font=("Arial", 12, "bold")).pack(pady=5)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
@@ -588,6 +685,119 @@ class ClienteView(BaseCTKView):
         
         ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
+    def _registrar_abono(self, id_reserva, monto, metodo, referencia=None):
+        from tkinter import messagebox
+        from datetime import datetime
+        try:
+            # Insertar el abono en la base de datos
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
+            
+            abono_query = f"""
+                INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
+                VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
+            """
+            self.db_manager.execute_query(abono_query, (monto, id_reserva, id_medio_pago), fetch=False)
+            
+            # Actualizar saldo pendiente en la reserva
+            update_query = f"""
+                UPDATE Reserva_alquiler 
+                SET saldo_pendiente = saldo_pendiente - {placeholder}
+                WHERE id_reserva = {placeholder}
+            """
+            self.db_manager.execute_query(update_query, (monto, id_reserva), fetch=False)
+            
+            # Verificar si la reserva está completamente pagada
+            check_query = f"SELECT saldo_pendiente FROM Reserva_alquiler WHERE id_reserva = {placeholder}"
+            result = self.db_manager.execute_query(check_query, (id_reserva,))
+            if result and result[0][0] <= 0:
+                # Cambiar estado a pagada
+                estado_query = f"""
+                    UPDATE Reserva_alquiler 
+                    SET id_estado_reserva = 2 
+                    WHERE id_reserva = {placeholder}
+                """
+                self.db_manager.execute_query(estado_query, (id_reserva,), fetch=False)
+                messagebox.showinfo("¡Reserva pagada!", "¡Felicidades! Tu reserva ha sido completamente pagada.")
+            
+            # Mostrar mensaje de éxito
+            if metodo == "Efectivo":
+                messagebox.showinfo("Abono registrado", f"Abono de ${monto:,.0f} registrado exitosamente.\nDebes acercarte a la sede para entregar el dinero.")
+            else:
+                messagebox.showinfo("Abono procesado", f"Abono de ${monto:,.0f} procesado exitosamente con {metodo}.")
+            
+            # Recargar la lista de reservas
+            self._cargar_reservas_pendientes(self.user_data.get('id_cliente'))
+            
+            # Limpiar campos
+            self.input_abono.delete(0, 'end')
+            self._abono_seleccionado = None
+            self.input_abono.configure(state="disabled")
+            self.metodo_pago_menu.configure(state="disabled")
+            self.btn_abonar.configure(state="disabled")
+            
+        except Exception as exc:
+            messagebox.showerror("Error", f"No se pudo registrar el abono: {exc}")
+
+    def _simular_pasarela_pago(self, id_reserva, monto, metodo):
+        from tkinter import messagebox
+        import tkinter as tk
+        from datetime import datetime
+        
+        # Crear ventana modal para simular pasarela de pago
+        win = ctk.CTkToplevel(self)
+        win.title(f"Pasarela de Pago - {metodo}")
+        win.geometry("500x400")
+        win.configure(fg_color="#1E1E1E")
+        win.transient(self)
+        win.grab_set()
+        win.focus_set()
+        
+        # Centrar ventana
+        win.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() // 2) - (500 // 2)
+        y = self.winfo_y() + (self.winfo_height() // 2) - (400 // 2)
+        win.geometry(f"500x400+{x}+{y}")
+        
+        # Contenido de la pasarela
+        ctk.CTkLabel(win, text="💳 Pasarela de Pago", font=("Arial", 18, "bold"), text_color="#00FF99").pack(pady=20)
+        ctk.CTkLabel(win, text=f"Método: {metodo}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(win, text=f"Monto: ${monto:,.0f}", font=("Arial", 16, "bold"), text_color="#FFD700").pack(pady=10)
+        
+        # Simular procesamiento
+        progress_label = ctk.CTkLabel(win, text="Procesando pago...", font=("Arial", 12))
+        progress_label.pack(pady=20)
+        
+        def procesar_pago():
+            import time
+            import random
+            
+            # Simular tiempo de procesamiento
+            for i in range(3):
+                progress_label.configure(text=f"Procesando pago... ({i+1}/3)")
+                win.update()
+                time.sleep(0.5)
+            
+            # Simular resultado (90% éxito)
+            if random.random() < 0.9:
+                progress_label.configure(text="✅ Pago procesado exitosamente", text_color="#00FF99")
+                win.update()
+                time.sleep(1)
+                
+                # Registrar el abono
+                self._registrar_abono(id_reserva, monto, metodo, f"REF_{random.randint(10000, 99999)}")
+                
+                win.destroy()
+            else:
+                progress_label.configure(text="❌ Error en el procesamiento", text_color="#FF5555")
+                win.update()
+                time.sleep(2)
+                messagebox.showerror("Error de Pago", "Hubo un error procesando el pago. Intente nuevamente.")
+                win.destroy()
+        
+        # Iniciar procesamiento después de un breve delay
+        win.after(1000, procesar_pago)
+
     def _build_tab_perfil(self, parent):
         import tkinter as tk
         from tkinter import messagebox
@@ -656,7 +866,7 @@ class ClienteView(BaseCTKView):
         self.metodo_pago_var.set(self.metodos_pago[0])
         self.metodo_pago_menu = tk.OptionMenu(input_frame, self.metodo_pago_var, *self.metodos_pago)
         self.metodo_pago_menu.grid(row=0, column=3, padx=5, pady=5)
-        self.metodo_pago_menu.config(state="disabled")
+        self.metodo_pago_menu.configure(state="disabled")
         self.btn_abonar = ctk.CTkButton(frame, text="💳 Realizar Abono", command=self._realizar_abono, fg_color="#00AA00", hover_color="#008800", font=("Arial", 13, "bold"), state="disabled")
         self.btn_abonar.pack(pady=10)
         self._abono_seleccionado = None
@@ -714,7 +924,7 @@ class ClienteView(BaseCTKView):
         # Reset selección
         self._abono_seleccionado = None
         self.input_abono.configure(state="disabled")
-        self.metodo_pago_menu.config(state="disabled")
+        self.metodo_pago_menu.configure(state="disabled")
         self.btn_abonar.configure(state="disabled")
 
     def _seleccionar_abono_card(self, id_reserva):
@@ -726,7 +936,7 @@ class ClienteView(BaseCTKView):
                 card.configure(fg_color="white")
         self._abono_seleccionado = id_reserva
         self.input_abono.configure(state="normal")
-        self.metodo_pago_menu.config(state="normal")
+        self.metodo_pago_menu.configure(state="normal")
         self.btn_abonar.configure(state="normal")
 
     def _realizar_abono(self):
@@ -1116,26 +1326,123 @@ class ClienteView(BaseCTKView):
         # Contenedor de tarjetas
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
-        # Listar vehículos disponibles con info completa
-        query = ("SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion, t.tarifa_dia "
-                 "FROM Vehiculo v "
-                 "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
-                 "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
-                 "WHERE v.id_estado_vehiculo = 1")
+        # Listar vehículos disponibles con TODA la información relevante
+        query = ("""
+            SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
+                   m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
+                   c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
+                   b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+            FROM Vehiculo v 
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
+            LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
+            LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
+            LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
+            WHERE v.id_estado_vehiculo = 1
+        """)
         vehiculos = self.db_manager.execute_query(query)
-        self._vehiculos_cache = []
-        if vehiculos:
-            for idx, v in enumerate(vehiculos):
-                self._vehiculos_cache.append(v)
-                # Tarjeta visual
-                card = ctk.CTkFrame(self.cards_vehiculos, fg_color="white", corner_radius=12)
-                card.pack(fill="x", padx=10, pady=8)
-                ctk.CTkLabel(card, text=f"{v[1]} {v[2]} ({v[3]})", font=("Arial", 14, "bold")).pack(anchor="w", padx=12, pady=(6,0))
-                ctk.CTkLabel(card, text=f"Placa: {v[0]}", font=("Arial", 12)).pack(anchor="w", padx=12)
-                ctk.CTkLabel(card, text=f"Tarifa por día: ${v[4]:,.0f}", font=("Arial", 12), text_color="#1976D2").pack(anchor="w", padx=12, pady=(0,6))
-                ctk.CTkButton(card, text="Reservar este vehículo", command=lambda i=idx: self._abrir_nueva_reserva_vehiculo(self._vehiculos_cache[i]), fg_color="#3A86FF", hover_color="#265DAB").pack(pady=6)
-        else:
-            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles.", font=("Arial", 13), text_color="#C62828").pack(pady=20)
+        
+        if not vehiculos:
+            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
+            return
+        
+        # Crear scrollable frame para las tarjetas
+        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
+        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        for i, vehiculo in enumerate(vehiculos):
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
+             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+            
+            # Crear tarjeta con información completa
+            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card.pack(fill="x", padx=10, pady=5)
+            
+            # Header de la tarjeta
+            header_frame = ctk.CTkFrame(card, fg_color="#2196F3", corner_radius=10)
+            header_frame.pack(fill="x", padx=10, pady=(10, 5))
+            
+            ctk.CTkLabel(header_frame, text=f"{marca} {modelo}", 
+                        font=("Arial", 16, "bold"), text_color="white").pack(pady=5)
+            ctk.CTkLabel(header_frame, text=f"Placa: {placa}", 
+                        font=("Arial", 12), text_color="white").pack()
+            
+            # Información principal
+            main_frame = ctk.CTkFrame(card, fg_color="transparent")
+            main_frame.pack(fill="x", padx=10, pady=5)
+            
+            # Primera fila de información
+            row1 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row1.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row1, text=f"💰 Tarifa: ${tarifa_dia:,.0f}/día", 
+                        font=("Arial", 12, "bold"), text_color="#2E7D32").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"👥 Capacidad: {capacidad} personas", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"⛽ Combustible: {combustible}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Segunda fila de información
+            row2 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row2.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row2, text=f"🎨 Color: {color or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"⚙️ Transmisión: {transmision or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"🔧 Cilindraje: {cilindraje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Tercera fila de información
+            row3 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row3.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row3, text=f"🛡️ Blindaje: {blindaje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"📊 Kilometraje: {kilometraje:,} km", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"🔒 Seguro: {seguro_estado or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Información de sucursal
+            if sucursal:
+                row4 = ctk.CTkFrame(main_frame, fg_color="#F5F5F5", corner_radius=5)
+                row4.pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(row4, text=f"🏢 Sucursal: {sucursal}", 
+                            font=("Arial", 11, "bold"), text_color="#1976D2").pack(anchor="w", padx=5, pady=2)
+                if sucursal_dir:
+                    ctk.CTkLabel(row4, text=f"📍 {sucursal_dir}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_tel:
+                    ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+            
+            # Botón de reservar
+            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+            btn_frame.pack(fill="x", padx=10, pady=(5, 10))
+            
+            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
+                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                         fg_color="#4CAF50", hover_color="#388E3C", 
+                         font=("Arial", 12, "bold")).pack(pady=5)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
@@ -1380,6 +1687,93 @@ class ClienteView(BaseCTKView):
         
         ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
+    def _actualizar_reserva(self, id_reserva, fecha_salida, fecha_entrada, id_vehiculo, id_seguro, id_descuento):
+        """Actualizar una reserva existente con validación de abonos"""
+        try:
+            from datetime import datetime
+            from tkinter import messagebox
+            
+            # Calcular nuevo valor
+            fecha_salida_dt = datetime.strptime(fecha_salida, "%Y-%m-%d %H:%M")
+            fecha_entrada_dt = datetime.strptime(fecha_entrada, "%Y-%m-%d %H:%M")
+            dias = (fecha_entrada_dt - fecha_salida_dt).days
+            
+            # Obtener tarifa del vehículo
+            tarifa_query = """
+                SELECT t.tarifa_dia
+                FROM Vehiculo v
+                JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+                WHERE v.placa = %s
+            """
+            tarifa_result = self.db_manager.execute_query(tarifa_query, (id_vehiculo,))
+            if not tarifa_result:
+                messagebox.showerror("Error", "No se pudo obtener la tarifa del vehículo")
+                return False
+            
+            tarifa_dia = float(tarifa_result[0][0])
+            nuevo_valor = dias * tarifa_dia
+            
+            # Obtener costo del seguro
+            if id_seguro:
+                seguro_query = "SELECT costo FROM Seguro_alquiler WHERE id_seguro = %s"
+                seguro_result = self.db_manager.execute_query(seguro_query, (id_seguro,))
+                if seguro_result:
+                    nuevo_valor += float(seguro_result[0][0])
+            
+            # Obtener descuento
+            if id_descuento:
+                descuento_query = "SELECT valor FROM Descuento_alquiler WHERE id_descuento = %s"
+                descuento_result = self.db_manager.execute_query(descuento_query, (id_descuento,))
+                if descuento_result:
+                    nuevo_valor -= float(descuento_result[0][0])
+            
+            # Obtener total de abonos realizados
+            abonos_query = "SELECT COALESCE(SUM(valor), 0) FROM Abono_reserva WHERE id_reserva = %s"
+            abonos_result = self.db_manager.execute_query(abonos_query, (id_reserva,))
+            total_abonos = float(abonos_result[0][0]) if abonos_result else 0
+            
+            # Validar si los abonos superan el nuevo valor
+            if total_abonos > nuevo_valor:
+                exceso = total_abonos - nuevo_valor
+                mensaje = f"""⚠️ ATENCIÓN: Los abonos realizados (${total_abonos:,.0f}) superan el nuevo valor de la reserva (${nuevo_valor:,.0f}).
+
+Exceso: ${exceso:,.0f}
+
+Debe contactar a la empresa para solicitar el reembolso del exceso.
+
+¿Desea continuar con la actualización?"""
+                
+                if not messagebox.askyesno("Exceso de Abonos", mensaje):
+                    return False
+            
+            # Actualizar alquiler
+            alquiler_query = """
+                UPDATE Alquiler 
+                SET fecha_hora_salida = %s, fecha_hora_entrada = %s, 
+                    id_vehiculo = %s, id_seguro = %s, id_descuento = %s, valor = %s
+                WHERE id_alquiler = (SELECT id_alquiler FROM Reserva_alquiler WHERE id_reserva = %s)
+            """
+            self.db_manager.execute_query(alquiler_query, 
+                (fecha_salida, fecha_entrada, id_vehiculo, id_seguro, id_descuento, nuevo_valor, id_reserva), 
+                fetch=False)
+            
+            # Actualizar saldo pendiente en reserva
+            nuevo_saldo = max(0, nuevo_valor - total_abonos)
+            reserva_query = """
+                UPDATE Reserva_alquiler 
+                SET saldo_pendiente = %s
+                WHERE id_reserva = %s
+            """
+            self.db_manager.execute_query(reserva_query, (nuevo_saldo, id_reserva), fetch=False)
+            
+            messagebox.showinfo("Éxito", f"Reserva actualizada correctamente.\nNuevo valor: ${nuevo_valor:,.0f}\nSaldo pendiente: ${nuevo_saldo:,.0f}")
+            self._cargar_reservas()  # Recargar la lista
+            return True
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo actualizar la reserva: {str(e)}")
+            return False
+
 class EmpleadoVentasView(BaseCTKView):
     def _welcome_message(self):
         return f"Bienvenido empleado de ventas, {self.user_data.get('usuario', '')}"
@@ -1451,34 +1845,129 @@ class EmpleadoVentasView(BaseCTKView):
         # Contenedor de tarjetas
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
-        # Listar vehículos disponibles con info completa
-        query = ("SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion, t.tarifa_dia "
-                 "FROM Vehiculo v "
-                 "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
-                 "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
-                 "WHERE v.id_estado_vehiculo = 1")
+        # Listar vehículos disponibles con TODA la información relevante
+        query = ("""
+            SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
+                   m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
+                   c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
+                   b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+            FROM Vehiculo v 
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
+            LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
+            LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
+            LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
+            WHERE v.id_estado_vehiculo = 1
+        """)
         vehiculos = self.db_manager.execute_query(query)
-        self._vehiculos_cache = []
-        if vehiculos:
-            for idx, v in enumerate(vehiculos):
-                self._vehiculos_cache.append(v)
-                # Tarjeta visual
-                card = ctk.CTkFrame(self.cards_vehiculos, fg_color="white", corner_radius=12)
-                card.pack(fill="x", padx=10, pady=8)
-                ctk.CTkLabel(card, text=f"{v[1]} {v[2]} ({v[3]})", font=("Arial", 14, "bold")).pack(anchor="w", padx=12, pady=(6,0))
-                ctk.CTkLabel(card, text=f"Placa: {v[0]}", font=("Arial", 12)).pack(anchor="w", padx=12)
-                ctk.CTkLabel(card, text=f"Tarifa por día: ${v[4]:,.0f}", font=("Arial", 12), text_color="#1976D2").pack(anchor="w", padx=12, pady=(0,6))
-                ctk.CTkButton(card, text="Reservar este vehículo", command=lambda i=idx: self._abrir_nueva_reserva_vehiculo(self._vehiculos_cache[i]), fg_color="#3A86FF", hover_color="#265DAB").pack(pady=6)
-        else:
-            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles.", font=("Arial", 13), text_color="#C62828").pack(pady=20)
+        
+        if not vehiculos:
+            ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
+            return
+        
+        # Crear scrollable frame para las tarjetas
+        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
+        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        for i, vehiculo in enumerate(vehiculos):
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
+             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+            
+            # Crear tarjeta con información completa
+            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card.pack(fill="x", padx=10, pady=5)
+            
+            # Header de la tarjeta
+            header_frame = ctk.CTkFrame(card, fg_color="#2196F3", corner_radius=10)
+            header_frame.pack(fill="x", padx=10, pady=(10, 5))
+            
+            ctk.CTkLabel(header_frame, text=f"{marca} {modelo}", 
+                        font=("Arial", 16, "bold"), text_color="white").pack(pady=5)
+            ctk.CTkLabel(header_frame, text=f"Placa: {placa}", 
+                        font=("Arial", 12), text_color="white").pack()
+            
+            # Información principal
+            main_frame = ctk.CTkFrame(card, fg_color="transparent")
+            main_frame.pack(fill="x", padx=10, pady=5)
+            
+            # Primera fila de información
+            row1 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row1.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row1, text=f"💰 Tarifa: ${tarifa_dia:,.0f}/día", 
+                        font=("Arial", 12, "bold"), text_color="#2E7D32").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"👥 Capacidad: {capacidad} personas", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row1, text=f"⛽ Combustible: {combustible}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Segunda fila de información
+            row2 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row2.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row2, text=f"🎨 Color: {color or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"⚙️ Transmisión: {transmision or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row2, text=f"🔧 Cilindraje: {cilindraje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Tercera fila de información
+            row3 = ctk.CTkFrame(main_frame, fg_color="transparent")
+            row3.pack(fill="x", pady=2)
+            
+            ctk.CTkLabel(row3, text=f"🛡️ Blindaje: {blindaje or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"📊 Kilometraje: {kilometraje:,} km", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            ctk.CTkLabel(row3, text=f"🔒 Seguro: {seguro_estado or 'No especificado'}", 
+                        font=("Arial", 12), text_color="#424242").pack(side="left", padx=5)
+            
+            # Información de sucursal
+            if sucursal:
+                row4 = ctk.CTkFrame(main_frame, fg_color="#F5F5F5", corner_radius=5)
+                row4.pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(row4, text=f"🏢 Sucursal: {sucursal}", 
+                            font=("Arial", 11, "bold"), text_color="#1976D2").pack(anchor="w", padx=5, pady=2)
+                if sucursal_dir:
+                    ctk.CTkLabel(row4, text=f"📍 {sucursal_dir}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_tel:
+                    ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}", 
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+            
+            # Botón de reservar
+            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+            btn_frame.pack(fill="x", padx=10, pady=(5, 10))
+            
+            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
+                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                         fg_color="#4CAF50", hover_color="#388E3C", 
+                         font=("Arial", 12, "bold")).pack(pady=5)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
         from tkinter import messagebox
         from datetime import datetime
         from tkcalendar import DateEntry
-        from ttkbootstrap import Style
-        from ttkbootstrap.widgets import Combobox
         win = ctk.CTkToplevel(self)
         win.title("Nueva reserva")
         win.geometry("600x700")
@@ -1494,34 +1983,42 @@ class EmpleadoVentasView(BaseCTKView):
         placa, modelo, marca, tipo, tarifa_dia = vehiculo
         ctk.CTkLabel(win, text=f"Placa: {placa} | {modelo} {marca} ({tipo})", font=("Arial", 15, "bold")).pack(pady=8)
         ctk.CTkLabel(win, text=f"Tarifa por día: ${tarifa_dia}", font=("Arial", 13)).pack(pady=4)
-        ctk.CTkLabel(win, text="Fecha y hora salida:", font=("Arial", 12)).pack(pady=4)
-        salida_frame = ctk.CTkFrame(win)
-        salida_frame.pack(pady=2)
-        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=16)
+        # Frame de fecha y hora salida (solo uno, tipo tk.Frame)
+        salida_frame = tk.Frame(win, bg="#222831")
+        salida_frame.pack(fill="x", pady=8)
+        tk.Label(salida_frame, text="Fecha y hora salida:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        salida_date = DateEntry(salida_frame, date_pattern='yyyy-mm-dd', width=12)
         salida_date.pack(side="left", padx=2)
-        # Combobox para hora y minutos de salida
-        style = Style("darkly")
-        horas = [f"{h:02d}" for h in range(8, 21)]
+        # Combobox para hora (1-12), minutos y AM/PM usando solo tkinter
+        horas_12 = [f"{h:02d}" for h in range(1, 13)]
         minutos = ["00", "15", "30", "45"]
-        salida_hora_cb = Combobox(salida_frame, values=horas, width=3, bootstyle="info")
+        ampm = ["AM", "PM"]
+        salida_hora_cb = tk.ttk.Combobox(salida_frame, values=horas_12, width=3, state="readonly")
         salida_hora_cb.set("08")
         salida_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(salida_frame, text=":").pack(side="left")
-        salida_min_cb = Combobox(salida_frame, values=minutos, width=3, bootstyle="info")
+        tk.Label(salida_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
+        salida_min_cb = tk.ttk.Combobox(salida_frame, values=minutos, width=3, state="readonly")
         salida_min_cb.set("00")
         salida_min_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(win, text="Fecha y hora entrada:", font=("Arial", 12)).pack(pady=4)
-        entrada_frame = ctk.CTkFrame(win)
-        entrada_frame.pack(pady=2)
-        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=16)
+        salida_ampm_cb = tk.ttk.Combobox(salida_frame, values=ampm, width=3, state="readonly")
+        salida_ampm_cb.set("AM")
+        salida_ampm_cb.pack(side="left", padx=2)
+        # Frame de fecha y hora entrada (solo uno, tipo tk.Frame)
+        entrada_frame = tk.Frame(win, bg="#222831")
+        entrada_frame.pack(fill="x", pady=8)
+        tk.Label(entrada_frame, text="Fecha y hora entrada:", font=("Arial", 12), bg="#222831", fg="#F5F6FA").pack(anchor="w")
+        entrada_date = DateEntry(entrada_frame, date_pattern='yyyy-mm-dd', width=12)
         entrada_date.pack(side="left", padx=2)
-        entrada_hora_cb = Combobox(entrada_frame, values=horas, width=3, bootstyle="info")
+        entrada_hora_cb = tk.ttk.Combobox(entrada_frame, values=horas_12, width=3, state="readonly")
         entrada_hora_cb.set("09")
         entrada_hora_cb.pack(side="left", padx=2)
-        ctk.CTkLabel(entrada_frame, text=":").pack(side="left")
-        entrada_min_cb = Combobox(entrada_frame, values=minutos, width=3, bootstyle="info")
+        tk.Label(entrada_frame, text=":", bg="#222831", fg="#F5F6FA").pack(side="left")
+        entrada_min_cb = tk.ttk.Combobox(entrada_frame, values=minutos, width=3, state="readonly")
         entrada_min_cb.set("00")
         entrada_min_cb.pack(side="left", padx=2)
+        entrada_ampm_cb = tk.ttk.Combobox(entrada_frame, values=ampm, width=3, state="readonly")
+        entrada_ampm_cb.set("AM")
+        entrada_ampm_cb.pack(side="left", padx=2)
         # Seguros disponibles
         ctk.CTkLabel(win, text="Seguro:", font=("Arial", 12)).pack(pady=4)
         seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion, costo FROM Seguro_alquiler")
@@ -1542,71 +2039,72 @@ class EmpleadoVentasView(BaseCTKView):
             descuento_var.set(f"{descuentos[0][1]} (-${descuentos[0][2]})")
         else:
             ctk.CTkLabel(win, text="No hay descuentos disponibles", text_color="#FF5555").pack(pady=4)
-        # Método de pago
-        ctk.CTkLabel(win, text="Método de pago:", font=("Arial", 12)).pack(pady=4)
-        metodos = ["Efectivo", "Tarjeta"]
-        metodo_var = tk.StringVar()
-        metodo_menu = tk.OptionMenu(win, metodo_var, *metodos)
-        metodo_menu.pack(pady=4)
-        metodo_var.set(metodos[0])
-        # Precio calculado
-        precio_label = ctk.CTkLabel(win, text="Precio total: $", font=("Arial", 13, "bold"))
-        precio_label.pack(pady=8)
-        # Mensaje de abono mínimo
-        abono_min_label = ctk.CTkLabel(win, text="Abono mínimo requerido: 30% del valor total", text_color="#FFD700", font=("Arial", 12, "bold"))
+        # Etiquetas para mostrar el total y el abono mínimo
+        total_label = ctk.CTkLabel(win, text="Total a pagar: $0", font=("Arial", 14, "bold"), text_color="#00FF99")
+        total_label.pack(pady=8)
+        abono_min_label = ctk.CTkLabel(win, text="Abono mínimo (30%): $0", font=("Arial", 13), text_color="#FFD700")
         abono_min_label.pack(pady=4)
-        ctk.CTkLabel(win, text="Monto a abonar:", font=("Arial", 12)).pack(pady=4)
-        entry_abono = ctk.CTkEntry(win, width=20)
+        # Abono y método de pago
+        ctk.CTkLabel(win, text="Abono inicial ($, mínimo 30%):", font=("Arial", 12)).pack(pady=4)
+        entry_abono = ctk.CTkEntry(win, width=120)  # Ampliado para mejor visibilidad
         entry_abono.pack(pady=4)
-        # Cálculo de precio
-        def calcular_precio(*_):
+        ctk.CTkLabel(win, text="Método de pago:", font=("Arial", 12)).pack(pady=4)
+        metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
+        metodo_pago_var = tk.StringVar()
+        metodo_pago_var.set(metodos_pago[0])
+        metodo_pago_menu = tk.OptionMenu(win, metodo_pago_var, *metodos_pago)
+        metodo_pago_menu.pack(pady=4)
+        # Modifico la función para obtener la hora en formato 24h
+        def get_24h(date, hora_cb, min_cb, ampm_cb):
+            h = int(hora_cb.get())
+            m = int(min_cb.get())
+            ampm = ampm_cb.get()
+            if ampm == "PM" and h != 12:
+                h += 12
+            if ampm == "AM" and h == 12:
+                h = 0
+            return f"{date.get()} {h:02d}:{m:02d}"
+        # Función para calcular y mostrar el total y abono mínimo
+        def actualizar_total(*args):
             try:
-                salida = entry_salida.get().strip()
-                entrada = entry_entrada.get().strip()
-                if not salida or not entrada:
-                    precio_label.configure(text="Precio total: $")
-                    return
                 fmt = "%Y-%m-%d %H:%M"
+                salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+                entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
                 dt_salida = datetime.strptime(salida, fmt)
                 dt_entrada = datetime.strptime(entrada, fmt)
                 dias = (dt_entrada - dt_salida).days
                 if dias < 1:
                     dias = 1
                 precio = dias * float(tarifa_dia)
-                # Seguro
-                idx_seg = 0
-                costo_seguro = 0
-                if seguros and seguro_var.get():
-                    idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
-                    if idx_seg:
-                        idx_seg = idx_seg[0]
-                        costo_seguro = float(seguros[idx_seg][2])
-                # Descuento
-                idx_desc = 0
-                valor_descuento = 0
-                if descuentos and descuento_var.get():
-                    idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
-                    if idx_desc:
-                        idx_desc = idx_desc[0]
-                        valor_descuento = float(descuentos[idx_desc][2])
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
-                precio_label.configure(text=f"Precio total: ${total}")
-                return total
+                abono_min = round(total * 0.3, 2)
+                total_label.configure(text=f"Total a pagar: ${total:,.2f}")
+                abono_min_label.configure(text=f"Abono mínimo (30%): ${abono_min:,.2f}")
             except Exception:
-                precio_label.configure(text="Precio total: $")
-                return None
-        entry_salida.bind('<FocusOut>', calcular_precio)
-        entry_entrada.bind('<FocusOut>', calcular_precio)
-        seguro_var.trace('w', calcular_precio)
-        descuento_var.trace('w', calcular_precio)
+                total_label.configure(text="Total a pagar: $0")
+                abono_min_label.configure(text="Abono mínimo (30%): $0")
+        # Asociar eventos para recalcular
+        for widget in [salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb, entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb]:
+            widget.bind("<<ComboboxSelected>>", actualizar_total)
+            widget.bind("<FocusOut>", actualizar_total)
+        if seguros:
+            seguro_var.trace_add('write', lambda *a: actualizar_total())
+        if descuentos:
+            descuento_var.trace_add('write', lambda *a: actualizar_total())
+        # Inicializar valores
+        actualizar_total()
         # Guardar reserva
         def guardar():
-            salida = entry_salida.get().strip()
-            entrada = entry_entrada.get().strip()
+            salida = get_24h(salida_date, salida_hora_cb, salida_min_cb, salida_ampm_cb)
+            entrada = get_24h(entrada_date, entrada_hora_cb, entrada_min_cb, entrada_ampm_cb)
             abono = entry_abono.get().strip()
-            metodo_pago = metodo_var.get()
+            metodo_pago = metodo_pago_var.get()
             if not salida or not entrada or not (seguros and seguro_var.get()) or not (descuentos and descuento_var.get()) or not abono or not metodo_pago:
                 messagebox.showwarning("Error", "Todos los campos son obligatorios")
                 return
@@ -1624,64 +2122,89 @@ class EmpleadoVentasView(BaseCTKView):
                 if dias < 1:
                     dias = 1
                 precio = dias * float(tarifa_dia)
-                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()][0]
-                id_seguro = seguros[idx_seg][0]
-                costo_seguro = float(seguros[idx_seg][2])
-                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()][0]
-                id_descuento = descuentos[idx_desc][0]
-                valor_descuento = float(descuentos[idx_desc][2])
+                idx_seg = [i for i, s in enumerate(seguros) if f"{s[1]} (${s[2]})" == seguro_var.get()]
+                id_seguro = seguros[idx_seg[0]][0] if idx_seg else None
+                costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
+                idx_desc = [i for i, d in enumerate(descuentos) if f"{d[1]} (-${d[2]})" == descuento_var.get()]
+                id_descuento = descuentos[idx_desc[0]][0] if idx_desc else None
+                valor_descuento = float(descuentos[idx_desc[0]][2]) if idx_desc else 0
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
                     total = 0
+                
+                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${descuento_val})")
+                
                 # Validar abono mínimo
-                try:
-                    abono_val = float(abono)
-                except ValueError:
-                    messagebox.showwarning("Error", "El monto de abono debe ser un número válido")
+                abono_min = int(total * 0.3)
+                abono = int(entry_abono.get().strip())
+                if abono < abono_min:
+                    messagebox.showwarning("Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:,.0f}")
                     return
-                abono_min = round(total * 0.3, 2)
-                if abono_val < abono_min:
-                    messagebox.showwarning("Error", f"El abono mínimo es de $ {abono_min}")
-                    return
+                
+                metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
-                placeholder = '%s' if not self.db_manager.offline else '?'
+                
+                print(f"Insertando en Alquiler...")
                 # Insertar en Alquiler
-                query_alquiler = (f"INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento) "
-                                  f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 1, 1, 1, {placeholder}, {placeholder})")
-                id_alquiler = self.db_manager.execute_query(query_alquiler, (salida, total, entrada, placa, id_cliente, id_seguro, id_descuento), fetch=False, return_lastrowid=True)
+                placeholder = '%s' if not self.db_manager.offline else '?'
+                alquiler_query = f"""
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
+                    id_seguro, id_descuento, valor) 
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                """
+                id_alquiler = self.db_manager.execute_query(alquiler_query, (
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    id_seguro, id_descuento, total
+                ), fetch=False, return_lastrowid=True)
+                
                 if not id_alquiler:
-                    raise Exception("No se pudo obtener el ID del alquiler")
-                # Estado de reserva según método de pago
-                if metodo_pago == "Efectivo":
-                    estado_reserva = 1  # Pendiente de aprobación
-                else:
-                    estado_reserva = 2  # Confirmada
+                    messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
+                    return
+                
+                print(f"ID Alquiler obtenido: {id_alquiler}")
+                
                 # Insertar en Reserva_alquiler
-                query_reserva = (f"INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler) "
-                                 f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                saldo_pendiente = total - abono_val
-                id_reserva = self.db_manager.execute_query(query_reserva, (salida, abono_val, saldo_pendiente, estado_reserva, id_alquiler), fetch=False, return_lastrowid=True)
+                saldo_pendiente = total - abono
+                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                reserva_query = f"""
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                """
+                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
-                # Insertar abono
-                query_abono = (f"INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) "
-                               f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})")
-                id_medio_pago = 1 if metodo_pago == "Efectivo" else (2 if metodo_pago == "Tarjeta" else 3)
-                self.db_manager.execute_query(query_abono, (abono_val, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), id_reserva, id_medio_pago), fetch=False)
-                # Simulación de pasarela de pago si corresponde
-                if metodo_pago in ("Tarjeta", "Transferencia"):
-                    win.withdraw()
-                    # Llamada sin on_finish, la recarga y cierre se hace al finalizar el pago
-                    self._simular_pasarela_pago(id_reserva, abono_val, metodo_pago)
+                
+                print(f"ID Reserva obtenido: {id_reserva}")
+                
+                # Insertar abono inicial
+                id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
+                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                abono_query = f"""
+                    INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
+                    VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
+                """
+                self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
+                
+                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                
+                # Mostrar mensaje según método de pago
+                if metodo in ("Tarjeta", "Transferencia"):
+                    self._simular_pasarela_pago(id_reserva, abono, metodo)
                 else:
-                    messagebox.showinfo("Reserva en espera", "Reserva creada. Debe acercarse a la oficina para entregar el dinero y que un empleado apruebe el alquiler.")
-                win.destroy()
-                # Solo recargar si el widget existe
-                if hasattr(self, 'reservas_listbox'):
-                    self._cargar_reservas_cliente(id_cliente)
+                    messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
+                
+                # Recargar lista de reservas
+                print(f"Recargando lista de reservas...")
+                self._cargar_reservas_cliente(id_cliente)
+                
+                # Limpiar formulario
+                entry_abono.delete(0, 'end')
+                
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-        ctk.CTkButton(win, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
+                print(f"Error detallado: {exc}")
+        
+        ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
 class EmpleadoCajaView(BaseCTKView):
     def _welcome_message(self):
