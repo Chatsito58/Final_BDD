@@ -935,10 +935,10 @@ class ClienteView(BaseCTKView):
             # Limpiar campos y HABILITAR para nuevo abono
             self.input_abono.delete(0, 'end')
             self._abono_seleccionado = None
-            # NO deshabilitar los campos, mantener habilitados para nuevo abono
-            # self.input_abono.configure(state="disabled")
-            # self.metodo_pago_menu.configure(state="disabled")
-            # self.btn_abonar.configure(state="disabled")
+            # HABILITAR los campos para nuevo abono
+            self.input_abono.configure(state="normal")
+            self.metodo_pago_menu.configure(state="normal")
+            self.btn_abonar.configure(state="normal")
             
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar el abono: {exc}")
@@ -1095,7 +1095,8 @@ class ClienteView(BaseCTKView):
                 abono_query = f"SELECT COALESCE(SUM(valor), 0) FROM Abono_reserva WHERE id_reserva = {placeholder}"
                 abonos = self.db_manager.execute_query(abono_query, (id_reserva,))
                 abonado = abonos[0][0] if abonos and abonos[0] else 0
-                saldo_real = saldo_pendiente - abonado
+                # Usar directamente el saldo_pendiente de la BD (ya está actualizado)
+                saldo_real = saldo_pendiente
                 if saldo_real > 0:
                     porcentaje_abonado = (abonado / valor_total) * 100 if valor_total > 0 else 0
                     es_primer_abono = abonado == 0
@@ -1180,18 +1181,14 @@ class ClienteView(BaseCTKView):
             if monto_float < monto_minimo:
                 messagebox.showwarning("Error", f"El primer abono debe ser al menos el 30% del valor total (${monto_minimo:,.0f})")
                 return
-        # Validar que no exceda el saldo pendiente
+        # Validar que no exceda el saldo pendiente (usar directamente el saldo_pendiente de la BD)
         if isinstance(saldo_pendiente, float) or isinstance(saldo_pendiente, int):
             saldo_pendiente_float = float(saldo_pendiente)
         else:
             saldo_pendiente_float = float(saldo_pendiente)
-        if isinstance(abonado_anterior, float) or isinstance(abonado_anterior, int):
-            abonado_anterior_float = float(abonado_anterior)
-        else:
-            abonado_anterior_float = float(abonado_anterior)
-        saldo_real = saldo_pendiente_float - abonado_anterior_float
-        if monto_float > saldo_real:
-            messagebox.showwarning("Error", f"El monto excede el saldo pendiente (${saldo_real:,.0f})")
+        
+        if monto_float > saldo_pendiente_float:
+            messagebox.showwarning("Error", f"El monto excede el saldo pendiente (${saldo_pendiente_float:,.0f})")
             return
         # Lógica de abono según método de pago
         if metodo == "Efectivo":
@@ -1965,6 +1962,8 @@ Debe contactar a la empresa para solicitar el reembolso del exceso.
             messagebox.showinfo("Éxito", f"Reserva actualizada correctamente.\nNuevo valor: ${nuevo_valor:,.0f}\nSaldo pendiente: ${nuevo_saldo:,.0f}")
             # Corregir el nombre del método
             self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+            # También actualizar la tabla de abonos si está activa
+            self._cargar_reservas_pendientes(self.user_data.get('id_cliente'))
             return True
             
         except Exception as e:
