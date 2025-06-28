@@ -181,14 +181,23 @@ class AlquilerApp:
             win.exec_() if hasattr(win, 'exec_') else app.exec_()
         else:
             from src.views.ctk_views import ClienteView
-            cliente_view = ClienteView(user_data, db_manager, on_logout)
-            # Usar after() para manejar el logout de manera segura
-            def safe_logout():
-                cliente_view._stop_status = True
-                cliente_view.withdraw()
-                on_logout()
-            cliente_view.on_logout = safe_logout
-            cliente_view.mainloop()
+            import threading
+            
+            def run_cliente_view():
+                cliente_view = ClienteView(user_data, db_manager, on_logout)
+                # Usar after() para manejar el logout de manera segura
+                def safe_logout():
+                    cliente_view._stop_status = True
+                    cliente_view.withdraw()
+                    # Usar QTimer para volver al login de manera segura
+                    from PyQt5.QtCore import QTimer
+                    QTimer.singleShot(0, on_logout)
+                cliente_view.on_logout = safe_logout
+                cliente_view.mainloop()
+            
+            # Ejecutar la vista de cliente en un hilo separado
+            cliente_thread = threading.Thread(target=run_cliente_view, daemon=True)
+            cliente_thread.start()
 
 if __name__ == "__main__":
     logger.info("=== Iniciando aplicación de alquiler ===")
