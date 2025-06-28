@@ -114,7 +114,8 @@ class BaseCTKView(ctk.CTk):
         super().destroy()
 
     def logout(self):
-        self.destroy()
+        self._stop_status = True
+        self.withdraw()  # Ocultar en lugar de destruir
         if self.on_logout:
             self.on_logout()
 

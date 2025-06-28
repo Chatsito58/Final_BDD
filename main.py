@@ -181,7 +181,14 @@ class AlquilerApp:
             win.exec_() if hasattr(win, 'exec_') else app.exec_()
         else:
             from src.views.ctk_views import ClienteView
-            ClienteView(user_data, db_manager, on_logout).mainloop()
+            cliente_view = ClienteView(user_data, db_manager, on_logout)
+            # Usar after() para manejar el logout de manera segura
+            def safe_logout():
+                cliente_view._stop_status = True
+                cliente_view.withdraw()
+                on_logout()
+            cliente_view.on_logout = safe_logout
+            cliente_view.mainloop()
 
 if __name__ == "__main__":
     logger.info("=== Iniciando aplicación de alquiler ===")

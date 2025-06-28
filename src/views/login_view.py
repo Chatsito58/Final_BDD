@@ -182,8 +182,8 @@ class LoginView(QDialog):
 
             def volver_a_login(correo_registrado=None):
                 if hasattr(self, '_registro_window'):
-                    self._registro_window.destroy()
-                    delattr(self, '_registro_window')
+                    self._registro_window.withdraw()  # Ocultar en lugar de destruir
+                    self._registro_window._stop_status = True
                 self.show()
                 self.raise_()
                 self.activateWindow()
