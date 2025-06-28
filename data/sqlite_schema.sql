@@ -112,14 +112,14 @@ CREATE TRIGGER IF NOT EXISTS trg_cliente_usuario
 AFTER INSERT ON Cliente
 BEGIN
     INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente)
-    VALUES (NEW.correo, NEW.documento, 1, NEW.id_cliente);
+    VALUES (NEW.correo, hex(sha256(NEW.documento)), 1, NEW.id_cliente);
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_empleado_usuario
 AFTER INSERT ON Empleado
 BEGIN
     INSERT INTO Usuario (usuario, contrasena, id_rol, id_empleado)
-    VALUES (NEW.correo, NEW.documento, 2, NEW.id_empleado);
+    VALUES (NEW.correo, hex(sha256(NEW.documento)), 2, NEW.id_empleado);
 END;
 
 -- Tablas críticas para sincronización offline

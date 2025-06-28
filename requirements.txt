@@ -17,3 +17,7 @@ ttkbootstrap>=1.10.0
 
 # Logging y utilidades del sistema
 pathlib2>=2.3.0; python_version<"3.4"
+
+# Dependencias adicionales para mejor compatibilidad
+Pillow>=9.0.0
+packaging>=21.0

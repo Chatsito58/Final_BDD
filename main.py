@@ -134,7 +134,8 @@ class AlquilerApp:
                 self.show_role_view(user_data, show_login, self.db_manager, self.auth_manager)
             else:
                 logger.info("Login cancelado por el usuario")
-                sys.exit()
+                # En lugar de cerrar la aplicación, volver a mostrar el login
+                show_login()
         show_login()
 
     def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
