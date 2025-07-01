@@ -267,7 +267,10 @@ class DBManager:
         self._sqlite.execute_query(query, params, fetch=False)
 
     def sync_pending_reservations(self):
-        """Sincronizar todas las tablas con columna 'pendiente' de SQLite a MariaDB."""
+        """Sincronizar en la base remota los registros marcados como pendientes.
+
+        Incluye reservas, abonos y cambios de contrase\u00f1a de usuarios.
+        """
         if self.offline:
             print("[SYNC][INFO] Sincronización de pendientes omitida, modo sin conexión.")
             self.logger.info("[SYNC][INFO] Sincronización de pendientes omitida, modo sin conexión.")
@@ -331,6 +334,29 @@ class DBManager:
                     print(f"[DBManager] Error insertando en {t['tabla']} id={reg[t['id']]}: {exc}")
                     conn.close()
                     return
+
+        # Sincronizar cambios de contraseña pendientes
+        pendientes_pwd = self._sqlite.get_pending_password_updates() or []
+        for usuario, contrasena in pendientes_pwd:
+            try:
+                cursor.execute(
+                    "UPDATE Usuario SET contrasena = %s WHERE usuario = %s",
+                    (contrasena, usuario)
+                )
+                self._sqlite.clear_pending_password(usuario)
+                self.logger.info(
+                    f"[DBManager] Contraseña sincronizada para {usuario}"
+                )
+                print(f"[DBManager] Contraseña sincronizada para {usuario}")
+            except Exception as exc:
+                self.logger.error(
+                    f"[DBManager] Error sincronizando contraseña para {usuario}: {exc}"
+                )
+                print(
+                    f"[DBManager] Error sincronizando contraseña para {usuario}: {exc}"
+                )
+                conn.close()
+                return
         cursor.close()
         conn.close()
         self.logger.info("[DBManager] Sincronización finalizada")
@@ -478,10 +504,12 @@ class DBManager:
                     (hashed_nueva, usuario),
                     fetch=False
                 )
-            # Actualizar en local siempre
+            # Determinar valor del flag pendiente según estado de conexión
+            pendiente_val = 1 if self.offline else 0
+            # Actualizar en local siempre, ajustando el flag
             self._sqlite.execute_query(
-                "UPDATE Usuario SET contrasena = ? WHERE usuario = ?",
-                (hashed_nueva, usuario),
+                "UPDATE Usuario SET contrasena = ?, pendiente = ? WHERE usuario = ?",
+                (hashed_nueva, pendiente_val, usuario),
                 fetch=False
             )
             return True
