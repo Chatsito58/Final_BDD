@@ -3074,6 +3074,9 @@ class GerenteView(BaseCTKView):
         if not doc or not nom or not cor or not cargo:
             messagebox.showwarning("Aviso", "Documento, nombre, correo y cargo son obligatorios")
             return
+        if not verificar_permiso_creacion_empleado(cargo, self.user_data.get('rol')):
+            messagebox.showwarning("Aviso", "No tiene permiso para crear/editar este empleado")
+            return
         placeholder = '%s' if not self.db_manager.offline else '?'
         try:
             if self._emp_sel:
