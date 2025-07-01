@@ -2890,3 +2890,237 @@ class EmpleadoMantenimientoView(BaseCTKView):
                 listbox.insert('end', f"{fecha} | {placa} | {desc}")
         else:
             listbox.insert('end', "Sin registros de mantenimiento")
+
+class GerenteView(BaseCTKView):
+    """Vista CTk para gerentes con gestión de empleados y reportes."""
+
+    def _welcome_message(self):
+        return f"Bienvenido gerente, {self.user_data.get('usuario', '')}"
+
+    def _build_ui(self):
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
+        topbar.pack(fill="x", pady=(0,5))
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
+        self._status_label.pack(side="left", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout,
+                      fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK,
+                      width=140, height=32).pack(side="right", padx=10, pady=8)
+
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR,
+                     font=("Arial", 20)).pack(pady=30)
+
+        self.tab_empleados = self.tabview.add("Empleados")
+        self._build_tab_empleados(self.tabview.tab("Empleados"))
+
+        self.tab_reportes = self.tabview.add("Reportes")
+        self._build_tab_reportes(self.tabview.tab("Reportes"))
+
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+    def _build_tab_empleados(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        self._emp_sel = None
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Gestión de empleados", font=("Arial", 18, "bold")).pack(pady=10)
+
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_emp = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_emp.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_emp.pack(side="left", fill="both", expand=True)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        ctk.CTkLabel(form, text="Documento:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Nombre:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Teléfono:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Correo:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Cargo:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_doc_e = ctk.CTkEntry(form, width=150)
+        self.ent_nom_e = ctk.CTkEntry(form, width=150)
+        self.ent_tel_e = ctk.CTkEntry(form, width=150)
+        self.ent_cor_e = ctk.CTkEntry(form, width=150)
+        self.ent_cargo_e = ctk.CTkEntry(form, width=150)
+
+        self.ent_doc_e.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_nom_e.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_tel_e.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_cor_e.grid(row=3, column=1, padx=5, pady=5)
+        self.ent_cargo_e.grid(row=4, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_empleado, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_empleado, width=120,
+                      fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
+
+        self.lb_emp.bind("<<ListboxSelect>>", self._seleccionar_empleado)
+        self._cargar_empleados()
+
+    def _cargar_empleados(self):
+        self.lb_emp.delete(0, 'end')
+        rows = self.db_manager.execute_query("SELECT id_empleado, nombre, cargo FROM Empleado")
+        if rows:
+            for r in rows:
+                self.lb_emp.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _seleccionar_empleado(self, event=None):
+        sel = self.lb_emp.curselection()
+        if not sel:
+            return
+        self._emp_sel = int(self.lb_emp.get(sel[0]).split('|')[0].strip())
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        row = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, correo, cargo FROM Empleado WHERE id_empleado = {placeholder}",
+            (self._emp_sel,))
+        if row:
+            doc, nom, tel, cor, cargo = row[0]
+            self.ent_doc_e.delete(0, 'end'); self.ent_doc_e.insert(0, doc or '')
+            self.ent_nom_e.delete(0, 'end'); self.ent_nom_e.insert(0, nom or '')
+            self.ent_tel_e.delete(0, 'end'); self.ent_tel_e.insert(0, tel or '')
+            self.ent_cor_e.delete(0, 'end'); self.ent_cor_e.insert(0, cor or '')
+            self.ent_cargo_e.delete(0, 'end'); self.ent_cargo_e.insert(0, cargo or '')
+
+    def _nuevo_empleado(self):
+        self._emp_sel = None
+        for e in [self.ent_doc_e, self.ent_nom_e, self.ent_tel_e, self.ent_cor_e, self.ent_cargo_e]:
+            e.delete(0, 'end')
+
+    def _guardar_empleado(self):
+        from tkinter import messagebox
+        doc = self.ent_doc_e.get().strip()
+        nom = self.ent_nom_e.get().strip()
+        tel = self.ent_tel_e.get().strip()
+        cor = self.ent_cor_e.get().strip()
+        cargo = self.ent_cargo_e.get().strip()
+        if not doc or not nom or not cor or not cargo:
+            messagebox.showwarning("Aviso", "Documento, nombre, correo y cargo son obligatorios")
+            return
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            if self._emp_sel:
+                q = f"UPDATE Empleado SET documento={placeholder}, nombre={placeholder}, telefono={placeholder}, correo={placeholder}, cargo={placeholder} WHERE id_empleado={placeholder}"
+                params = (doc, nom, tel, cor, cargo, self._emp_sel)
+            else:
+                q = f"INSERT INTO Empleado (documento, nombre, telefono, correo, cargo) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                params = (doc, nom, tel, cor, cargo)
+            self.db_manager.execute_query(q, params, fetch=False)
+            messagebox.showinfo("Éxito", "Empleado guardado correctamente")
+            self._nuevo_empleado()
+            self._cargar_empleados()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _build_tab_reportes(self, parent):
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Reportes rápidos", font=("Arial", 18, "bold")).pack(pady=10)
+        e_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Empleado")
+        e_total = e_count[0][0] if e_count else 0
+        ctk.CTkLabel(frame, text=f"Total empleados: {e_total}", font=("Arial", 14)).pack(pady=5)
+
+
+class AdminView(BaseCTKView):
+    """Vista CTk para administradores con visión general de personal y clientes."""
+
+    def _welcome_message(self):
+        return f"Bienvenido administrador, {self.user_data.get('usuario', '')}"
+
+    def _build_ui(self):
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
+        topbar.pack(fill="x", pady=(0,5))
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
+        self._status_label.pack(side="left", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout,
+                      fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK,
+                      width=140, height=32).pack(side="right", padx=10, pady=8)
+
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+
+        self.tab_principal = self.tabview.add("Principal")
+        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR,
+                     font=("Arial", 20)).pack(pady=30)
+
+        self.tab_personal = self.tabview.add("Personal")
+        self._build_tab_personal(self.tabview.tab("Personal"))
+
+        self.tab_clientes = self.tabview.add("Clientes")
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
+
+        self.tab_reportes = self.tabview.add("Reportes")
+        self._build_tab_reportes(self.tabview.tab("Reportes"))
+
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+    def _build_tab_personal(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Listado de empleados", font=("Arial", 18, "bold")).pack(pady=10)
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_staff = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_staff.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_staff.pack(side="left", fill="both", expand=True)
+        self._cargar_staff()
+
+    def _cargar_staff(self):
+        self.lb_staff.delete(0, 'end')
+        rows = self.db_manager.execute_query("SELECT id_empleado, nombre, cargo FROM Empleado")
+        if rows:
+            for r in rows:
+                self.lb_staff.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _build_tab_clientes(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Listado de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_cli.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_cli.pack(side="left", fill="both", expand=True)
+        self._cargar_clientes_overview()
+
+    def _cargar_clientes_overview(self):
+        self.lb_cli.delete(0, 'end')
+        rows = self.db_manager.execute_query("SELECT id_cliente, nombre, correo FROM Cliente")
+        if rows:
+            for r in rows:
+                self.lb_cli.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _build_tab_reportes(self, parent):
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Reportes rápidos", font=("Arial", 18, "bold")).pack(pady=10)
+        e_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Empleado")
+        c_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Cliente")
+        e_total = e_count[0][0] if e_count else 0
+        c_total = c_count[0][0] if c_count else 0
+        ctk.CTkLabel(frame, text=f"Total empleados: {e_total}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(frame, text=f"Total clientes: {c_total}", font=("Arial", 14)).pack(pady=5)

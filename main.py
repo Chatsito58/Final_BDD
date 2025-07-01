@@ -49,9 +49,9 @@ from src.db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.main_view import MainView
-from src.views.ctk_views import ClienteView
+from src.views.ctk_views import ClienteView, AdminView, GerenteView
 from src.views.main_view import (
-    GerenteViewQt, AdminViewQt, EmpleadoViewQt, EmpleadoVentasViewQt, EmpleadoMantenimientoViewQt, EmpleadoCajaViewQt
+    EmpleadoViewQt, EmpleadoVentasViewQt, EmpleadoMantenimientoViewQt, EmpleadoCajaViewQt
 )
 from src.styles import MODERN_QSS
 
@@ -95,17 +95,11 @@ class AlquilerApp:
             QTimer.singleShot(0, on_logout)
         view_kwargs = dict(db_manager=db_manager, auth_manager=auth_manager, app=app)
         if rol == 'admin':
-            from src.views.main_view import AdminViewQt
-            win = AdminViewQt(username, **view_kwargs)
-            win.logged_out.connect(handle_logout)
-            win.show()
-            win.exec_() if hasattr(win, 'exec_') else app.exec_()
+            win = AdminView(user_data, db_manager, handle_logout)
+            win.mainloop()
         elif rol == 'gerente':
-            from src.views.main_view import GerenteViewQt
-            win = GerenteViewQt(username, **view_kwargs)
-            win.logged_out.connect(handle_logout)
-            win.show()
-            win.exec_() if hasattr(win, 'exec_') else app.exec_()
+            win = GerenteView(user_data, db_manager, handle_logout)
+            win.mainloop()
         elif rol == 'empleado':
             if not tipo_empleado and user_data.get('id_empleado'):
                 query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
