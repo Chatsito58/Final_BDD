@@ -217,6 +217,14 @@ ALTER TABLE Mantenimiento_vehiculo
 ADD COLUMN id_vehiculo VARCHAR(20),
 ADD FOREIGN KEY (id_vehiculo) REFERENCES Vehiculo(placa);
 
+CREATE TABLE Mantenimiento (
+  id_mantenimiento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  placa            VARCHAR(20),
+  descripcion      VARCHAR(255),
+  fecha            DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
+) ENGINE=InnoDB;
+
 CREATE TABLE Descuento_alquiler (
   id_descuento      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   descripcion       VARCHAR(255),
