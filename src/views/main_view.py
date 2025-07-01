@@ -75,7 +75,6 @@ class MainView(QtWidgets.QMainWindow):
     def __init__(self, username: str, role: str, parent=None, db_manager=None, auth_manager=None, app=None):
         super().__init__(parent)
         ui_path = Path(__file__).resolve().parents[2] / 'ui' / 'main_window.ui'
-        print(f"[DEBUG] Cargando UI desde: {ui_path}")
         uic.loadUi(ui_path, self)
 
         # Aplicar QSS si se pasa QApplication
@@ -133,9 +132,8 @@ class MainView(QtWidgets.QMainWindow):
 
         # --- Depuración: mostrar pestañas disponibles ---
         if self.tabWidget:
-            print(f"[DEBUG] tabWidget.count(): {self.tabWidget.count()}")
             for i in range(self.tabWidget.count()):
-                print(f"[DEBUG] tabWidget.tabText({i}): {self.tabWidget.tabText(i)}")
+                _ = self.tabWidget.tabText(i)
 
         # --- Agregar botón 'Cerrar sesión' en la pestaña principal ---
         tab_principal = self.findChild(QtWidgets.QWidget, 'tabPrincipal')
@@ -154,12 +152,10 @@ class MainView(QtWidgets.QMainWindow):
         if self.tabCambiarContrasena is not None:
             self.verticalLayoutTabCambiarContrasena = self.tabCambiarContrasena.layout()
             if self.verticalLayoutTabCambiarContrasena is None:
-                print('[DEBUG] Layout de Cambiar contraseña era None, creando QVBoxLayout manualmente')
                 self.verticalLayoutTabCambiarContrasena = QVBoxLayout(self.tabCambiarContrasena)
         else:
             self.verticalLayoutTabCambiarContrasena = None
-        print(f"[DEBUG] tabCambiarContrasena: {self.tabCambiarContrasena}")
-        print(f"[DEBUG] verticalLayoutTabCambiarContrasena: {self.verticalLayoutTabCambiarContrasena}")
+        
         if self.tabCambiarContrasena and self.verticalLayoutTabCambiarContrasena:
             try:
                 # Limpiar el layout antes de agregar widgets (evita duplicados)
@@ -169,10 +165,6 @@ class MainView(QtWidgets.QMainWindow):
                     if widget is not None:
                         widget.deleteLater()
                 from PyQt5.QtWidgets import QLineEdit, QPushButton, QLabel
-                # Agregar un label de prueba visible
-                self.label_prueba = QLabel('PRUEBA CAMBIO CONTRASEÑA')
-                self.label_prueba.setStyleSheet('color: #FF5555; font-size: 18px; font-weight: bold;')
-                self.verticalLayoutTabCambiarContrasena.addWidget(self.label_prueba)
                 self.label_actual = QLabel('Contraseña actual:')
                 self.input_actual = QLineEdit()
                 self.input_actual.setEchoMode(QLineEdit.Password)
@@ -226,24 +218,23 @@ class MainView(QtWidgets.QMainWindow):
         actual = self.input_actual.text()
         nueva = self.input_nueva.text()
         confirmar = self.input_confirmar.text()
-        print(f"[DEBUG] _cambiar_contrasena llamado para usuario: {self._username}")
-        print(f"[DEBUG] actual: {actual}, nueva: {nueva}, confirmar: {confirmar}")
+        
         logger.info(f"[DEBUG] _cambiar_contrasena llamado para usuario: {self._username}")
         logger.info(f"[DEBUG] actual: {actual}, nueva: {nueva}, confirmar: {confirmar}")
         if not actual or not nueva or not confirmar:
-            print("[DEBUG] Faltan campos")
+            
             logger.warning("[DEBUG] Faltan campos en el cambio de contraseña")
             QMessageBox.warning(self, 'Error', 'Complete todos los campos')
             return
         if nueva != confirmar:
-            print("[DEBUG] Nueva y confirmación no coinciden")
+            
             logger.warning("[DEBUG] Nueva y confirmación no coinciden")
             QMessageBox.warning(self, 'Error', 'La nueva contraseña y la confirmación no coinciden')
             return
-        print(f"[DEBUG] Llamando a self._auth_manager.cambiar_contrasena({self._username}, actual, nueva)")
+        
         logger.info(f"[DEBUG] Llamando a self._auth_manager.cambiar_contrasena({self._username}, actual, nueva)")
         resultado = self._auth_manager.cambiar_contrasena(self._username, actual, nueva)
-        print(f"[DEBUG] Resultado de cambiar_contrasena: {resultado}")
+        
         logger.info(f"[DEBUG] Resultado de cambiar_contrasena: {resultado}")
         if resultado is True:
             QMessageBox.information(self, 'Éxito', 'Contraseña cambiada correctamente')
