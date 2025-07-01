@@ -1,4 +1,6 @@
+import os
 from mysql.connector import connect, Error
+from dotenv import load_dotenv
 from src.config import Config
 
 class DatabaseHelper:

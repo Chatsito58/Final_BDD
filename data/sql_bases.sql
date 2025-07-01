@@ -244,7 +244,12 @@ CREATE TABLE Reserva_alquiler (
   id_estado_reserva  INT UNSIGNED,
   FOREIGN KEY (id_estado_reserva)
     REFERENCES Estado_reserva(id_estado)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB
+PARTITION BY RANGE (YEAR(fecha_hora)) (
+  PARTITION p2023 VALUES LESS THAN (2024),
+  PARTITION p2024 VALUES LESS THAN (2025),
+  PARTITION pmax VALUES LESS THAN MAXVALUE
+);
 
 CREATE TABLE Alquiler (
   id_alquiler        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -265,7 +270,12 @@ CREATE TABLE Alquiler (
   FOREIGN KEY (id_estado)      REFERENCES Estado_alquiler(id_estado),
   FOREIGN KEY (id_seguro)      REFERENCES Seguro_alquiler(id_seguro),
   FOREIGN KEY (id_descuento)   REFERENCES Descuento_alquiler(id_descuento)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB
+PARTITION BY RANGE (YEAR(fecha_hora_salida)) (
+  PARTITION p2023 VALUES LESS THAN (2024),
+  PARTITION p2024 VALUES LESS THAN (2025),
+  PARTITION pmax VALUES LESS THAN MAXVALUE
+);
 
 ALTER TABLE Reserva_alquiler
 ADD COLUMN id_alquiler INT UNSIGNED,
@@ -344,7 +354,12 @@ CREATE TABLE Abono_reserva (
     REFERENCES Reserva_alquiler(id_reserva),
   FOREIGN KEY (id_medio_pago)
     REFERENCES Medio_pago(id_medio_pago)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB
+PARTITION BY RANGE (YEAR(fecha_hora)) (
+  PARTITION p2023 VALUES LESS THAN (2024),
+  PARTITION p2024 VALUES LESS THAN (2025),
+  PARTITION pmax VALUES LESS THAN MAXVALUE
+);
 
 ALTER TABLE Cliente
   ADD FOREIGN KEY (id_cuenta)
