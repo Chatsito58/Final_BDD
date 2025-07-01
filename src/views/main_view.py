@@ -5,67 +5,7 @@ import logging
 
 from ..db_manager import DBManager
 from ..auth import AuthManager
-
-# QSS moderno global (debe ser igual al de main.py)
-MODERN_QSS = """
-QMainWindow, QWidget {
-    background-color: #18191A;
-    color: #F5F6FA;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: 15px;
-}
-QMenuBar, QMenu {
-    background-color: #242526;
-    color: #F5F6FA;
-}
-QMenuBar::item:selected, QMenu::item:selected {
-    background: #3A86FF;
-    color: white;
-}
-QTabWidget::pane {
-    border: 1px solid #3A3B3C;
-    border-radius: 8px;
-    background: #18191A;
-}
-QTabBar::tab {
-    background: #242526;
-    color: #F5F6FA;
-    border-radius: 8px;
-    padding: 8px 20px;
-    margin: 2px;
-}
-QTabBar::tab:selected {
-    background: #3A86FF;
-    color: white;
-}
-QPushButton {
-    background-color: #3A86FF;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 0px;
-    font-size: 15px;
-}
-QPushButton:hover {
-    background-color: #265DAB;
-}
-QLineEdit, QTextEdit, QComboBox, QSpinBox {
-    background-color: #23272F;
-    color: #F5F6FA;
-    border: 1px solid #3A3B3C;
-    border-radius: 8px;
-    padding: 6px;
-}
-QLabel {
-    color: #F5F6FA;
-    font-size: 15px;
-}
-QStatusBar {
-    background: #23272F;
-    color: #F5F6FA;
-    border-top: 1px solid #3A3B3C;
-}
-"""
+from ..styles import MODERN_QSS
 
 class MainView(QtWidgets.QMainWindow):
     """Main application window handling role based menus and logout."""
