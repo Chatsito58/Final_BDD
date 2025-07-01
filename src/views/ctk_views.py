@@ -2974,6 +2974,9 @@ class GerenteView(BaseCTKView):
         self.tab_empleados = self.tabview.add("Empleados")
         self._build_tab_empleados(self.tabview.tab("Empleados"))
 
+        self.tab_vehiculos = self.tabview.add("Vehículos")
+        self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
+
         self.tab_reportes = self.tabview.add("Reportes")
         self._build_tab_reportes(self.tabview.tab("Reportes"))
 
@@ -3089,6 +3092,120 @@ class GerenteView(BaseCTKView):
             messagebox.showinfo("Éxito", "Empleado guardado correctamente")
             self._nuevo_empleado()
             self._cargar_empleados()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _build_tab_vehiculos(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Agregar vehículo", font=("Arial", 18, "bold")).pack(pady=10)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        labels = [
+            "Placa:", "Chasis:", "Modelo:", "Kilometraje:",
+            "Marca:", "Color:", "Tipo:", "Transmisión:",
+            "Proveedor:", "Taller:"
+        ]
+        for i, lbl in enumerate(labels):
+            ctk.CTkLabel(form, text=lbl).grid(row=i, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_placa = ctk.CTkEntry(form, width=150)
+        self.ent_chasis = ctk.CTkEntry(form, width=150)
+        self.ent_modelo = ctk.CTkEntry(form, width=150)
+        self.ent_km = ctk.CTkEntry(form, width=150)
+
+        self.ent_placa.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_chasis.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_modelo.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_km.grid(row=3, column=1, padx=5, pady=5)
+
+        # Obtener datos para los OptionMenu
+        marcas = self.db_manager.execute_query("SELECT id_marca, nombre_marca FROM Marca_vehiculo") or []
+        colores = self.db_manager.execute_query("SELECT id_color, nombre_color FROM Color_vehiculo") or []
+        tipos = self.db_manager.execute_query("SELECT id_tipo, descripcion FROM Tipo_vehiculo") or []
+        trans = self.db_manager.execute_query("SELECT id_transmision, descripcion FROM Transmision_vehiculo") or []
+        proveedores = self.db_manager.execute_query("SELECT id_proveedor, nombre FROM Proveedor_vehiculo") or []
+        talleres = self.db_manager.execute_query("SELECT id_taller, nombre FROM Taller_mantenimiento") or []
+
+        self.marca_map = {m[1]: m[0] for m in marcas}
+        self.color_map = {c[1]: c[0] for c in colores}
+        self.tipo_map = {t[1]: t[0] for t in tipos}
+        self.trans_map = {tr[1]: tr[0] for tr in trans}
+        self.prov_map = {p[1]: p[0] for p in proveedores}
+        self.taller_map = {t[1]: t[0] for t in talleres}
+
+        self.var_marca = ctk.StringVar(value=list(self.marca_map.keys())[0] if self.marca_map else "")
+        self.var_color = ctk.StringVar(value=list(self.color_map.keys())[0] if self.color_map else "")
+        self.var_tipo = ctk.StringVar(value=list(self.tipo_map.keys())[0] if self.tipo_map else "")
+        self.var_trans = ctk.StringVar(value=list(self.trans_map.keys())[0] if self.trans_map else "")
+        self.var_prov = ctk.StringVar(value=list(self.prov_map.keys())[0] if self.prov_map else "")
+        self.var_taller = ctk.StringVar(value=list(self.taller_map.keys())[0] if self.taller_map else "")
+
+        self.opt_marca = ctk.CTkOptionMenu(form, variable=self.var_marca, values=list(self.marca_map.keys()))
+        self.opt_color = ctk.CTkOptionMenu(form, variable=self.var_color, values=list(self.color_map.keys()))
+        self.opt_tipo = ctk.CTkOptionMenu(form, variable=self.var_tipo, values=list(self.tipo_map.keys()))
+        self.opt_trans = ctk.CTkOptionMenu(form, variable=self.var_trans, values=list(self.trans_map.keys()))
+        self.opt_prov = ctk.CTkOptionMenu(form, variable=self.var_prov, values=list(self.prov_map.keys()))
+        self.opt_taller = ctk.CTkOptionMenu(form, variable=self.var_taller, values=list(self.taller_map.keys()))
+
+        self.opt_marca.grid(row=4, column=1, padx=5, pady=5)
+        self.opt_color.grid(row=5, column=1, padx=5, pady=5)
+        self.opt_tipo.grid(row=6, column=1, padx=5, pady=5)
+        self.opt_trans.grid(row=7, column=1, padx=5, pady=5)
+        self.opt_prov.grid(row=8, column=1, padx=5, pady=5)
+        self.opt_taller.grid(row=9, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_vehiculo, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_vehiculo, width=120, fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
+
+    def _nuevo_vehiculo(self):
+        for ent in [self.ent_placa, self.ent_chasis, self.ent_modelo, self.ent_km]:
+            ent.delete(0, 'end')
+
+    def _guardar_vehiculo(self):
+        from tkinter import messagebox
+
+        placa = self.ent_placa.get().strip()
+        chasis = self.ent_chasis.get().strip()
+        modelo = self.ent_modelo.get().strip()
+        km = self.ent_km.get().strip()
+
+        if not placa or not modelo:
+            messagebox.showwarning("Aviso", "Placa y modelo son obligatorios")
+            return
+
+        try:
+            km_val = int(km) if km else 0
+        except ValueError:
+            messagebox.showwarning("Aviso", "Kilometraje inválido")
+            return
+
+        marca = self.marca_map.get(self.var_marca.get()) if self.var_marca.get() else None
+        color = self.color_map.get(self.var_color.get()) if self.var_color.get() else None
+        tipo = self.tipo_map.get(self.var_tipo.get()) if self.var_tipo.get() else None
+        trans = self.trans_map.get(self.var_trans.get()) if self.var_trans.get() else None
+        prov = self.prov_map.get(self.var_prov.get()) if self.var_prov.get() else None
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = (
+            f"INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, "
+            f"id_marca, id_color, id_tipo_vehiculo, id_transmision, id_proveedor) "
+            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, "
+            f"{placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+        )
+        params = (placa, chasis, modelo, km_val, marca, color, tipo, trans, prov)
+        try:
+            self.db_manager.execute_query(query, params, fetch=False)
+            messagebox.showinfo("Éxito", "Vehículo guardado correctamente")
+            self._nuevo_vehiculo()
         except Exception as exc:
             messagebox.showerror("Error", str(exc))
 
