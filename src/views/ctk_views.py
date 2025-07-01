@@ -2797,6 +2797,9 @@ class EmpleadoMantenimientoView(BaseCTKView):
         # Pestaña: Historial
         self.tab_historial = self.tabview.add("Historial")
         self._build_tab_historial(self.tabview.tab("Historial"))
+        # Pestaña: Predictivo
+        self.tab_predictivo = self.tabview.add("Predictivo")
+        self._build_tab_predictivo(self.tabview.tab("Predictivo"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -2890,6 +2893,59 @@ class EmpleadoMantenimientoView(BaseCTKView):
                 listbox.insert('end', f"{fecha} | {placa} | {desc}")
         else:
             listbox.insert('end', "Sin registros de mantenimiento")
+
+    def _build_tab_predictivo(self, parent):
+        import tkinter as tk
+        from datetime import datetime, timedelta
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Mantenimiento predictivo", font=("Arial", 18, "bold")).pack(pady=10)
+
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
+        scrollbar.config(command=listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        listbox.pack(side="left", fill="both", expand=True)
+
+        query = (
+            "SELECT v.placa, v.modelo, v.kilometraje, MAX(m.fecha_hora) "
+            "FROM Vehiculo v "
+            "LEFT JOIN Mantenimiento_vehiculo m ON v.placa = m.id_vehiculo "
+            "GROUP BY v.placa, v.modelo, v.kilometraje"
+        )
+        filas = self.db_manager.execute_query(query)
+
+        if not filas:
+            listbox.insert('end', "Sin vehículos registrados")
+            return
+
+        umbral_dias = 180
+        hoy = datetime.now()
+
+        for placa, modelo, km, fecha in filas:
+            necesita = False
+            if fecha is None:
+                necesita = True
+                fecha_txt = "N/A"
+            else:
+                try:
+                    fecha_dt = datetime.fromisoformat(str(fecha))
+                except Exception:
+                    try:
+                        fecha_dt = datetime.strptime(str(fecha), "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        fecha_dt = None
+                if fecha_dt is None or hoy - fecha_dt > timedelta(days=umbral_dias):
+                    necesita = True
+                fecha_txt = fecha_dt.strftime("%Y-%m-%d") if fecha_dt else str(fecha)
+
+            if necesita:
+                listbox.insert('end', f"{placa} | {modelo} | {km} km | {fecha_txt}")
 
 class GerenteView(BaseCTKView):
     """Vista CTk para gerentes con gestión de empleados y reportes."""
