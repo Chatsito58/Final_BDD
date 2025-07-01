@@ -173,10 +173,13 @@ LOCAL_DB_PATH=data/local.sqlite
    ```sql
    CREATE DATABASE alquiler_vehiculos;
    USE alquiler_vehiculos;
-   SOURCE data/sql_bases-2.sql;
+   SOURCE data/sql_bases.sql;
    SOURCE data/inserts_prueba.sql;
    EXIT;
    ```
+
+El archivo `data/sql_bases.sql` crea estas tablas con particiones por
+año para `Alquiler`, `Reserva_alquiler` y `Abono_reserva`.
 
 #### Si NO tienes MySQL/MariaDB:
 La aplicación funcionará automáticamente en modo offline con SQLite. No necesitas hacer nada más.
@@ -300,8 +303,10 @@ python main.py
 - Base de datos local de respaldo
 - Se activa automáticamente cuando no hay conexión
 - Permite continuar trabajando sin internet
-- Sincronización automática cuando vuelve la conexión
+### Particionamiento
+Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se crean con particiones anuales en MySQL. En SQLite solo se conserva la ultima semana de registros.
 
+- Sincronización automática cuando vuelve la conexión
 ### Sincronización Automática
 - Los datos se sincronizan automáticamente entre ambas bases
 - Las reservas creadas offline se suben cuando hay conexión
@@ -371,7 +376,7 @@ Final_BDD/
 │   ├── db_manager.py    # Gestor de base de datos
 │   └── sqlite_manager.py # Gestor SQLite
 ├── data/
-│   ├── sql_bases-2.sql  # Esquema MariaDB
+│   ├── sql_bases.sql   # Esquema MariaDB con particiones
 │   ├── sqlite_schema.sql # Esquema SQLite
 │   └── inserts_prueba.sql # Datos de prueba
 ├── ui/                  # Archivos de interfaz

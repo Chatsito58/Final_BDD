@@ -1,0 +1,1 @@
+-- Datos iniciales para SQLite (puede estar vacío)

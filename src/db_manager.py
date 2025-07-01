@@ -310,6 +310,7 @@ class DBManager:
         }
         try:
             conn = mysql.connector.connect(**config)
+            conn.autocommit = True
         except Exception as exc:
             self.logger.error("[DBManager] Error conectando a MariaDB: %s", exc)
             print(f"[DBManager] Error conectando a MariaDB: {exc}")
@@ -371,6 +372,9 @@ class DBManager:
             ("Taller_mantenimiento", ["id_taller", "nombre", "direccion", "telefono"], "id_taller", True),
             ("Tipo_mantenimiento", ["id_tipo", "descripcion"], "id_tipo", True),
             ("Proveedor_vehiculo", ["id_proveedor", "nombre", "direccion", "telefono", "correo"], "id_proveedor", True),
+            ("Alquiler", ["id_alquiler", "fecha_hora_salida", "valor", "fecha_hora_entrada", "id_vehiculo", "id_cliente", "id_sucursal", "id_medio_pago", "id_estado", "id_seguro", "id_descuento"], "id_alquiler", True),
+            ("Reserva_alquiler", ["id_reserva", "fecha_hora", "abono", "saldo_pendiente", "id_estado_reserva", "id_alquiler"], "id_reserva", True),
+            ("Abono_reserva", ["id_abono", "valor", "fecha_hora", "id_reserva", "id_medio_pago"], "id_abono", True),
         ]
         conn_remota = self.connect()
         conn_local = self._sqlite.connect()
@@ -379,16 +383,45 @@ class DBManager:
                 cursor_remota = conn_remota.cursor()
                 cursor_local = conn_local.cursor()
                 cols_str = ', '.join(columnas)
-                cursor_remota.execute(f"SELECT {cols_str} FROM {nombre}")
+                if nombre == "Alquiler":
+                    cursor_remota.execute(
+                        f"SELECT {cols_str} FROM {nombre} WHERE fecha_hora_salida >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                    )
+                elif nombre == "Reserva_alquiler":
+                    cursor_remota.execute(
+                        f"SELECT {cols_str} FROM {nombre} WHERE fecha_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                    )
+                elif nombre == "Abono_reserva":
+                    cursor_remota.execute(
+                        f"SELECT {cols_str} FROM {nombre} WHERE fecha_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                    )
+                else:
+                    cursor_remota.execute(f"SELECT {cols_str} FROM {nombre}")
                 rows = cursor_remota.fetchall()
                 for row in rows:
                     placeholders = ', '.join(['?'] * len(columnas))
                     update_str = ', '.join([f'{col}=?' for col in columnas])
-                    # Intentar update primero
-                    cursor_local.execute(f"UPDATE {nombre} SET {update_str} WHERE {pk}=?", tuple(row) + (row[columnas.index(pk)],))
+                    cursor_local.execute(
+                        f"UPDATE {nombre} SET {update_str} WHERE {pk}=?",
+                        tuple(row) + (row[columnas.index(pk)],),
+                    )
                     if cursor_local.rowcount == 0:
-                        # Si no existe, insertar
-                        cursor_local.execute(f"INSERT OR IGNORE INTO {nombre} ({cols_str}) VALUES ({placeholders})", row)
+                        cursor_local.execute(
+                            f"INSERT OR IGNORE INTO {nombre} ({cols_str}) VALUES ({placeholders})",
+                            row,
+                        )
+                if nombre == "Alquiler":
+                    cursor_local.execute(
+                        "DELETE FROM Alquiler WHERE fecha_hora_salida < date('now','-7 day')"
+                    )
+                elif nombre == "Reserva_alquiler":
+                    cursor_local.execute(
+                        "DELETE FROM Reserva_alquiler WHERE fecha_hora < date('now','-7 day')"
+                    )
+                elif nombre == "Abono_reserva":
+                    cursor_local.execute(
+                        "DELETE FROM Abono_reserva WHERE fecha_hora < date('now','-7 day')"
+                    )
                 conn_local.commit()
                 cursor_remota.close()
                 cursor_local.close()
