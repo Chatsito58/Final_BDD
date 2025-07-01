@@ -89,7 +89,8 @@ CREATE TABLE IF NOT EXISTS Usuario (
     contrasena TEXT,
     id_rol INTEGER,
     id_cliente INTEGER,
-    id_empleado INTEGER
+    id_empleado INTEGER,
+    pendiente INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS Empleado (

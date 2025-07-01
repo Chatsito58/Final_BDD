@@ -135,3 +135,13 @@ class SQLiteManager:
         query = "DELETE FROM Abono WHERE id_abono = ?"
         self.execute_query(query, (abono_id,), fetch=False)
 
+    def get_pending_password_updates(self):
+        """Return users whose password updates are pending."""
+        query = "SELECT usuario, contrasena FROM Usuario WHERE pendiente = 1"
+        return self.execute_query(query)
+
+    def clear_pending_password(self, usuario):
+        """Reset the pending flag for a user password update."""
+        query = "UPDATE Usuario SET pendiente = 0 WHERE usuario = ?"
+        self.execute_query(query, (usuario,), fetch=False)
+
