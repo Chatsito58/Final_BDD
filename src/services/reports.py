@@ -73,7 +73,7 @@ def ventas_mensuales(db, anio: int) -> List[Tuple[int, float]]:
             "WHERE strftime('%Y', fecha_hora_salida) = ? "
             "GROUP BY mes ORDER BY mes"
         )
-        params = (anio,)
+        params = (str(anio),)
     else:
         query = (
             "SELECT MONTH(fecha_hora_salida) as mes, SUM(valor) as total "
