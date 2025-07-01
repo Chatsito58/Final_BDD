@@ -23,7 +23,10 @@ INSERT INTO Estado_alquiler (descripcion) VALUES ('Activa'), ('Finalizada');
 INSERT INTO Estado_reserva (descripcion) VALUES ('Pendiente'), ('Confirmada'), ('Cancelada');
 
 -- Sucursal y proveedor
-INSERT INTO Sucursal (nombre, direccion, telefono, gerente, id_codigo_postal) VALUES ('Sucursal Norte', 'Av 68 #100-20, Bogotá', '3209876543', 'Ana Gerente', '110111');
+INSERT INTO Sucursal (nombre, direccion, telefono, gerente, id_codigo_postal)
+VALUES
+    ('Sucursal Norte', 'Av 68 #100-20, Bogotá', '3209876543', 'Ana Gerente', '110111'),
+    ('Sucursal Sur', 'Cra 15 #50-40, Cali', '3211234567', 'Juan Gerente', '760001');
 INSERT INTO Proveedor_vehiculo (nombre, direccion, telefono, correo) VALUES ('Autocolombia', 'Calle 80 #30-15, Bogotá', '3152223344', 'ventas@autocolombia.com');
 
 -- Licencia de conducción
@@ -67,16 +70,22 @@ INSERT INTO Descuento_alquiler (descripcion, valor) VALUES
 -- Alquileres de Carlos Ramírez
 INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento)
 VALUES
-('2024-06-01 10:00:00', 210000, '2024-06-03 10:00:00', 'ABC123', 1, 3, 1, 1, 1, 1, 1),
-('2024-06-10 09:00:00', 200000, '2024-06-11 09:00:00', 'XYZ789', 1, 4, 1, 2, 1, 2, 2);
+    ('2024-06-01 10:00:00', 210000, '2024-06-03 10:00:00', 'ABC123', 1, 3, 1, 1, 1, 1, 1),
+    ('2024-06-10 09:00:00', 200000, '2024-06-11 09:00:00', 'XYZ789', 1, 4, 1, 2, 1, 2, 2),
+    ('2024-07-05 08:00:00', 150000, '2024-07-06 08:00:00', 'ABC123', 1, 4, 1, 1, 1, 1, 2),
+    ('2024-07-12 15:00:00', 170000, '2024-07-13 15:00:00', 'XYZ789', 1, 3, 2, 2, 1, 2, 1);
 
 -- Reservas de Carlos Ramírez
 INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler)
 VALUES
-('2024-05-30 09:00:00', 100000, 110000, 1, 1),
-('2024-06-08 08:00:00', 50000, 150000, 1, 2);
+    ('2024-05-30 09:00:00', 100000, 110000, 1, 1),
+    ('2024-06-08 08:00:00', 50000, 150000, 1, 2),
+    ('2024-07-04 07:00:00', 60000, 90000, 1, 3),
+    ('2024-07-11 14:00:00', 70000, 100000, 1, 4);
 
 -- Abonos a reservas
 INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) VALUES
-(100000, '2024-05-30 10:00:00', 1, 1),
-(50000, '2024-06-08 09:00:00', 2, 2);
+    (100000, '2024-05-30 10:00:00', 1, 1),
+    (50000, '2024-06-08 09:00:00', 2, 2),
+    (60000, '2024-07-04 08:00:00', 3, 1),
+    (70000, '2024-07-11 15:00:00', 4, 2);
