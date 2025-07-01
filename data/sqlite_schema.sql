@@ -243,3 +243,11 @@ CREATE TABLE IF NOT EXISTS Proveedor_vehiculo (
     telefono TEXT,
     correo TEXT
 );
+
+CREATE TABLE IF NOT EXISTS Mantenimiento (
+    id_mantenimiento INTEGER PRIMARY KEY AUTOINCREMENT,
+    placa TEXT,
+    descripcion TEXT,
+    fecha TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
+);
