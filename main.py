@@ -166,7 +166,7 @@ class AlquilerApp:
                 query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
                 params = (user_data['id_empleado'],)
                 result = db_manager.execute_query(query, params)
-                tipo_empleado = result[0][0].lower() if result else ""
+                tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
                 from src.views.main_view import EmpleadoVentasViewQt
                 win = EmpleadoVentasViewQt(username, **view_kwargs)

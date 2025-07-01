@@ -431,3 +431,51 @@ class DBManager:
     def set_on_reconnect_callback(self, callback):
         """Permite a las vistas registrar un callback para mostrar una ventana emergente de reconexión inmediata."""
         self.on_reconnect_callback = callback
+
+    def update_user_password_both(self, usuario, hashed_nueva):
+        """
+        Actualiza la contraseña en ambas bases (remota y local) si hay conexión.
+        Si está offline, solo en la local y marca como pendiente para sincronizar.
+        """
+        try:
+            # Actualizar en remota si hay conexión
+            if not self.offline:
+                self.execute_query(
+                    "UPDATE Usuario SET contrasena = %s WHERE usuario = %s",
+                    (hashed_nueva, usuario),
+                    fetch=False
+                )
+            # Actualizar en local siempre
+            self._sqlite.execute_query(
+                "UPDATE Usuario SET contrasena = ? WHERE usuario = ?",
+                (hashed_nueva, usuario),
+                fetch=False
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(f"Error actualizando contraseña en ambas bases: {exc}")
+            return False
+
+    def update_cliente_info_both(self, id_cliente, nombre, telefono, direccion, correo):
+        """
+        Actualiza los datos del cliente en ambas bases (remota y local) si hay conexión.
+        Si está offline, solo en la local y marca como pendiente para sincronizar.
+        """
+        try:
+            # Actualizar en remota si hay conexión
+            if not self.offline:
+                self.execute_query(
+                    "UPDATE Cliente SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_cliente = %s",
+                    (nombre, telefono, direccion, correo, id_cliente),
+                    fetch=False
+                )
+            # Actualizar en local siempre
+            self._sqlite.execute_query(
+                "UPDATE Cliente SET nombre = ?, telefono = ?, direccion = ?, correo = ? WHERE id_cliente = ?",
+                (nombre, telefono, direccion, correo, id_cliente),
+                fetch=False
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(f"Error actualizando datos de cliente en ambas bases: {exc}")
+            return False

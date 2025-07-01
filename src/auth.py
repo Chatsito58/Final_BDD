@@ -140,16 +140,13 @@ class AuthManager:
             if hashed_actual == hashed_nueva:
                 self.logger.warning(f"Intento fallido de cambio de contraseña para {usuario}: nueva contraseña igual a la actual")
                 return "La nueva contraseña no puede ser igual a la actual."
-            # 3. Actualizar la contraseña
-            if is_sqlite:
-                update_q = "UPDATE Usuario SET contrasena = ? WHERE usuario = ?"
-                update_params = (hashed_nueva, usuario)
+            # 3. Actualizar la contraseña en ambas bases
+            ok = self.db.update_user_password_both(usuario, hashed_nueva)
+            if ok:
+                self.logger.info(f"Contraseña cambiada exitosamente para {usuario} (ambas bases)")
+                return True
             else:
-                update_q = "UPDATE Usuario SET contrasena = %s WHERE usuario = %s"
-                update_params = (hashed_nueva, usuario)
-            self.db.execute_query(update_q, update_params, fetch=False)
-            self.logger.info(f"Contraseña cambiada exitosamente para {usuario}")
-            return True
+                return "Error actualizando la contraseña en ambas bases."
         except Exception as e:
             self.logger.error(f"Error cambiando contraseña para {usuario}: {e}")
             return f"Error cambiando la contraseña: {e}"

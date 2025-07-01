@@ -1024,13 +1024,17 @@ class ClienteView(BaseCTKView):
         entry_correo.pack()
         def guardar():
             try:
-                placeholder = '%s' if not self.db_manager.offline else '?'
-                self.db_manager.execute_query(
-                    f"UPDATE Cliente SET nombre = {placeholder}, telefono = {placeholder}, direccion = {placeholder}, correo = {placeholder} WHERE id_cliente = {placeholder}",
-                    (entry_nombre.get(), entry_telefono.get(), entry_direccion.get(), entry_correo.get(), id_cliente),
-                    fetch=False
+                ok = self.db_manager.update_cliente_info_both(
+                    id_cliente,
+                    entry_nombre.get(),
+                    entry_telefono.get(),
+                    entry_direccion.get(),
+                    entry_correo.get()
                 )
-                messagebox.showinfo("Éxito", "Perfil actualizado correctamente")
+                if ok:
+                    messagebox.showinfo("Éxito", "Perfil actualizado correctamente (ambas bases)")
+                else:
+                    messagebox.showerror("Error", "No se pudo actualizar el perfil en ambas bases")
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo actualizar el perfil: {exc}")
         ctk.CTkButton(frame, text="Guardar cambios", command=guardar).pack(pady=10)
