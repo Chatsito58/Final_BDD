@@ -7,6 +7,7 @@ from src.services.roles import (
     cargos_permitidos_para_gerente,
     puede_ejecutar_sql_libre
 )
+from ..styles import BG_DARK, TEXT_COLOR, PRIMARY_COLOR, PRIMARY_COLOR_DARK
 
 class BaseCTKView(ctk.CTk):
     def __init__(self, user_data, db_manager, on_logout=None):
@@ -17,7 +18,7 @@ class BaseCTKView(ctk.CTk):
         self._status_label = None
         self._stop_status = False
         self.geometry("600x400")
-        self.configure(bg="#18191A")
+        self.configure(bg=BG_DARK)
         self._build_ui()
         self._update_status_label()
         self._start_status_updater()
@@ -29,11 +30,11 @@ class BaseCTKView(ctk.CTk):
 
     def _build_ui(self):
         # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color="#18191A")
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0,5))
-        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
         self._status_label.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=140, height=32).pack(side="right", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
         # Pestaña: Mis reservas
@@ -130,11 +131,11 @@ class ClienteView(BaseCTKView):
 
     def _build_ui(self):
         # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color="#18191A")
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0,5))
-        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
         self._status_label.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=140, height=32).pack(side="right", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
         # Pestaña: Mis reservas
@@ -1982,18 +1983,18 @@ class EmpleadoVentasView(BaseCTKView):
 
     def _build_ui(self):
         # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color="#18191A")
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0,5))
-        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
         self._status_label.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=140, height=32).pack(side="right", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
         self.tab_principal = self.tabview.add("Principal")
         frame = ctk.CTkFrame(self.tabview.tab("Principal"))
         frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR, font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Clientes
         self.tab_clientes = self.tabview.add("Clientes")
         self._build_tab_clientes(self.tabview.tab("Clientes"))
@@ -2615,19 +2616,19 @@ class EmpleadoCajaView(BaseCTKView):
 
     def _build_ui(self):
         # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color="#18191A")
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0,5))
-        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
         self._status_label.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=140, height=32).pack(side="right", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
         # Pestaña principal: Bienvenida y cerrar sesión
         self.tab_principal = self.tabview.add("Principal")
         frame = ctk.CTkFrame(self.tabview.tab("Principal"))
         frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR, font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Pagos
         self.tab_pagos = self.tabview.add("Pagos")
         self._build_tab_pagos(self.tabview.tab("Pagos"))
@@ -2774,19 +2775,19 @@ class EmpleadoMantenimientoView(BaseCTKView):
 
     def _build_ui(self):
         # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color="#18191A")
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0,5))
-        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color="#F5F6FA")
+        self._status_label = ctk.CTkLabel(topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR)
         self._status_label.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=140, height=32).pack(side="right", padx=10, pady=8)
+        ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
         # Pestaña principal: Bienvenida y cerrar sesión
         self.tab_principal = self.tabview.add("Principal")
         frame = ctk.CTkFrame(self.tabview.tab("Principal"))
         frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color="#F5F6FA", font=("Arial", 20)).pack(pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color="#3A86FF", hover_color="#265DAB", width=180, height=38).pack(side="bottom", pady=(30, 20))
+        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR, font=("Arial", 20)).pack(pady=30)
+        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Vehículos
         self.tab_vehiculos = self.tabview.add("Vehículos")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
