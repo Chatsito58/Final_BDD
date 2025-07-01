@@ -1,4 +1,4 @@
-drop database Alquiler_vehiculos;
+DROP DATABASE IF EXISTS Alquiler_vehiculos;
 CREATE DATABASE IF NOT EXISTS Alquiler_vehiculos;
 USE Alquiler_vehiculos;
 CREATE TABLE Tipo_entidad (
