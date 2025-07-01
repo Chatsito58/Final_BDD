@@ -65,10 +65,10 @@ INSERT INTO Descuento_alquiler (descripcion, valor) VALUES
 ('Sin descuento', 0);
 
 -- Alquileres de Carlos Ramírez
-INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento)
+INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento)
 VALUES
-('2024-06-01 10:00:00', 210000, '2024-06-03 10:00:00', 'ABC123', 1, 1, 1, 1, 1, 1),
-('2024-06-10 09:00:00', 200000, '2024-06-11 09:00:00', 'XYZ789', 1, 1, 2, 1, 2, 2);
+('2024-06-01 10:00:00', 210000, '2024-06-03 10:00:00', 'ABC123', 1, 3, 1, 1, 1, 1, 1),
+('2024-06-10 09:00:00', 200000, '2024-06-11 09:00:00', 'XYZ789', 1, 4, 1, 2, 1, 2, 2);
 
 -- Reservas de Carlos Ramírez
 INSERT INTO Reserva_alquiler (fecha_hora, abono, saldo_pendiente, id_estado_reserva, id_alquiler)
