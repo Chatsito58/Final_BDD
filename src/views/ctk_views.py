@@ -3012,7 +3012,9 @@ class GerenteView(BaseCTKView):
         self.ent_nom_e = ctk.CTkEntry(form, width=150)
         self.ent_tel_e = ctk.CTkEntry(form, width=150)
         self.ent_cor_e = ctk.CTkEntry(form, width=150)
-        self.ent_cargo_e = ctk.CTkEntry(form, width=150)
+        cargos = cargos_permitidos_para_gerente()
+        self.cargo_var = ctk.StringVar(value=cargos[0])
+        self.ent_cargo_e = ctk.CTkOptionMenu(form, variable=self.cargo_var, values=cargos, width=150)
 
         self.ent_doc_e.grid(row=0, column=1, padx=5, pady=5)
         self.ent_nom_e.grid(row=1, column=1, padx=5, pady=5)
@@ -3031,7 +3033,10 @@ class GerenteView(BaseCTKView):
 
     def _cargar_empleados(self):
         self.lb_emp.delete(0, 'end')
-        rows = self.db_manager.execute_query("SELECT id_empleado, nombre, cargo FROM Empleado")
+        rows = self.db_manager.execute_query(
+            "SELECT id_empleado, nombre, cargo FROM Empleado "
+            "WHERE LOWER(cargo) NOT IN ('gerente','administrador')"
+        )
         if rows:
             for r in rows:
                 self.lb_emp.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
@@ -3051,12 +3056,13 @@ class GerenteView(BaseCTKView):
             self.ent_nom_e.delete(0, 'end'); self.ent_nom_e.insert(0, nom or '')
             self.ent_tel_e.delete(0, 'end'); self.ent_tel_e.insert(0, tel or '')
             self.ent_cor_e.delete(0, 'end'); self.ent_cor_e.insert(0, cor or '')
-            self.ent_cargo_e.delete(0, 'end'); self.ent_cargo_e.insert(0, cargo or '')
+            self.cargo_var.set(cargo or cargos_permitidos_para_gerente()[0])
 
     def _nuevo_empleado(self):
         self._emp_sel = None
-        for e in [self.ent_doc_e, self.ent_nom_e, self.ent_tel_e, self.ent_cor_e, self.ent_cargo_e]:
+        for e in [self.ent_doc_e, self.ent_nom_e, self.ent_tel_e, self.ent_cor_e]:
             e.delete(0, 'end')
+        self.cargo_var.set(cargos_permitidos_para_gerente()[0])
 
     def _guardar_empleado(self):
         from tkinter import messagebox
@@ -3064,7 +3070,7 @@ class GerenteView(BaseCTKView):
         nom = self.ent_nom_e.get().strip()
         tel = self.ent_tel_e.get().strip()
         cor = self.ent_cor_e.get().strip()
-        cargo = self.ent_cargo_e.get().strip()
+        cargo = self.cargo_var.get().strip()
         if not doc or not nom or not cor or not cargo:
             messagebox.showwarning("Aviso", "Documento, nombre, correo y cargo son obligatorios")
             return
