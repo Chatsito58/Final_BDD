@@ -2009,35 +2009,236 @@ class EmpleadoVentasView(BaseCTKView):
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+
+        self._cliente_sel = None
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Clientes (crear, editar, ver)", font=("Arial", 16)).pack(pady=10)
-        # Listar clientes
-        query = "SELECT id_cliente, nombre, correo FROM Cliente"
-        clientes = self.db_manager.execute_query(query)
-        listbox = tk.Listbox(frame, height=10, width=60)
-        listbox.pack(pady=10)
-        if clientes:
-            for c in clientes:
-                listbox.insert('end', f"ID: {c[0]} | Nombre: {c[1]} | Correo: {c[2]}")
-        else:
-            listbox.insert('end', "No hay clientes registrados.")
+
+        ctk.CTkLabel(frame, text="Gestión de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_clientes = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_clientes.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_clientes.pack(side="left", fill="both", expand=True)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        ctk.CTkLabel(form, text="Documento:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Nombre:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Teléfono:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Dirección:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Correo:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_doc = ctk.CTkEntry(form, width=150)
+        self.ent_nom = ctk.CTkEntry(form, width=150)
+        self.ent_tel = ctk.CTkEntry(form, width=150)
+        self.ent_dir = ctk.CTkEntry(form, width=150)
+        self.ent_cor = ctk.CTkEntry(form, width=150)
+
+        self.ent_doc.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_nom.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_tel.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_dir.grid(row=3, column=1, padx=5, pady=5)
+        self.ent_cor.grid(row=4, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_cliente, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_cliente, width=120, fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
+
+        self.lb_clientes.bind("<<ListboxSelect>>", self._seleccionar_cliente)
+        self._cargar_clientes()
+
+        def refresh():
+            self._cargar_clientes()
+
+        self._refresh_clientes = refresh
 
     def _build_tab_reservas(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+        from tkcalendar import DateEntry
+
+        self._reserva_sel = None
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
-        # Listar reservas
-        query = "SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva"
+
+        top = ctk.CTkFrame(frame)
+        top.pack(fill="x")
+        ctk.CTkButton(top, text="Nueva reserva", command=lambda: self._abrir_form_reserva()).pack(side="right", padx=5, pady=5)
+
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_reservas = tk.Listbox(list_frame, height=10, width=80, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_reservas.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_reservas.pack(side="left", fill="both", expand=True)
+
+        btns = ctk.CTkFrame(frame)
+        btns.pack(pady=5)
+        ctk.CTkButton(btns, text="Editar", command=lambda: self._abrir_form_reserva(self._reserva_sel), width=120).grid(row=0, column=0, padx=5)
+
+        self.lb_reservas.bind("<<ListboxSelect>>", lambda e: self._seleccionar_reserva())
+        self._cargar_reservas()
+
+        def refresh():
+            self._cargar_reservas()
+
+        self._refresh_reservas = refresh
+
+    def _cargar_clientes(self):
+        self.lb_clientes.delete(0, 'end')
+        query = "SELECT id_cliente, nombre, correo FROM Cliente"
+        clientes = self.db_manager.execute_query(query)
+        if clientes:
+            for c in clientes:
+                self.lb_clientes.insert('end', f"{c[0]} | {c[1]} | {c[2]}")
+
+    def _seleccionar_cliente(self, event):
+        sel = self.lb_clientes.curselection()
+        if not sel:
+            return
+        idx = sel[0]
+        data = self.lb_clientes.get(idx).split('|')
+        self._cliente_sel = int(data[0].strip())
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        row = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, direccion, correo FROM Cliente WHERE id_cliente = {placeholder}",
+            (self._cliente_sel,))
+        if row:
+            doc, nom, tel, dir_, cor = row[0]
+            self.ent_doc.delete(0, 'end'); self.ent_doc.insert(0, doc or '')
+            self.ent_nom.delete(0, 'end'); self.ent_nom.insert(0, nom or '')
+            self.ent_tel.delete(0, 'end'); self.ent_tel.insert(0, tel or '')
+            self.ent_dir.delete(0, 'end'); self.ent_dir.insert(0, dir_ or '')
+            self.ent_cor.delete(0, 'end'); self.ent_cor.insert(0, cor or '')
+
+    def _nuevo_cliente(self):
+        self._cliente_sel = None
+        for e in [self.ent_doc, self.ent_nom, self.ent_tel, self.ent_dir, self.ent_cor]:
+            e.delete(0, 'end')
+
+    def _guardar_cliente(self):
+        from tkinter import messagebox
+        doc = self.ent_doc.get().strip()
+        nom = self.ent_nom.get().strip()
+        tel = self.ent_tel.get().strip()
+        dir_ = self.ent_dir.get().strip()
+        cor = self.ent_cor.get().strip()
+        if not doc or not nom or not cor:
+            messagebox.showwarning("Aviso", "Documento, nombre y correo son obligatorios")
+            return
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            if self._cliente_sel:
+                q = f"UPDATE Cliente SET documento={placeholder}, nombre={placeholder}, telefono={placeholder}, direccion={placeholder}, correo={placeholder} WHERE id_cliente={placeholder}"
+                params = (doc, nom, tel, dir_, cor, self._cliente_sel)
+            else:
+                q = f"INSERT INTO Cliente (documento, nombre, telefono, direccion, correo) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                params = (doc, nom, tel, dir_, cor)
+            self.db_manager.execute_query(q, params, fetch=False)
+            messagebox.showinfo("Éxito", "Cliente guardado correctamente")
+            self._nuevo_cliente()
+            self._cargar_clientes()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _cargar_reservas(self):
+        self.lb_reservas.delete(0, 'end')
+        query = (
+            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
+            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler"
+        )
         reservas = self.db_manager.execute_query(query)
-        listbox = tk.Listbox(frame, height=18, width=180)
-        listbox.pack(pady=10)
         if reservas:
             for r in reservas:
-                listbox.insert('end', f"ID: {r[0]} | Cliente: {r[1]} | Vehículo: {r[2]}")
+                self.lb_reservas.insert('end', f"{r[0]} | Cliente {r[1]} | Vehículo {r[2]}")
+
+    def _seleccionar_reserva(self):
+        sel = self.lb_reservas.curselection()
+        if sel:
+            self._reserva_sel = int(self.lb_reservas.get(sel[0]).split('|')[0].strip())
         else:
-            listbox.insert('end', "No hay reservas registradas.")
+            self._reserva_sel = None
+
+    def _abrir_form_reserva(self, id_reserva=None):
+        from tkinter import messagebox
+        from tkcalendar import DateEntry
+        import tkinter as tk
+        from datetime import datetime
+
+        win = ctk.CTkToplevel(self)
+        win.title("Reserva")
+        win.geometry("400x500")
+        win.configure(fg_color="#222831")
+        win.transient(self)
+        win.grab_set()
+
+        ctk.CTkLabel(win, text="Cliente ID:").pack(pady=4)
+        entry_cliente = ctk.CTkEntry(win)
+        entry_cliente.pack(pady=4)
+
+        ctk.CTkLabel(win, text="Vehículo placa:").pack(pady=4)
+        entry_veh = ctk.CTkEntry(win)
+        entry_veh.pack(pady=4)
+
+        ctk.CTkLabel(win, text="Fecha salida:").pack(pady=4)
+        salida = DateEntry(win, date_pattern='yyyy-mm-dd')
+        salida.pack(pady=4)
+        ctk.CTkLabel(win, text="Fecha entrada:").pack(pady=4)
+        entrada = DateEntry(win, date_pattern='yyyy-mm-dd')
+        entrada.pack(pady=4)
+
+        if id_reserva:
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            q = (
+                "SELECT a.id_cliente, a.id_vehiculo, a.fecha_hora_salida, a.fecha_hora_entrada "
+                "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler=a.id_alquiler WHERE ra.id_reserva=%s"
+            )
+            row = self.db_manager.execute_query(q.replace('%s', placeholder), (id_reserva,))
+            if row:
+                entry_cliente.insert(0, row[0][0])
+                entry_veh.insert(0, row[0][1])
+                salida.set_date(row[0][2])
+                entrada.set_date(row[0][3])
+
+        def guardar():
+            cid = entry_cliente.get().strip()
+            veh = entry_veh.get().strip()
+            fs = salida.get_date().strftime('%Y-%m-%d')
+            fe = entrada.get_date().strftime('%Y-%m-%d')
+            if not cid or not veh:
+                messagebox.showwarning("Aviso", "Complete todos los campos")
+                return
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            try:
+                if id_reserva:
+                    q = f"UPDATE Alquiler a JOIN Reserva_alquiler ra ON a.id_alquiler=ra.id_alquiler SET a.id_cliente={placeholder}, a.id_vehiculo={placeholder}, a.fecha_hora_salida={placeholder}, a.fecha_hora_entrada={placeholder} WHERE ra.id_reserva={placeholder}"
+                    self.db_manager.execute_query(q, (cid, veh, fs, fe, id_reserva), fetch=False)
+                else:
+                    q = f"INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                    id_alq = self.db_manager.execute_query(q, (fs, fe, veh, cid), fetch=False, return_lastrowid=True)
+                    if id_alq:
+                        q2 = f"INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) VALUES ({placeholder}, 1, 0, 0)"
+                        self.db_manager.execute_query(q2, (id_alq,), fetch=False)
+                messagebox.showinfo("Éxito", "Reserva guardada")
+                win.destroy()
+                self._cargar_reservas()
+            except Exception as exc:
+                messagebox.showerror("Error", str(exc))
+
+        ctk.CTkButton(win, text="Guardar", command=guardar, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=10)
 
     def _build_tab_vehiculos(self, parent):
         import tkinter as tk
@@ -2442,11 +2643,34 @@ class EmpleadoCajaView(BaseCTKView):
 
     def _build_tab_pagos(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Procesar pagos", font=("Arial", 16)).pack(pady=10)
-        # Listar pagos (en desarrollo)
-        ctk.CTkLabel(frame, text="Funcionalidad en desarrollo").pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Procesar pagos", font=("Arial", 18, "bold")).pack(pady=10)
+
+        self.cards_abonos = ctk.CTkFrame(frame, fg_color="#FFF8E1")
+        self.cards_abonos.pack(fill="both", expand=True, padx=10, pady=10)
+
+        input_frame = ctk.CTkFrame(frame)
+        input_frame.pack(pady=15)
+        ctk.CTkLabel(input_frame, text="Monto a abonar ($):", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.input_abono = ctk.CTkEntry(input_frame, width=120, state="disabled")
+        self.input_abono.grid(row=0, column=1, padx=5, pady=5)
+        ctk.CTkLabel(input_frame, text="Método de pago:", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
+        self.metodo_pago_var = tk.StringVar()
+        self.metodo_pago_var.set(self.metodos_pago[0])
+        self.metodo_pago_menu = tk.OptionMenu(input_frame, self.metodo_pago_var, *self.metodos_pago)
+        self.metodo_pago_menu.grid(row=0, column=3, padx=5, pady=5)
+        self.metodo_pago_menu.configure(state="disabled")
+
+        self.btn_abonar = ctk.CTkButton(frame, text="💳 Registrar Abono", command=self._realizar_abono_global, fg_color="#00AA00", hover_color="#008800", font=("Arial", 13, "bold"), state="disabled")
+        self.btn_abonar.pack(pady=10)
+
+        self._abono_seleccionado = None
+        self._cargar_reservas_pendientes_global()
 
     def _build_tab_reservas(self, parent):
         import tkinter as tk
@@ -2479,6 +2703,70 @@ class EmpleadoCajaView(BaseCTKView):
                 listbox.insert('end', f"ID: {c[0]} | Nombre: {c[1]} | Correo: {c[2]}")
         else:
             listbox.insert('end', "No hay clientes registrados.")
+
+    def _cargar_reservas_pendientes_global(self):
+        for w in self.cards_abonos.winfo_children():
+            w.destroy()
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = (
+            "SELECT ra.id_reserva, a.id_cliente, v.modelo, v.placa, ra.saldo_pendiente "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler=a.id_alquiler "
+            "JOIN Vehiculo v ON a.id_vehiculo=v.placa "
+            "WHERE ra.saldo_pendiente>0 AND ra.id_estado_reserva IN (1,2)"
+        )
+        reservas = self.db_manager.execute_query(query)
+        self._abono_cards = {}
+        if reservas:
+            for r in reservas:
+                rid, cid, modelo, placa, saldo = r
+                card = ctk.CTkFrame(self.cards_abonos, fg_color="white", corner_radius=12)
+                card.pack(fill="x", padx=10, pady=8)
+                ctk.CTkLabel(card, text=f"Reserva {rid} - Cliente {cid}", font=("Arial", 14, "bold")).pack(anchor="w", padx=12)
+                ctk.CTkLabel(card, text=f"{modelo} ({placa})", font=("Arial", 12)).pack(anchor="w", padx=12)
+                ctk.CTkLabel(card, text=f"Saldo: ${saldo:,.0f}", font=("Arial", 12), text_color="#B8860B").pack(anchor="w", padx=12)
+                card.bind("<Button-1>", lambda e, rid=rid: self._seleccionar_abono_card(rid))
+                for child in card.winfo_children():
+                    child.bind("<Button-1>", lambda e, rid=rid: self._seleccionar_abono_card(rid))
+                self._abono_cards[rid] = card
+        else:
+            ctk.CTkLabel(self.cards_abonos, text="No hay reservas pendientes", font=("Arial", 13)).pack(pady=20)
+        self._abono_seleccionado = None
+        self.input_abono.configure(state="disabled")
+        self.metodo_pago_menu.configure(state="disabled")
+        self.btn_abonar.configure(state="disabled")
+
+    def _realizar_abono_global(self):
+        from tkinter import messagebox
+        id_reserva = self._abono_seleccionado
+        if not id_reserva:
+            messagebox.showwarning("Aviso", "Seleccione una reserva")
+            return
+        monto = self.input_abono.get().strip()
+        metodo = self.metodo_pago_var.get()
+        if not monto:
+            messagebox.showwarning("Error", "Ingrese un monto")
+            return
+        try:
+            monto_f = float(monto)
+        except ValueError:
+            messagebox.showwarning("Error", "Monto inválido")
+            return
+        if monto_f <= 0:
+            messagebox.showwarning("Error", "El monto debe ser mayor a 0")
+            return
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        val_query = f"SELECT saldo_pendiente FROM Reserva_alquiler WHERE id_reserva={placeholder}"
+        row = self.db_manager.execute_query(val_query, (id_reserva,))
+        if not row:
+            messagebox.showerror("Error", "Reserva no encontrada")
+            return
+        saldo = float(row[0][0])
+        if monto_f > saldo:
+            messagebox.showwarning("Error", f"El monto excede el saldo (${saldo:,.0f})")
+            return
+        self._registrar_abono(id_reserva, monto_f, metodo, None)
+        self._cargar_reservas_pendientes_global()
 
 class EmpleadoMantenimientoView(BaseCTKView):
     def _welcome_message(self):
@@ -2514,24 +2802,90 @@ class EmpleadoMantenimientoView(BaseCTKView):
 
     def _build_tab_vehiculos(self, parent):
         import tkinter as tk
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Vehículos asignados", font=("Arial", 16)).pack(pady=10)
-        # Listar vehículos asignados (en desarrollo)
-        ctk.CTkLabel(frame, text="Funcionalidad en desarrollo").pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Vehículos asignados", font=("Arial", 18, "bold")).pack(pady=10)
+
+        cont = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        cont.pack(fill="both", expand=True, padx=10, pady=10)
+
+        query = (
+            "SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion "
+            "FROM Vehiculo v "
+            "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
+            "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo"
+        )
+        vehiculos = self.db_manager.execute_query(query)
+
+        if not vehiculos:
+            ctk.CTkLabel(cont, text="Sin vehículos asignados", font=("Arial", 13)).pack(pady=20)
+            return
+
+        for v in vehiculos:
+            placa, modelo, marca, tipo = v
+            card = ctk.CTkFrame(cont, fg_color="white", corner_radius=10)
+            card.pack(fill="x", padx=10, pady=5)
+            ctk.CTkLabel(card, text=f"{marca} {modelo}", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=2)
+            ctk.CTkLabel(card, text=f"Placa: {placa} | {tipo}", font=("Arial", 12)).pack(anchor="w", padx=10, pady=(0,5))
 
     def _build_tab_reportar(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Reportar mantenimiento", font=("Arial", 16)).pack(pady=10)
-        # Reportar mantenimiento (en desarrollo)
-        ctk.CTkLabel(frame, text="Funcionalidad en desarrollo").pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Reportar mantenimiento", font=("Arial", 18, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Placa del vehículo:").pack(pady=5)
+        self.rep_placa = ctk.CTkEntry(frame, width=150)
+        self.rep_placa.pack(pady=5)
+        ctk.CTkLabel(frame, text="Descripción del mantenimiento:").pack(pady=5)
+        self.rep_desc = ctk.CTkEntry(frame, width=300)
+        self.rep_desc.pack(pady=5)
+
+        def guardar():
+            placa = self.rep_placa.get().strip()
+            desc = self.rep_desc.get().strip()
+            if not placa or not desc:
+                messagebox.showwarning("Aviso", "Complete todos los campos")
+                return
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
+            try:
+                self.db_manager.execute_query(query, (placa, desc), fetch=False)
+                messagebox.showinfo("Éxito", "Reporte registrado")
+                self.rep_placa.delete(0, 'end')
+                self.rep_desc.delete(0, 'end')
+            except Exception as exc:
+                messagebox.showerror("Error", str(exc))
+
+        ctk.CTkButton(frame, text="Registrar", command=guardar, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=10)
 
     def _build_tab_historial(self, parent):
         import tkinter as tk
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Historial vehículos", font=("Arial", 16)).pack(pady=10)
-        # Historial de vehículos (en desarrollo)
-        ctk.CTkLabel(frame, text="Funcionalidad en desarrollo").pack(pady=10) 
+
+        ctk.CTkLabel(frame, text="Historial vehículos", font=("Arial", 18, "bold")).pack(pady=10)
+
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
+        scrollbar.config(command=listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        listbox.pack(side="left", fill="both", expand=True)
+
+        query = "SELECT placa, descripcion, fecha FROM Mantenimiento ORDER BY fecha DESC"
+        filas = self.db_manager.execute_query(query)
+        if filas:
+            for f in filas:
+                placa, desc, fecha = f
+                listbox.insert('end', f"{fecha} | {placa} | {desc}")
+        else:
+            listbox.insert('end', "Sin registros de mantenimiento")
