@@ -343,12 +343,13 @@ Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se crean con partici
 ### Gerente
 - Gestionar empleados (excepto gerentes y admin)
 - Ver todos los clientes
-- Generar reportes de sucursal
+- Acceder al panel de reportes de ventas
 - Cambiar contraseña
 
 ### Administrador
 - Gestionar gerentes
 - Ver todos los empleados y clientes
+- Acceder al panel de reportes de ventas
 - Ejecutar consultas SQL libres
 - Cambiar contraseña
 
@@ -457,6 +458,12 @@ chmod +x main.py
 - **Gestión completa de abonos** con validaciones inteligentes
 - **Edición de fechas de reservas** con recálculo automático de precios
 - Reportes automáticos
+- **Nuevo panel de reportes de ventas** para gerentes y administradores
+
+#### Panel de reportes
+Solo los gerentes y administradores pueden acceder a la pestaña **Reportes**.
+Elige mes y año y haz clic en **Ventas por sede** o **Ventas por vendedor** para
+ver los totales de ventas generados.
 
 ### Robustez del Sistema
 - Sincronización automática de datos críticos

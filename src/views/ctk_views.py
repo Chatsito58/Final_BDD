@@ -814,12 +814,12 @@ class ClienteView(BaseCTKView):
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
-                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
-                    id_seguro, id_descuento, valor) 
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
+                    id_seguro, id_descuento, valor)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 """
                 id_alquiler = self.db_manager.execute_query(alquiler_query, (
-                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
                     id_seguro, id_descuento, total
                 ), fetch=False, return_lastrowid=True)
                 
@@ -1455,12 +1455,12 @@ class ClienteView(BaseCTKView):
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
-                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
-                    id_seguro, id_descuento, valor) 
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
+                    id_seguro, id_descuento, valor)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 """
                 id_alquiler = self.db_manager.execute_query(alquiler_query, (
-                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
                     id_seguro, id_descuento, total
                 ), fetch=False, return_lastrowid=True)
                 if not id_alquiler:
@@ -1829,12 +1829,12 @@ class ClienteView(BaseCTKView):
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
-                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
-                    id_seguro, id_descuento, valor) 
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
+                    id_seguro, id_descuento, valor)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 """
                 id_alquiler = self.db_manager.execute_query(alquiler_query, (
-                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
                     id_seguro, id_descuento, total
                 ), fetch=False, return_lastrowid=True)
                 
@@ -2228,8 +2228,8 @@ class EmpleadoVentasView(BaseCTKView):
                     q = f"UPDATE Alquiler a JOIN Reserva_alquiler ra ON a.id_alquiler=ra.id_alquiler SET a.id_cliente={placeholder}, a.id_vehiculo={placeholder}, a.fecha_hora_salida={placeholder}, a.fecha_hora_entrada={placeholder} WHERE ra.id_reserva={placeholder}"
                     self.db_manager.execute_query(q, (cid, veh, fs, fe, id_reserva), fetch=False)
                 else:
-                    q = f"INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
-                    id_alq = self.db_manager.execute_query(q, (fs, fe, veh, cid), fetch=False, return_lastrowid=True)
+                    q = f"INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                    id_alq = self.db_manager.execute_query(q, (fs, fe, veh, cid, self.user_data.get('id_empleado')), fetch=False, return_lastrowid=True)
                     if id_alq:
                         q2 = f"INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) VALUES ({placeholder}, 1, 0, 0)"
                         self.db_manager.execute_query(q2, (id_alq,), fetch=False)
@@ -2552,12 +2552,12 @@ class EmpleadoVentasView(BaseCTKView):
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
-                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, 
-                    id_seguro, id_descuento, valor) 
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
+                    id_seguro, id_descuento, valor)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 """
                 id_alquiler = self.db_manager.execute_query(alquiler_query, (
-                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, 
+                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
                     id_seguro, id_descuento, total
                 ), fetch=False, return_lastrowid=True)
                 
@@ -3084,12 +3084,44 @@ class GerenteView(BaseCTKView):
             messagebox.showerror("Error", str(exc))
 
     def _build_tab_reportes(self, parent):
+        import tkinter as tk
+        from tkinter import ttk
+        from datetime import datetime
+        from src.services import reports
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Reportes rápidos", font=("Arial", 18, "bold")).pack(pady=10)
-        e_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Empleado")
-        e_total = e_count[0][0] if e_count else 0
-        ctk.CTkLabel(frame, text=f"Total empleados: {e_total}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(frame, text="Reportes de ventas", font=("Arial", 18, "bold")).pack(pady=10)
+
+        controls = ctk.CTkFrame(frame)
+        controls.pack(pady=10)
+        mes_var = tk.IntVar(value=datetime.now().month)
+        anio_var = tk.IntVar(value=datetime.now().year)
+        tk.Label(controls, text="Mes:").grid(row=0, column=0, padx=2)
+        tk.Spinbox(controls, from_=1, to=12, width=4, textvariable=mes_var).grid(row=0, column=1)
+        tk.Label(controls, text="Año:").grid(row=0, column=2, padx=2)
+        tk.Spinbox(controls, from_=2020, to=2100, width=6, textvariable=anio_var).grid(row=0, column=3)
+        ctk.CTkButton(controls, text="Ventas por sede", command=lambda: mostrar("sucursal")).grid(row=0, column=4, padx=4)
+        ctk.CTkButton(controls, text="Ventas por vendedor", command=lambda: mostrar("vendedor")).grid(row=0, column=5, padx=4)
+
+        tree = ttk.Treeview(frame, columns=("c1", "c2"), show="headings", height=8)
+        tree.heading("c1", text="ID")
+        tree.heading("c2", text="Total")
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def mostrar(tipo):
+            for row in tree.get_children():
+                tree.delete(row)
+            mes = mes_var.get()
+            anio = anio_var.get()
+            if tipo == "sucursal":
+                rows = reports.ventas_por_sucursal(self.db_manager, mes, anio)
+                tree.heading("c1", text="Sucursal")
+            else:
+                rows = reports.ventas_por_vendedor(self.db_manager, mes, anio)
+                tree.heading("c1", text="Empleado")
+            for r in rows:
+                tree.insert("", "end", values=r)
 
 
 class AdminView(BaseCTKView):
@@ -3171,12 +3203,41 @@ class AdminView(BaseCTKView):
                 self.lb_cli.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
 
     def _build_tab_reportes(self, parent):
+        import tkinter as tk
+        from tkinter import ttk
+        from datetime import datetime
+        from src.services import reports
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Reportes rápidos", font=("Arial", 18, "bold")).pack(pady=10)
-        e_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Empleado")
-        c_count = self.db_manager.execute_query("SELECT COUNT(*) FROM Cliente")
-        e_total = e_count[0][0] if e_count else 0
-        c_total = c_count[0][0] if c_count else 0
-        ctk.CTkLabel(frame, text=f"Total empleados: {e_total}", font=("Arial", 14)).pack(pady=5)
-        ctk.CTkLabel(frame, text=f"Total clientes: {c_total}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(frame, text="Reportes de ventas", font=("Arial", 18, "bold")).pack(pady=10)
+
+        controls = ctk.CTkFrame(frame)
+        controls.pack(pady=10)
+        mes_var = tk.IntVar(value=datetime.now().month)
+        anio_var = tk.IntVar(value=datetime.now().year)
+        tk.Label(controls, text="Mes:").grid(row=0, column=0, padx=2)
+        tk.Spinbox(controls, from_=1, to=12, width=4, textvariable=mes_var).grid(row=0, column=1)
+        tk.Label(controls, text="Año:").grid(row=0, column=2, padx=2)
+        tk.Spinbox(controls, from_=2020, to=2100, width=6, textvariable=anio_var).grid(row=0, column=3)
+        ctk.CTkButton(controls, text="Ventas por sede", command=lambda: mostrar("sucursal")).grid(row=0, column=4, padx=4)
+        ctk.CTkButton(controls, text="Ventas por vendedor", command=lambda: mostrar("vendedor")).grid(row=0, column=5, padx=4)
+
+        tree = ttk.Treeview(frame, columns=("c1", "c2"), show="headings", height=8)
+        tree.heading("c1", text="ID")
+        tree.heading("c2", text="Total")
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def mostrar(tipo):
+            for row in tree.get_children():
+                tree.delete(row)
+            mes = mes_var.get()
+            anio = anio_var.get()
+            if tipo == "sucursal":
+                rows = reports.ventas_por_sucursal(self.db_manager, mes, anio)
+                tree.heading("c1", text="Sucursal")
+            else:
+                rows = reports.ventas_por_vendedor(self.db_manager, mes, anio)
+                tree.heading("c1", text="Empleado")
+            for r in rows:
+                tree.insert("", "end", values=r)

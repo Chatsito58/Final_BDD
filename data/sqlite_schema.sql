@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS Alquiler (
     fecha_hora_entrada TEXT,
     id_vehiculo TEXT,
     id_cliente INTEGER,
+    id_empleado INTEGER,
     id_sucursal INTEGER,
     id_medio_pago INTEGER,
     id_estado INTEGER,
