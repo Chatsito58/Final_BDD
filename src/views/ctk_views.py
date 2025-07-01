@@ -3125,34 +3125,54 @@ class GerenteView(BaseCTKView):
         self.ent_modelo.grid(row=2, column=1, padx=5, pady=5)
         self.ent_km.grid(row=3, column=1, padx=5, pady=5)
 
-        # Obtener datos para los OptionMenu
-        marcas = self.db_manager.execute_query("SELECT id_marca, nombre_marca FROM Marca_vehiculo") or []
-        colores = self.db_manager.execute_query("SELECT id_color, nombre_color FROM Color_vehiculo") or []
-        tipos = self.db_manager.execute_query("SELECT id_tipo, descripcion FROM Tipo_vehiculo") or []
-        trans = self.db_manager.execute_query("SELECT id_transmision, descripcion FROM Transmision_vehiculo") or []
-        proveedores = self.db_manager.execute_query("SELECT id_proveedor, nombre FROM Proveedor_vehiculo") or []
-        talleres = self.db_manager.execute_query("SELECT id_taller, nombre FROM Taller_mantenimiento") or []
+        # Cargar listas iniciales
+        marcas = self.db_manager.execute_query(
+            "SELECT id_marca, nombre_marca FROM Marca_vehiculo"
+        ) or []
+        colores = self.db_manager.execute_query(
+            "SELECT id_color, nombre_color FROM Color_vehiculo"
+        ) or []
+        tipos = self.db_manager.execute_query(
+            "SELECT id_tipo, descripcion FROM Tipo_vehiculo"
+        ) or []
+        trans = self.db_manager.execute_query(
+            "SELECT id_transmision, descripcion FROM Transmision_vehiculo"
+        ) or []
 
         self.marca_map = {m[1]: m[0] for m in marcas}
         self.color_map = {c[1]: c[0] for c in colores}
         self.tipo_map = {t[1]: t[0] for t in tipos}
         self.trans_map = {tr[1]: tr[0] for tr in trans}
-        self.prov_map = {p[1]: p[0] for p in proveedores}
-        self.taller_map = {t[1]: t[0] for t in talleres}
 
-        self.var_marca = ctk.StringVar(value=list(self.marca_map.keys())[0] if self.marca_map else "")
-        self.var_color = ctk.StringVar(value=list(self.color_map.keys())[0] if self.color_map else "")
-        self.var_tipo = ctk.StringVar(value=list(self.tipo_map.keys())[0] if self.tipo_map else "")
-        self.var_trans = ctk.StringVar(value=list(self.trans_map.keys())[0] if self.trans_map else "")
-        self.var_prov = ctk.StringVar(value=list(self.prov_map.keys())[0] if self.prov_map else "")
-        self.var_taller = ctk.StringVar(value=list(self.taller_map.keys())[0] if self.taller_map else "")
+        self.var_marca = ctk.StringVar(
+            value=list(self.marca_map.keys())[0] if self.marca_map else ""
+        )
+        self.var_color = ctk.StringVar(
+            value=list(self.color_map.keys())[0] if self.color_map else ""
+        )
+        self.var_tipo = ctk.StringVar(
+            value=list(self.tipo_map.keys())[0] if self.tipo_map else ""
+        )
+        self.var_trans = ctk.StringVar(
+            value=list(self.trans_map.keys())[0] if self.trans_map else ""
+        )
+        self.var_prov = ctk.StringVar()
+        self.var_taller = ctk.StringVar()
 
-        self.opt_marca = ctk.CTkOptionMenu(form, variable=self.var_marca, values=list(self.marca_map.keys()))
-        self.opt_color = ctk.CTkOptionMenu(form, variable=self.var_color, values=list(self.color_map.keys()))
-        self.opt_tipo = ctk.CTkOptionMenu(form, variable=self.var_tipo, values=list(self.tipo_map.keys()))
-        self.opt_trans = ctk.CTkOptionMenu(form, variable=self.var_trans, values=list(self.trans_map.keys()))
-        self.opt_prov = ctk.CTkOptionMenu(form, variable=self.var_prov, values=list(self.prov_map.keys()))
-        self.opt_taller = ctk.CTkOptionMenu(form, variable=self.var_taller, values=list(self.taller_map.keys()))
+        self.opt_marca = ctk.CTkOptionMenu(
+            form, variable=self.var_marca, values=list(self.marca_map.keys())
+        )
+        self.opt_color = ctk.CTkOptionMenu(
+            form, variable=self.var_color, values=list(self.color_map.keys())
+        )
+        self.opt_tipo = ctk.CTkOptionMenu(
+            form, variable=self.var_tipo, values=list(self.tipo_map.keys())
+        )
+        self.opt_trans = ctk.CTkOptionMenu(
+            form, variable=self.var_trans, values=list(self.trans_map.keys())
+        )
+        self.opt_prov = ctk.CTkOptionMenu(form, variable=self.var_prov, values=[])
+        self.opt_taller = ctk.CTkOptionMenu(form, variable=self.var_taller, values=[])
 
         self.opt_marca.grid(row=4, column=1, padx=5, pady=5)
         self.opt_color.grid(row=5, column=1, padx=5, pady=5)
@@ -3160,6 +3180,9 @@ class GerenteView(BaseCTKView):
         self.opt_trans.grid(row=7, column=1, padx=5, pady=5)
         self.opt_prov.grid(row=8, column=1, padx=5, pady=5)
         self.opt_taller.grid(row=9, column=1, padx=5, pady=5)
+
+        # Cargar opciones de proveedores y talleres
+        self._load_proveedores_talleres()
 
         btn_frame = ctk.CTkFrame(frame)
         btn_frame.pack(pady=5)
@@ -3169,6 +3192,31 @@ class GerenteView(BaseCTKView):
     def _nuevo_vehiculo(self):
         for ent in [self.ent_placa, self.ent_chasis, self.ent_modelo, self.ent_km]:
             ent.delete(0, 'end')
+        self._load_proveedores_talleres()
+
+    def _load_proveedores_talleres(self):
+        """Recargar opciones de proveedores y talleres."""
+        proveedores = self.db_manager.execute_query(
+            "SELECT id_proveedor, nombre FROM Proveedor_vehiculo"
+        ) or []
+        talleres = self.db_manager.execute_query(
+            "SELECT id_taller, nombre FROM Taller_mantenimiento"
+        ) or []
+
+        self.prov_map = {p[1]: p[0] for p in proveedores}
+        self.taller_map = {t[1]: t[0] for t in talleres}
+
+        self.opt_prov.configure(values=list(self.prov_map.keys()))
+        self.opt_taller.configure(values=list(self.taller_map.keys()))
+
+        if self.prov_map:
+            self.var_prov.set(list(self.prov_map.keys())[0])
+        else:
+            self.var_prov.set("")
+        if self.taller_map:
+            self.var_taller.set(list(self.taller_map.keys())[0])
+        else:
+            self.var_taller.set("")
 
     def _guardar_vehiculo(self):
         from tkinter import messagebox
