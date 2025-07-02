@@ -513,9 +513,7 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
         placeholder = '%s' if not self.db_manager.offline else '?'
-        placeholder = '%s' if not self.db_manager.offline else '?'
-        placeholder = '%s' if not self.db_manager.offline else '?'
-        query = ("""
+        query = f("""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
@@ -1538,7 +1536,8 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
-        query = ("""
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f("""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
@@ -2264,7 +2263,8 @@ class EmpleadoVentasView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
-        query = ("""
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f("""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
