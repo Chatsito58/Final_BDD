@@ -512,13 +512,16 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        placeholder = '%s' if not self.db_manager.offline else '?'
         query = ("""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
                    su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
-            FROM Vehiculo v 
+            FROM Vehiculo v
             JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
             JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
             LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
@@ -527,9 +530,9 @@ class ClienteView(BaseCTKView):
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1
+            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
         """)
-        vehiculos = self.db_manager.execute_query(query)
+        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -1214,7 +1217,10 @@ class ClienteView(BaseCTKView):
         card.pack(padx=20, pady=20, fill="x")
         # Selección de vehículo
         ctk.CTkLabel(card, text="Vehículo", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10,0), padx=12)
-        vehiculos = self.db_manager.execute_query("SELECT v.placa, v.modelo, m.nombre_marca FROM Vehiculo v JOIN Marca_vehiculo m ON v.id_marca = m.id_marca WHERE v.id_estado_vehiculo = 1")
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        vehiculos = self.db_manager.execute_query(
+            f"SELECT v.placa, v.modelo, m.nombre_marca FROM Vehiculo v JOIN Marca_vehiculo m ON v.id_marca = m.id_marca WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}",
+            (self.user_data.get('id_sucursal'),))
         vehiculo_var = tk.StringVar()
         if vehiculos:
             vehiculo_menu = tk.OptionMenu(card, vehiculo_var, *[f"{v[0]} - {v[1]} {v[2]}" for v in vehiculos])
@@ -1508,8 +1514,9 @@ class ClienteView(BaseCTKView):
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
         # Listar reservas
-        query = "SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva"
-        reservas = self.db_manager.execute_query(query)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva WHERE id_sucursal = {placeholder}"
+        reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         listbox = tk.Listbox(frame, height=18, width=180)
         listbox.pack(pady=10)
         if reservas:
@@ -1542,9 +1549,9 @@ class ClienteView(BaseCTKView):
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1
+            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
         """)
-        vehiculos = self.db_manager.execute_query(query)
+        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -2100,8 +2107,9 @@ class EmpleadoVentasView(BaseCTKView):
 
     def _cargar_clientes(self):
         self.lb_clientes.delete(0, 'end')
-        query = "SELECT id_cliente, nombre, correo FROM Cliente"
-        clientes = self.db_manager.execute_query(query)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"SELECT id_cliente, nombre, correo FROM Cliente WHERE id_sucursal = {placeholder}"
+        clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         if clientes:
             for c in clientes:
                 self.lb_clientes.insert('end', f"{c[0]} | {c[1]} | {c[2]}")
@@ -2157,11 +2165,13 @@ class EmpleadoVentasView(BaseCTKView):
 
     def _cargar_reservas(self):
         self.lb_reservas.delete(0, 'end')
+        placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
             "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
-            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler"
+            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE a.id_sucursal = {placeholder}"
         )
-        reservas = self.db_manager.execute_query(query)
+        reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         if reservas:
             for r in reservas:
                 self.lb_reservas.insert('end', f"{r[0]} | Cliente {r[1]} | Vehículo {r[2]}")
@@ -2265,9 +2275,9 @@ class EmpleadoVentasView(BaseCTKView):
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1
+            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
         """)
-        vehiculos = self.db_manager.execute_query(query)
+        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -2695,8 +2705,9 @@ class EmpleadoCajaView(BaseCTKView):
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Clientes", font=("Arial", 16)).pack(pady=10)
         # Listar clientes
-        query = "SELECT id_cliente, nombre, correo FROM Cliente"
-        clientes = self.db_manager.execute_query(query)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"SELECT id_cliente, nombre, correo FROM Cliente WHERE id_sucursal = {placeholder}"
+        clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         listbox = tk.Listbox(frame, height=10, width=60)
         listbox.pack(pady=10)
         if clientes:
@@ -2714,9 +2725,11 @@ class EmpleadoCajaView(BaseCTKView):
             "FROM Reserva_alquiler ra "
             "JOIN Alquiler a ON ra.id_alquiler=a.id_alquiler "
             "JOIN Vehiculo v ON a.id_vehiculo=v.placa "
-            "WHERE ra.saldo_pendiente>0 AND ra.id_estado_reserva IN (1,2)"
+            "WHERE ra.saldo_pendiente>0 AND ra.id_estado_reserva IN (1,2) AND a.id_sucursal = ?"
         )
-        reservas = self.db_manager.execute_query(query)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = query.replace('?', placeholder)
+        reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         self._abono_cards = {}
         if reservas:
             for r in reservas:
@@ -2815,13 +2828,15 @@ class EmpleadoMantenimientoView(BaseCTKView):
         cont = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         cont.pack(fill="both", expand=True, padx=10, pady=10)
 
+        placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
             "SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion "
             "FROM Vehiculo v "
             "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
-            "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo"
+            "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
+            f"WHERE v.id_sucursal = {placeholder}"
         )
-        vehiculos = self.db_manager.execute_query(query)
+        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
 
         if not vehiculos:
             ctk.CTkLabel(cont, text="Sin vehículos asignados", font=("Arial", 13)).pack(pady=20)
@@ -2885,8 +2900,13 @@ class EmpleadoMantenimientoView(BaseCTKView):
         scrollbar.pack(side="right", fill="y")
         listbox.pack(side="left", fill="both", expand=True)
 
-        query = "SELECT placa, descripcion, fecha FROM Mantenimiento ORDER BY fecha DESC"
-        filas = self.db_manager.execute_query(query)
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = (
+            "SELECT m.placa, m.descripcion, m.fecha "
+            "FROM Mantenimiento m JOIN Vehiculo v ON m.placa = v.placa "
+            f"WHERE v.id_sucursal = {placeholder} ORDER BY m.fecha DESC"
+        )
+        filas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         if filas:
             for f in filas:
                 placa, desc, fecha = f
@@ -2912,13 +2932,15 @@ class EmpleadoMantenimientoView(BaseCTKView):
         scrollbar.pack(side="right", fill="y")
         listbox.pack(side="left", fill="both", expand=True)
 
+        placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
             "SELECT v.placa, v.modelo, v.kilometraje, MAX(m.fecha_hora) "
             "FROM Vehiculo v "
             "LEFT JOIN Mantenimiento_vehiculo m ON v.placa = m.id_vehiculo "
+            f"WHERE v.id_sucursal = {placeholder} "
             "GROUP BY v.placa, v.modelo, v.kilometraje"
         )
-        filas = self.db_manager.execute_query(query)
+        filas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
 
         if not filas:
             listbox.insert('end', "Sin vehículos registrados")
