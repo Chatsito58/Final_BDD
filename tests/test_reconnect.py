@@ -46,3 +46,20 @@ def test_eventual_reconnect(monkeypatch, tmp_path):
     assert db.offline is False
     assert 'callback' in events
     assert 'pending' in events and 'critical' in events
+
+
+def test_try_reconnect_switches_online(monkeypatch, tmp_path):
+    os.environ['LOCAL_DB_PATH'] = str(tmp_path / 'test.db')
+    db = DBManager()
+    assert db.offline
+
+    import src.db_manager as db_module
+
+    mysql_mock = types.SimpleNamespace(connector=types.SimpleNamespace(connect=lambda **k: DummyConn()))
+    monkeypatch.setattr(db_module, 'mysql', mysql_mock, raising=False)
+
+    monkeypatch.setattr(db, 'sync_pending_reservations', lambda: None)
+    monkeypatch.setattr(db, 'sync_critical_data_to_local', lambda: None)
+
+    assert db.try_reconnect() is True
+    assert db.offline is False
