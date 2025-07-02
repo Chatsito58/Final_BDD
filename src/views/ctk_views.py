@@ -3084,6 +3084,12 @@ class GerenteView(BaseCTKView):
         if not doc or not nom or not cor or not cargo:
             messagebox.showwarning("Aviso", "Documento, nombre, correo y cargo son obligatorios")
             return
+        if cargo.lower() == 'gerente' and not puede_gestionar_gerentes(self.user_data.get('rol')):
+            messagebox.showwarning(
+                "Aviso",
+                "No tiene permiso para gestionar empleados con cargo 'gerente'",
+            )
+            return
         if not verificar_permiso_creacion_empleado(cargo, self.user_data.get('rol')):
             messagebox.showwarning("Aviso", "No tiene permiso para crear/editar este empleado")
             return
