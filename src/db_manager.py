@@ -566,14 +566,21 @@ class DBManager:
                 self.execute_query(
                     "UPDATE Cliente SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_cliente = %s",
                     (nombre, telefono, direccion, correo, id_cliente),
-                    fetch=False
+                    fetch=False,
                 )
-            # Actualizar en local siempre
-            self._sqlite.execute_query(
-                "UPDATE Cliente SET nombre = ?, telefono = ?, direccion = ?, correo = ? WHERE id_cliente = ?",
-                (nombre, telefono, direccion, correo, id_cliente),
-                fetch=False
-            )
+                # Sincronizar copia local (sin columna direccion)
+                self._sqlite.execute_query(
+                    "UPDATE Cliente SET nombre = ?, telefono = ?, correo = ? WHERE id_cliente = ?",
+                    (nombre, telefono, correo, id_cliente),
+                    fetch=False,
+                )
+            else:
+                # En modo offline solo se actualizan las columnas existentes en SQLite
+                self._sqlite.execute_query(
+                    "UPDATE Cliente SET nombre = ?, telefono = ?, correo = ? WHERE id_cliente = ?",
+                    (nombre, telefono, correo, id_cliente),
+                    fetch=False,
+                )
             return True
         except Exception as exc:
             self.logger.error(f"Error actualizando datos de cliente en ambas bases: {exc}")
