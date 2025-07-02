@@ -847,10 +847,15 @@ class ClienteView(BaseCTKView):
                 saldo_pendiente = total - abono
                 print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
                 reserva_query = f"""
-                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
-                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
                 """
-                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
+                id_reserva = self.db_manager.execute_query(
+                    reserva_query,
+                    (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
+                    fetch=False,
+                    return_lastrowid=True
+                )
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
@@ -1493,10 +1498,15 @@ class ClienteView(BaseCTKView):
                     return
                 saldo_pendiente = total - abono
                 reserva_query = f"""
-                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
-                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
                 """
-                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
+                id_reserva = self.db_manager.execute_query(
+                    reserva_query,
+                    (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
+                    fetch=False,
+                    return_lastrowid=True
+                )
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
@@ -1875,10 +1885,15 @@ class ClienteView(BaseCTKView):
                 saldo_pendiente = total - abono
                 print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
                 reserva_query = f"""
-                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
-                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
                 """
-                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
+                id_reserva = self.db_manager.execute_query(
+                    reserva_query,
+                    (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
+                    fetch=False,
+                    return_lastrowid=True
+                )
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
@@ -2261,8 +2276,15 @@ class EmpleadoVentasView(BaseCTKView):
                     q = f"INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
                     id_alq = self.db_manager.execute_query(q, (fs, fe, veh, cid, self.user_data.get('id_empleado')), fetch=False, return_lastrowid=True)
                     if id_alq:
-                        q2 = f"INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) VALUES ({placeholder}, 1, 0, 0)"
-                        self.db_manager.execute_query(q2, (id_alq,), fetch=False)
+                        q2 = (
+                            f"INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)"
+                            f" VALUES ({placeholder}, 1, 0, 0, {placeholder})"
+                        )
+                        self.db_manager.execute_query(
+                            q2,
+                            (id_alq, self.user_data.get('id_empleado')),
+                            fetch=False,
+                        )
                 messagebox.showinfo("Éxito", "Reserva guardada")
                 win.destroy()
                 self._cargar_reservas()
@@ -2599,10 +2621,15 @@ class EmpleadoVentasView(BaseCTKView):
                 saldo_pendiente = total - abono
                 print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
                 reserva_query = f"""
-                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono) 
-                    VALUES ({placeholder}, 1, {placeholder}, {placeholder})
+                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
+                    VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
                 """
-                id_reserva = self.db_manager.execute_query(reserva_query, (id_alquiler, saldo_pendiente, abono), fetch=False, return_lastrowid=True)
+                id_reserva = self.db_manager.execute_query(
+                    reserva_query,
+                    (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
+                    fetch=False,
+                    return_lastrowid=True
+                )
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
