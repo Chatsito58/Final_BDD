@@ -89,11 +89,15 @@ class AlquilerApp:
         show_login()
 
     def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
-        from PyQt5.QtCore import QTimer
         rol = (user_data.get('rol') or '').lower()
         tipo_empleado = (user_data.get('tipo_empleado') or '').lower() if user_data.get('tipo_empleado') else None
         def handle_logout():
-            QTimer.singleShot(0, on_logout)
+            # For CTk (Tkinter based) windows we can call the callback directly
+            # since they do not share the Qt event loop. Using QTimer.singleShot
+            # here delays the re-display of the login dialog after closing the
+            # admin window. When running a Qt based view this still allows the
+            # callback to be executed safely in the Qt event loop.
+            on_logout()
         if rol == 'admin':
             win = AdminView(user_data, db_manager, handle_logout)
             win.mainloop()
