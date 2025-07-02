@@ -36,6 +36,11 @@ class MainView(QtWidgets.QMainWindow):
         self._status_timer.timeout.connect(self._update_status_bar)
         self._status_timer.start(2000)
 
+        # Intentar reconexión periódica si está offline
+        self._reconnect_timer = QTimer(self)
+        self._reconnect_timer.timeout.connect(self._attempt_reconnect)
+        self._reconnect_timer.start(5000)
+
         # Setup status bar information
         if self.statusBar():
             self.statusBar().showMessage(f"Usuario: {username} | Rol: {role}")
@@ -151,6 +156,11 @@ class MainView(QtWidgets.QMainWindow):
     def _sync_and_update_status(self):
         self._db_manager.sync_pending_reservations()
         self._update_status_bar()
+
+    def _attempt_reconnect(self):
+        """Intentar reconectar y actualizar el estado si tiene éxito."""
+        if self._db_manager.offline and self._db_manager.try_reconnect():
+            self._update_status_bar()
 
     def _cambiar_contrasena(self):
         from PyQt5.QtWidgets import QMessageBox
