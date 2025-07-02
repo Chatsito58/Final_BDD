@@ -127,6 +127,8 @@ Final_BDD/
 - Al restablecerse la conexión los datos pendientes se sincronizan automáticamente.
 - Cuenta con un mecanismo de reconexión que intenta enlazar nuevamente con la base remota y reanuda la sincronización.
 - Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se particionan anualmente en MySQL; en SQLite solo se conserva la última semana de registros.
+- Las reservas registran el `id_empleado` que las crea. Si un cliente genera una
+  reserva por su cuenta, este campo queda en `NULL`.
 
 ## Roles y Permisos
 - **Cliente**: puede crear y consultar sus reservas, editar su perfil y realizar abonos.
