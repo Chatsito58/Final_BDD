@@ -3482,6 +3482,10 @@ class AdminView(BaseCTKView):
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
 
+        if puede_ejecutar_sql_libre(self.user_data.get('rol')):
+            self.tab_sql_libre = self.tabview.add("SQL Libre")
+            self._build_tab_sql_libre(self.tabview.tab("SQL Libre"))
+
     def _build_tab_personal(self, parent):
         import tkinter as tk
 
