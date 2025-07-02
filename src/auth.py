@@ -63,7 +63,7 @@ class AuthManager:
             # Consulta para SQLite
             query = """
             SELECT u.id_usuario, u.usuario, r.nombre as rol,
-                   u.id_cliente, u.id_empleado, e.cargo
+                   u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
             FROM Usuario u
             JOIN Rol r ON u.id_rol = r.id_rol
             LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
@@ -73,7 +73,7 @@ class AuthManager:
             # Consulta para MySQL
             query = """
             SELECT u.id_usuario, u.usuario, r.nombre as rol,
-                   u.id_cliente, u.id_empleado, e.cargo
+                   u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
             FROM Usuario u
             JOIN Rol r ON u.id_rol = r.id_rol
             LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
@@ -98,7 +98,8 @@ class AuthManager:
                 'rol': row[2],
                 'id_cliente': row[3],
                 'id_empleado': row[4],
-                'tipo_empleado': row[5]
+                'tipo_empleado': row[5],
+                'id_sucursal': row[6]
             }
         # Credenciales incorrectas
         attempts = self.failed_attempts.get(correo, 0) + 1
