@@ -1,0 +1,193 @@
+import os
+import logging
+from dotenv import load_dotenv
+
+try:
+    import mysql.connector
+except Exception:
+    mysql = None
+
+from .sqlite_manager import SQLiteManager
+
+
+class DualDBManager:
+    """Manage two remote MySQL databases with local SQLite fallback."""
+
+    def __init__(self):
+        load_dotenv()
+        self.logger = logging.getLogger(__name__)
+        self.sqlite = SQLiteManager()
+        self.pending = []  # [(target, query, params)]
+        self.remote1_active = False
+        self.remote2_active = False
+
+    # ------------------------------------------------------------------
+    # Connection helpers
+    # ------------------------------------------------------------------
+    def _config_remote1(self):
+        return {
+            'host': os.getenv('DB_REMOTE_HOST'),
+            'user': os.getenv('DB_REMOTE_USER'),
+            'password': os.getenv('DB_REMOTE_PASSWORD'),
+            'database': os.getenv('DB_REMOTE_NAME'),
+            'port': os.getenv('DB_REMOTE_PORT', 3306),
+            'connection_timeout': 10,
+        }
+
+    def _config_remote2(self):
+        return {
+            'host': os.getenv('DB_REMOTE_HOST2'),
+            'user': os.getenv('DB_REMOTE_USER2'),
+            'password': os.getenv('DB_REMOTE_PASSWORD2'),
+            'database': os.getenv('DB_REMOTE_NAME2'),
+            'port': os.getenv('DB_REMOTE_PORT2', 3306),
+            'connection_timeout': 10,
+        }
+
+    def connect_remote1(self):
+        if mysql is None:
+            self.remote1_active = False
+            return None
+        try:
+            conn = mysql.connector.connect(**self._config_remote1())
+            conn.autocommit = True
+            self.remote1_active = True
+            return conn
+        except Exception as exc:
+            self.logger.error("Remote1 connection failed: %s", exc)
+            self.remote1_active = False
+            return None
+
+    def connect_remote2(self):
+        if mysql is None:
+            self.remote2_active = False
+            return None
+        try:
+            conn = mysql.connector.connect(**self._config_remote2())
+            conn.autocommit = True
+            self.remote2_active = True
+            return conn
+        except Exception as exc:
+            self.logger.error("Remote2 connection failed: %s", exc)
+            self.remote2_active = False
+            return None
+
+    # ------------------------------------------------------------------
+    # Internal execution
+    # ------------------------------------------------------------------
+    def _exec_mysql(self, conn, query, params=None, fetch=True, last=False):
+        cursor = conn.cursor()
+        cursor.execute(query, params or ())
+        if last:
+            last_id = cursor.lastrowid
+            cursor.close()
+            conn.close()
+            return last_id
+        if fetch:
+            result = cursor.fetchall()
+        else:
+            conn.commit()
+            result = None
+        cursor.close()
+        conn.close()
+        return result
+
+    def _exec_sqlite(self, query, params=None, fetch=True, last=False):
+        query = query.replace('%s', '?')
+        return self.sqlite.execute_query(
+            query, params, fetch=fetch, return_lastrowid=last
+        )
+
+    def _enqueue(self, target, query, params):
+        self.pending.append((target, query, params))
+
+    # ------------------------------------------------------------------
+    # CRUD public API
+    # ------------------------------------------------------------------
+    def insert(self, query, params=None):
+        return self._write(query, params, last=True)
+
+    def update(self, query, params=None):
+        return self._write(query, params, last=False)
+
+    def delete(self, query, params=None):
+        return self._write(query, params, last=False)
+
+    def select(self, query, params=None):
+        # Try remote1 -> remote2 -> sqlite
+        if self.remote1_active or self.remote1_active is False:
+            conn = self.connect_remote1()
+            if conn:
+                try:
+                    return self._exec_mysql(conn, query, params, fetch=True)
+                except Exception as exc:  # pragma: no cover - network errors
+                    self.logger.error("Select remote1 failed: %s", exc)
+                    self.remote1_active = False
+        conn2 = self.connect_remote2()
+        if conn2:
+            try:
+                return self._exec_mysql(conn2, query, params, fetch=True)
+            except Exception as exc:  # pragma: no cover - network errors
+                self.logger.error("Select remote2 failed: %s", exc)
+                self.remote2_active = False
+        # Fallback to SQLite
+        return self._exec_sqlite(query, params, fetch=True)
+
+    # ------------------------------------------------------------------
+    # Write with dual replication
+    # ------------------------------------------------------------------
+    def _write(self, query, params, last):
+        result = None
+        conn1 = self.connect_remote1()
+        if conn1:
+            try:
+                result = self._exec_mysql(conn1, query, params, fetch=False, last=last)
+                # replicate to remote2
+                conn2 = self.connect_remote2()
+                if conn2:
+                    try:
+                        self._exec_mysql(conn2, query, params, fetch=False, last=False)
+                    except Exception as exc:  # pragma: no cover - network errors
+                        self.logger.error("Replicate to remote2 failed: %s", exc)
+                        self.remote2_active = False
+                        self._enqueue('remote2', query, params)
+                return result
+            except Exception as exc:  # pragma: no cover - network errors
+                self.logger.error("Write remote1 failed: %s", exc)
+                self.remote1_active = False
+                # Try remote2
+        conn2 = self.connect_remote2()
+        if conn2:
+            try:
+                result = self._exec_mysql(conn2, query, params, fetch=False, last=last)
+                self._enqueue('remote1', query, params)
+                return result
+            except Exception as exc:  # pragma: no cover - network errors
+                self.logger.error("Write remote2 failed: %s", exc)
+                self.remote2_active = False
+        # both remotes failed -> local
+        local_result = self._exec_sqlite(query, params, fetch=False, last=last)
+        self._enqueue('remote1', query, params)
+        self._enqueue('remote2', query, params)
+        if last:
+            result = local_result
+        return result
+
+    # ------------------------------------------------------------------
+    # Retry pending operations
+    # ------------------------------------------------------------------
+    def retry_pending(self):
+        remaining = []
+        for target, query, params in self.pending:
+            if target == 'remote1':
+                conn = self.connect_remote1()
+            else:
+                conn = self.connect_remote2()
+            if conn:
+                try:
+                    self._exec_mysql(conn, query, params, fetch=False)
+                    continue
+                except Exception as exc:  # pragma: no cover - network errors
+                    self.logger.error("Retry %s failed: %s", target, exc)
+            remaining.append((target, query, params))
+        self.pending = remaining
