@@ -29,6 +29,8 @@ Este proyecto implementa una aplicación de alquiler de vehículos con una inter
 - Gestión completa de clientes, empleados, vehículos, reservas y pagos.
 - Sistema de abonos que valida el primer pago mínimo del 30 % y admite múltiples abonos.
 - Panel de reportes de ventas por sede y por vendedor.
+- Reconexión automática con la base de datos remota cuando se restablece la red.
+- Mantenimiento predictivo que sugiere cuándo programar revisiones de vehículos.
 
 ## Tecnologías Utilizadas
 - **Python 3.8+**
@@ -123,14 +125,16 @@ Final_BDD/
 - **Modo Online (MySQL/MariaDB)**: todas las operaciones se realizan en la base remota.
 - **Modo Offline (SQLite)**: si no hay conexión, la aplicación utiliza la base local para seguir operando.
 - Al restablecerse la conexión los datos pendientes se sincronizan automáticamente.
+- Cuenta con un mecanismo de reconexión que intenta enlazar nuevamente con la base remota y reanuda la sincronización.
 - Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se particionan anualmente en MySQL; en SQLite solo se conserva la última semana de registros.
 
 ## Roles y Permisos
 - **Cliente**: puede crear y consultar sus reservas, editar su perfil y realizar abonos.
-- **Empleado de Ventas**: administra clientes y reservas.
-- **Empleado de Caja**: procesa pagos y consulta reservas.
-- **Empleado de Mantenimiento**: gestiona mantenimientos de vehículos.
-- **Gerente**: administra empleados y accede a reportes de ventas.
+- Todos los empleados están vinculados a una sede específica y solo pueden gestionar datos de esa sede.
+- **Empleado de Ventas**: administra clientes y reservas de su sede.
+- **Empleado de Caja**: procesa y aprueba pagos únicamente para su sede.
+- **Empleado de Mantenimiento**: gestiona mantenimientos de vehículos de su sede.
+- **Gerente**: administra empleados y accede a reportes de ventas de su sede.
 - **Administrador**: controla a los gerentes, accede a todas las consultas y puede ejecutar SQL libre.
 
 ## Sistema de Autenticación
