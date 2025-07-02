@@ -3478,8 +3478,6 @@ class AdminView(BaseCTKView):
         self.tab_clientes = self.tabview.add("Clientes")
         self._build_tab_clientes(self.tabview.tab("Clientes"))
 
-        self.tab_reportes = self.tabview.add("Reportes")
-        self._build_tab_reportes(self.tabview.tab("Reportes"))
 
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
