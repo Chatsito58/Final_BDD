@@ -2977,6 +2977,9 @@ class GerenteView(BaseCTKView):
         self.tab_vehiculos = self.tabview.add("Vehículos")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
 
+        self.tab_clientes = self.tabview.add("Clientes")
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
+
         self.tab_reportes = self.tabview.add("Reportes")
         self._build_tab_reportes(self.tabview.tab("Reportes"))
 
@@ -3256,6 +3259,27 @@ class GerenteView(BaseCTKView):
             self._nuevo_vehiculo()
         except Exception as exc:
             messagebox.showerror("Error", str(exc))
+
+    def _build_tab_clientes(self, parent):
+        import tkinter as tk
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Listado de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+        list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lb_cli.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_cli.pack(side="left", fill="both", expand=True)
+        self._cargar_clientes_overview()
+
+    def _cargar_clientes_overview(self):
+        self.lb_cli.delete(0, 'end')
+        rows = self.db_manager.execute_query("SELECT id_cliente, nombre, correo FROM Cliente")
+        if rows:
+            for r in rows:
+                self.lb_cli.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
 
     def _build_tab_reportes(self, parent):
         import tkinter as tk
