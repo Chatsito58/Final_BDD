@@ -2986,6 +2986,10 @@ class GerenteView(BaseCTKView):
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
 
+        if puede_ejecutar_sql_libre(self.user_data.get('rol')):
+            self.tab_sql_libre = self.tabview.add("SQL Libre")
+            self._build_tab_sql_libre(self.tabview.tab("SQL Libre"))
+
     def _build_tab_empleados(self, parent):
         import tkinter as tk
         from tkinter import messagebox
@@ -3439,3 +3443,48 @@ class AdminView(BaseCTKView):
                 tree.heading("c1", text="Empleado")
             for r in rows:
                 tree.insert("", "end", values=r)
+
+    def _build_tab_sql_libre(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Consulta SQL:").pack(pady=(10, 5))
+        query_entry = ctk.CTkTextbox(frame, height=80)
+        query_entry.pack(fill="x", padx=5)
+
+        ctk.CTkLabel(frame, text="Resultado:").pack(pady=(10, 5))
+        result_box = ctk.CTkTextbox(frame)
+        result_box.pack(expand=True, fill="both", padx=5, pady=(0, 10))
+
+        def ejecutar():
+            query = query_entry.get("1.0", "end").strip()
+            if not query:
+                messagebox.showwarning("Error", "Ingrese una consulta SQL")
+                return
+            if not puede_ejecutar_sql_libre(self.user_data.get('rol')):
+                messagebox.showwarning("Error", "No autorizado")
+                return
+            result_box.delete("1.0", "end")
+            try:
+                rows = self.db_manager.execute_query(query)
+                if rows is None:
+                    result_box.insert("end", "Error al ejecutar la consulta")
+                elif len(rows) == 0:
+                    result_box.insert("end", "Consulta ejecutada correctamente")
+                else:
+                    for r in rows:
+                        result_box.insert("end", f"{r}\n")
+            except Exception as exc:
+                result_box.insert("end", str(exc))
+
+        ctk.CTkButton(
+            frame,
+            text="Ejecutar",
+            command=ejecutar,
+            fg_color=PRIMARY_COLOR,
+            hover_color=PRIMARY_COLOR_DARK,
+        ).pack(pady=5)
+
