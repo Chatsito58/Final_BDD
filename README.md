@@ -1,528 +1,179 @@
 # Sistema de Alquiler de Vehículos
 
-Este repositorio contiene una aplicación completa de alquiler de vehículos desarrollada en Python con interfaz gráfica moderna y sistema de bases de datos redundante.
+Este proyecto implementa una aplicación de alquiler de vehículos con una interfaz gráfica moderna y un sistema de bases de datos redundante. Funciona tanto con MySQL/MariaDB como con SQLite para ofrecer un modo offline con sincronización automática.
 
-## 🚗 Características Principales
+## Tabla de Contenidos
+1. [Características principales](#caracteristicas-principales)
+2. [Tecnologías utilizadas](#tecnologias-utilizadas)
+3. [Requisitos](#requisitos)
+4. [Instalación](#instalacion)
+5. [Configuración de la base de datos](#configuracion-de-la-base-de-datos)
+6. [Ejecución de la aplicación](#ejecucion-de-la-aplicacion)
+7. [Usuarios de prueba](#usuarios-de-prueba)
+8. [Estructura del proyecto](#estructura-del-proyecto)
+9. [Modo offline y sincronización](#modo-offline-y-sincronizacion)
+10. [Roles y permisos](#roles-y-permisos)
+11. [Sistema de autenticación](#sistema-de-autenticacion)
+12. [Sistema de abonos](#sistema-de-abonos)
+13. [Logging](#logging)
+14. [Ejecutar pruebas](#ejecutar-pruebas)
+15. [Contribuir](#contribuir)
+16. [Licencia](#licencia)
+17. [Desarrolladores y soporte](#desarrolladores-y-soporte)
 
-- **Interfaz gráfica moderna** con PyQt5 y CustomTkinter
-- **Sistema de autenticación** con roles y permisos
-- **Base de datos redundante** (MariaDB/MySQL + SQLite)
-- **Modo offline** con sincronización automática
-- **Gestión completa** de clientes, empleados, vehículos y reservas
-- **Sistema de pagos y abonos** integrado con validaciones
-- **Interfaz responsiva** y fácil de usar
-- **Flujo de registro mejorado** con retorno automático al login
-- **Navegación intuitiva** entre ventanas y sesiones
+## Características Principales
+- Interfaz gráfica moderna basada en **PyQt5** y **CustomTkinter**.
+- Sistema de autenticación con roles y permisos.
+- Base de datos redundante (MariaDB/MySQL como principal y SQLite en local).
+- Modo offline automático con sincronización de datos cuando vuelve la conexión.
+- Gestión completa de clientes, empleados, vehículos, reservas y pagos.
+- Sistema de abonos que valida el primer pago mínimo del 30 % y admite múltiples abonos.
+- Panel de reportes de ventas por sede y por vendedor.
 
-## 🛠️ Tecnologías Utilizadas
+## Tecnologías Utilizadas
+- **Python 3.8+**
+- **PyQt5** y **CustomTkinter** para la interfaz.
+- **mysql-connector-python** y **sqlite3** para la capa de datos.
+- **python-dotenv** para la configuración.
+- **tkcalendar** y **ttkbootstrap** como componentes adicionales de la UI.
+- **pytest** para las pruebas unitarias.
 
-- **Backend**: Python 3.8+
-- **Bases de datos**: MariaDB/MySQL (principal), SQLite (local)
-- **Interfaces**: PyQt5, CustomTkinter
-- **Autenticación**: SHA-256
-- **Logging**: Sistema centralizado de logs
-- **Componentes UI**: tkcalendar, ttkbootstrap
+## Requisitos
+- Python 3.8 o superior.
+- Opcional: servidor MySQL/MariaDB (para modo online).
+- Conexión a internet para la sincronización inicial de datos.
 
-## 📋 Requisitos del Sistema
-
-- Python 3.8 o superior
-- MariaDB/MySQL (opcional, para modo online)
-- Conexión a internet (para sincronización inicial)
-
-## 🚀 Instalación y Configuración Completa
-
-### Paso 1: Instalar Python
-
-#### Windows:
-1. Ve a [python.org](https://www.python.org/downloads/)
-2. Descarga la versión más reciente de Python (3.8 o superior)
-3. Ejecuta el instalador
-4. **IMPORTANTE**: Marca la casilla "Add Python to PATH"
-5. Haz clic en "Install Now"
-
-#### Linux (Ubuntu/Debian):
-```bash
-sudo apt update
-sudo apt install python3 python3-pip python3-venv
-```
-
-#### Linux (CentOS/RHEL/Fedora):
-```bash
-sudo dnf install python3 python3-pip python3-venv
-# O para versiones más antiguas:
-sudo yum install python3 python3-pip python3-venv
-```
-
-#### macOS:
-```bash
-# Con Homebrew (recomendado)
-brew install python3
-
-# O descarga desde python.org
-```
-
-### Paso 2: Verificar la instalación
-
-Abre una terminal (Command Prompt en Windows) y ejecuta:
-
-```bash
-python --version
-# Debe mostrar Python 3.8.x o superior
-
-pip --version
-# Debe mostrar pip instalado
-```
-
-### Paso 3: Descargar el proyecto
-
-#### Opción A: Clonar con Git
-```bash
-git clone <url-del-repositorio>
-cd Final_BDD
-```
-
-#### Opción B: Descargar ZIP
-1. Ve al repositorio en GitHub
-2. Haz clic en "Code" → "Download ZIP"
-3. Extrae el archivo ZIP
-4. Abre una terminal en la carpeta extraída
-
-### Paso 4: Crear entorno virtual
-
-#### Windows:
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
-
-#### Linux/macOS:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**Nota**: Deberías ver `(venv)` al inicio de la línea de comandos, indicando que el entorno virtual está activado.
-
-### Paso 5: Instalar dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-### Paso 6: Configurar variables de entorno
-
-1. Copia el archivo de ejemplo:
+## Instalación
+1. **Clonar el repositorio**
    ```bash
-   # Windows
-   copy .env.example .env
-   
-   # Linux/macOS
+   git clone <url-del-repositorio>
+   cd Final_BDD
+   ```
+2. **Crear un entorno virtual**
+   ```bash
+   python -m venv venv
+   # Activar en Windows
+   venv\Scripts\activate
+   # o en Linux/macOS
+   source venv/bin/activate
+   ```
+3. **Instalar dependencias**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Copiar el archivo de entorno**
+   ```bash
    cp .env.example .env
    ```
+   Edita `.env` si deseas conectar con MySQL/MariaDB.
 
-2. Edita el archivo `.env` con tus configuraciones:
+## Configuración de la Base de Datos
+El archivo `.env` permite definir los parámetros de conexión:
 
-```env
-# Configuración de base de datos remota (opcional)
-DB_REMOTE_HOST=localhost
-DB_REMOTE_PORT=3306
-DB_REMOTE_USER=root
-DB_REMOTE_PASSWORD=tu_contraseña
-DB_REMOTE_NAME=alquiler_vehiculos
+| Variable            | Descripción                           | Valor por defecto       |
+|---------------------|---------------------------------------|-------------------------|
+| `DB_REMOTE_HOST`    | Servidor de base de datos remota      | `localhost`             |
+| `DB_REMOTE_PORT`    | Puerto del servidor                   | `3306`                  |
+| `DB_REMOTE_USER`    | Usuario de la base de datos           | `root`                  |
+| `DB_REMOTE_PASSWORD`| Contraseña del usuario                | (vacío)                 |
+| `DB_REMOTE_NAME`    | Nombre de la base de datos            | `alquiler_vehiculos`    |
+| `LOCAL_DB_PATH`     | Ruta al archivo SQLite local          | `data/local.sqlite`     |
 
-# Configuración de base de datos local
-LOCAL_DB_PATH=data/local.sqlite
-```
+Si no dispones de MySQL/MariaDB la aplicación funcionará automáticamente en modo offline usando solo SQLite.
 
-**Nota**: Si no tienes MySQL/MariaDB, puedes dejar las configuraciones por defecto. La aplicación funcionará en modo offline con SQLite.
+Los esquemas se encuentran en `data/sql_bases.sql` (MySQL) y `data/sqlite_schema.sql` (SQLite). El archivo `data/inserts_prueba.sql` contiene datos de ejemplo para pruebas.
 
-### Paso 7: Configurar base de datos (Opcional)
-
-#### Si tienes MySQL/MariaDB instalado:
-
-1. **Instalar MySQL/MariaDB**:
-
-   **Windows**:
-   - Descarga MySQL Installer desde [mysql.com](https://dev.mysql.com/downloads/installer/)
-   - Ejecuta el instalador y sigue las instrucciones
-   - Anota la contraseña del usuario root
-
-   **Linux (Ubuntu/Debian)**:
-   ```bash
-   sudo apt install mysql-server
-   sudo mysql_secure_installation
-   ```
-
-   **Linux (CentOS/RHEL/Fedora)**:
-   ```bash
-   sudo dnf install mysql-server
-   sudo systemctl start mysqld
-   sudo mysql_secure_installation
-   ```
-
-   **macOS**:
-   ```bash
-   brew install mysql
-   brew services start mysql
-   ```
-
-2. **Crear la base de datos**:
-   ```bash
-   mysql -u root -p
-   ```
-   ```sql
-   CREATE DATABASE alquiler_vehiculos;
-   USE alquiler_vehiculos;
-   SOURCE data/sql_bases.sql;
-   SOURCE data/inserts_prueba.sql;
-   EXIT;
-   ```
-
-El archivo `data/sql_bases.sql` crea estas tablas con particiones por
-año para `Alquiler`, `Reserva_alquiler` y `Abono_reserva`.
-
-#### Si NO tienes MySQL/MariaDB:
-La aplicación funcionará automáticamente en modo offline con SQLite. No necesitas hacer nada más.
-
-### Paso 8: Ejecutar la aplicación
-
+## Ejecución de la Aplicación
+Una vez instaladas las dependencias y configuradas las variables de entorno, ejecuta:
 ```bash
 python main.py
 ```
+Se abrirá la ventana de inicio de sesión. Según las credenciales utilizadas se mostrará la vista correspondiente al rol del usuario.
 
-¡Listo! La aplicación debería abrirse con la ventana de login.
+## Usuarios de Prueba
+El proyecto incluye usuarios de ejemplo para cada rol:
 
-## 👥 Usuarios de Prueba
+| Usuario           | Contraseña      | Rol                       |
+|-------------------|-----------------|---------------------------|
+| `admin`           | `admin123`      | Administrador             |
+| `gerente1`        | `gerente123`    | Gerente                   |
+| `ventas1`         | `ventas123`     | Empleado de Ventas        |
+| `caja1`           | `caja123`       | Empleado de Caja          |
+| `mantenimiento1`  | `mantenimiento123` | Empleado de Mantenimiento |
+| `cliente1`        | `cliente123`    | Cliente                   |
 
-La aplicación incluye usuarios de prueba para cada rol:
-
-| Usuario | Contraseña | Rol |
-|---------|------------|-----|
-| `admin` | `admin123` | Administrador |
-| `gerente1` | `gerente123` | Gerente |
-| `ventas1` | `ventas123` | Empleado de Ventas |
-| `caja1` | `caja123` | Empleado de Caja |
-| `mantenimiento1` | `mantenimiento123` | Empleado de Mantenimiento |
-| `cliente1` | `cliente123` | Cliente |
-
-## 💳 Sistema de Abonos Mejorado
-
-### Características del Sistema de Abonos
-
-- **Validación inteligente**: Primer abono mínimo 30%, siguientes libres
-- **Cálculo automático**: Saldo pendiente se actualiza correctamente
-- **Múltiples abonos**: Permite realizar varios abonos consecutivos
-- **Pasarela de pagos**: Simulación realista para tarjeta y transferencia
-- **Actualización en tiempo real**: Tabla de abonos se actualiza automáticamente
-
-### Instrucciones para Clientes
-
-1. **Acceder a la pestaña "Realizar abonos"**:
-   - Inicia sesión como cliente
-   - Ve a la pestaña "Realizar abonos"
-
-2. **Seleccionar reserva**:
-   - La lista muestra todas las reservas con saldo pendiente
-   - Selecciona la reserva haciendo clic en la tarjeta
-   - Los campos se habilitan automáticamente
-
-3. **Ingresar monto**:
-   - **Primer abono**: Debe ser al menos el 30% del valor total
-   - **Abonos posteriores**: Pueden ser de cualquier valor
-   - El sistema valida que no exceda el saldo pendiente
-
-4. **Seleccionar método de pago**:
-   - **Efectivo**: Registra el abono y muestra mensaje para validar en oficina
-   - **Tarjeta/Transferencia**: Abre pasarela de pagos simulada
-
-5. **Confirmar abono**:
-   - El sistema registra el abono automáticamente
-   - Actualiza el saldo pendiente de la reserva
-   - Muestra confirmación del pago realizado
-   - **Permite realizar múltiples abonos seguidos**
-
-## 🔧 Configuración del Puerto
-
-El puerto de la base de datos se configura en el archivo `.env`:
-
-```env
-DB_REMOTE_PORT=3306
-```
-
-**Puertos comunes**:
-- **3306**: Puerto estándar de MySQL/MariaDB
-- **3307**: Puerto alternativo común
-- **33060**: Puerto X Protocol de MySQL
-
-## 🚀 Comandos Rápidos por Sistema Operativo
-
-### Windows (Command Prompt)
-```cmd
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Activar entorno virtual
-venv\Scripts\activate
-
-# Ejecutar aplicación
-python main.py
-```
-
-### Windows (PowerShell)
-```powershell
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Activar entorno virtual
-.\venv\Scripts\Activate.ps1
-
-# Ejecutar aplicación
-python main.py
-```
-
-### Linux/macOS
-```bash
-# Instalar dependencias
-pip3 install -r requirements.txt
-
-# Activar entorno virtual
-source venv/bin/activate
-
-# Ejecutar aplicación
-python main.py
-```
-
-## 🔄 Sistema de Base de Datos Redundante
-
-### Modo Online (MariaDB/MySQL)
-- Base de datos principal
-- Todas las operaciones se realizan aquí
-- Sincronización automática con SQLite
-
-### Modo Offline (SQLite)
-- Base de datos local de respaldo
-- Se activa automáticamente cuando no hay conexión
-- Permite continuar trabajando sin internet
-### Particionamiento
-Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se crean con particiones anuales en MySQL. En SQLite solo se conserva la ultima semana de registros.
-
-- Sincronización automática cuando vuelve la conexión
-### Sincronización Automática
-- Los datos se sincronizan automáticamente entre ambas bases
-- Las reservas creadas offline se suben cuando hay conexión
-- No se pierden datos por problemas de conectividad
-
-## 👥 Roles y Permisos
-
-### Cliente
-- Ver y crear reservas propias
-- Ver vehículos disponibles
-- Editar perfil personal
-- **Realizar abonos a reservas pendientes**
-- **Editar fechas de reservas existentes**
-- Cambiar contraseña
-
-### Empleado de Ventas
-- Gestionar clientes
-- Crear y editar reservas
-- Consultar vehículos
-- Cambiar contraseña
-
-### Empleado de Caja
-- Procesar pagos
-- Consultar reservas
-- Ver clientes
-- Cambiar contraseña
-
-### Empleado de Mantenimiento
-- Ver vehículos asignados
-- Reportar mantenimiento
-- Ver historial de vehículos
-- Cambiar contraseña
-
-### Gerente
-- Gestionar empleados (excepto gerentes y admin)
-- Ver todos los clientes
-- Acceder al panel de reportes de ventas
-- Cambiar contraseña
-
-### Administrador
-- Gestionar gerentes
-- Ver todos los empleados y clientes
-- Acceder al panel de reportes de ventas
-- Ejecutar consultas SQL libres
-- Cambiar contraseña
-
-## 🔐 Sistema de Autenticación
-
-### Características de Seguridad
-- Contraseñas cifradas con SHA-256
-- Bloqueo temporal tras 3 intentos fallidos
-- Validación de correo único
-- Triggers automáticos para crear usuarios
-
-### Triggers Automáticos
-- Al registrar un **Cliente**: se crea automáticamente un usuario con rol 'cliente'
-- Al registrar un **Empleado**: se crea automáticamente un usuario con rol 'empleado'
-
-## 📊 Estructura del Proyecto
-
-```
+## Estructura del Proyecto
+```text
 Final_BDD/
-├── src/
-│   ├── services/        # Lógica de negocio
-│   ├── views/           # Interfaces de usuario
-│   ├── auth.py          # Autenticación
-│   ├── config.py        # Configuración
-│   ├── db_manager.py    # Gestor de base de datos
-│   └── sqlite_manager.py # Gestor SQLite
-├── data/
-│   ├── sql_bases.sql   # Esquema MariaDB con particiones
-│   ├── sqlite_schema.sql # Esquema SQLite
-│   └── inserts_prueba.sql # Datos de prueba
-├── ui/                  # Archivos de interfaz
-├── main.py              # Punto de entrada
-├── requirements.txt     # Dependencias
-├── .env.example         # Configuración de ejemplo
-└── README.md           # Este archivo
+├── src/                 # Código fuente principal
+│   ├── services/        # Lógica de negocio (reportes, roles)
+│   ├── views/           # Interfaces y ventanas
+│   ├── auth.py          # Manejo de autenticación
+│   ├── config.py        # Configuración global
+│   ├── db_manager.py    # Gestor de base de datos principal
+│   └── sqlite_manager.py# Gestor de la base local SQLite
+├── data/                # Esquemas y datos de ejemplo
+├── ui/                  # Archivos .ui para PyQt5
+├── tests/               # Pruebas unitarias
+├── main.py              # Punto de entrada de la aplicación
+└── requirements.txt     # Dependencias
 ```
 
-## 📝 Logging
+## Modo Offline y Sincronización
+- **Modo Online (MySQL/MariaDB)**: todas las operaciones se realizan en la base remota.
+- **Modo Offline (SQLite)**: si no hay conexión, la aplicación utiliza la base local para seguir operando.
+- Al restablecerse la conexión los datos pendientes se sincronizan automáticamente.
+- Las tablas `Alquiler`, `Reserva_alquiler` y `Abono_reserva` se particionan anualmente en MySQL; en SQLite solo se conserva la última semana de registros.
 
-La aplicación registra todos los eventos importantes en `app.log`:
+## Roles y Permisos
+- **Cliente**: puede crear y consultar sus reservas, editar su perfil y realizar abonos.
+- **Empleado de Ventas**: administra clientes y reservas.
+- **Empleado de Caja**: procesa pagos y consulta reservas.
+- **Empleado de Mantenimiento**: gestiona mantenimientos de vehículos.
+- **Gerente**: administra empleados y accede a reportes de ventas.
+- **Administrador**: controla a los gerentes, accede a todas las consultas y puede ejecutar SQL libre.
 
-- Intentos de login (exitosos y fallidos)
-- Operaciones de base de datos
-- Errores de conexión
-- Sincronización de datos
-- Cambios de contraseña
-- **Operaciones de abonos y pagos**
+## Sistema de Autenticación
+- Contraseñas cifradas con SHA‑256.
+- Bloqueo temporal del usuario tras tres intentos fallidos de inicio de sesión.
+- Validación de correos únicos en tiempo real.
+- Triggers automáticos que crean un usuario al registrar un cliente o un empleado.
 
-## 🔧 Variables de Entorno Disponibles
+## Sistema de Abonos
+- Pestaña dedicada para realizar pagos parciales de las reservas.
+- El primer abono debe cubrir al menos el 30 % del valor total.
+- Se admiten abonos posteriores de cualquier valor hasta saldar la reserva.
+- Soporta pago en efectivo, tarjeta o transferencia (con pasarela simulada).
+- La tabla de abonos se actualiza en tiempo real y permite realizar varios pagos consecutivos sin reiniciar la vista.
 
-| Variable | Descripción | Valor por Defecto |
-|----------|-------------|-------------------|
-| `DB_REMOTE_HOST` | Servidor de base de datos | localhost |
-| `DB_REMOTE_PORT` | Puerto de base de datos | 3306 |
-| `DB_REMOTE_USER` | Usuario de base de datos | root |
-| `DB_REMOTE_PASSWORD` | Contraseña de base de datos | - |
-| `DB_REMOTE_NAME` | Nombre de la base de datos | alquiler_vehiculos |
-| `LOCAL_DB_PATH` | Ruta de SQLite local | data/local.sqlite |
+## Logging
+Toda la actividad relevante se almacena en el archivo `app.log`:
+- Intentos de inicio de sesión y bloqueos temporales.
+- Consultas y errores de la base de datos.
+- Sincronización entre la base remota y local.
+- Registro de pagos y cambios de contraseña.
 
-## 🐛 Solución de Problemas Comunes
-
-### Error: "python no se reconoce como comando"
-**Solución**: 
-1. Reinstala Python marcando "Add Python to PATH"
-2. O usa `python3` en lugar de `python`
-
-### Error: "pip no se reconoce como comando"
-**Solución**:
+## Ejecutar Pruebas
+Las pruebas unitarias se encuentran en el directorio `tests` y utilizan `pytest`.
+Para ejecutarlas desde el entorno virtual:
 ```bash
-# Windows
-python -m pip install -r requirements.txt
-
-# Linux/macOS
-python3 -m pip install -r requirements.txt
+pytest
 ```
+Estas pruebas validan los cálculos de los reportes de ventas usando una base SQLite temporal.
 
-### Error: "No se puede conectar a la base de datos"
-**Solución**:
-1. Verificar que el servidor MySQL esté ejecutándose
-2. Comprobar las credenciales en `.env`
-3. Verificar la conectividad de red
-4. La aplicación funcionará en modo offline si no hay conexión
+## Contribuir
+1. Realiza un fork del proyecto y crea una rama para tu aportación.
+2. Envía tus cambios mediante un pull request descriptivo.
+3. Asegúrate de seguir la estructura y estilo del código existente.
 
-### Error: "ModuleNotFoundError"
-**Solución**:
-1. Asegúrate de que el entorno virtual esté activado
-2. Reinstala las dependencias: `pip install -r requirements.txt`
+## Licencia
+El proyecto está disponible bajo la [Licencia MIT](LICENSE).
 
-### Error: "Permission denied" (Linux/macOS)
-**Solución**:
-```bash
-chmod +x main.py
-```
+## Desarrolladores y Soporte
+- **William Diaz** – Desarrollo principal.
+- **Equipo de Base de Datos** – Diseño de esquemas y pruebas.
 
-## 📈 Características Recientes (2024)
-
-### Interfaz Moderna
-- Diseño oscuro y moderno
-- Indicadores visuales de estado de conexión
-- Navegación mejorada entre ventanas
-- **Tarjetas visuales para reservas, vehículos y abonos**
-
-### Funcionalidades Avanzadas
-- **Selección visual de fecha y hora en reservas** con formato 12h
-- **Sistema de pagos integrado** con pasarela simulada
-- **Gestión completa de abonos** con validaciones inteligentes
-- **Edición de fechas de reservas** con recálculo automático de precios
-- Reportes automáticos
-- **Nuevo panel de reportes de ventas** para gerentes y administradores
-
-#### Panel de reportes
-Solo los gerentes y administradores pueden acceder a la pestaña **Reportes**.
-Elige mes y año y haz clic en **Ventas por sede** o **Ventas por vendedor** para
-ver los totales de ventas generados.
-
-### Robustez del Sistema
-- Sincronización automática de datos críticos
-- Manejo robusto de desconexiones
-- Logging detallado de todas las operaciones
-- Validación de integridad de datos
-- **Cálculo correcto de saldos pendientes**
-
-### Flujo de Registro Mejorado
-- Registro de clientes con retorno automático al login
-- Prellenado del correo electrónico después del registro
-- Triggers automáticos para crear usuarios con contraseñas seguras
-- Validación de correos únicos en tiempo real
-
-### Sistema de Abonos para Clientes
-- **Pestaña dedicada** para realizar abonos a reservas pendientes
-- **Validación del 30% mínimo** para el primer abono
-- **Abonos posteriores** de cualquier valor
-- **Selección de método de pago** (Efectivo, Tarjeta, Transferencia)
-- **Pasarela de pagos simulada** para tarjeta y transferencia
-- **Mensajes informativos** según el método de pago seleccionado
-- **Actualización automática** del saldo pendiente
-- **Múltiples abonos consecutivos** sin reiniciar la interfaz
-- **Actualización en tiempo real** de la tabla de abonos
-
-### Navegación y Gestión de Sesiones
-- **Cierre de sesión funcional** que vuelve al login
-- **Botón "X" del login** cierra completamente la aplicación
-- **Botón "Volver" del registro** regresa al login
-- **Navegación intuitiva** entre todas las ventanas
-
-### Correcciones de Bugs Importantes
-- **Cálculo correcto del saldo pendiente** sin duplicaciones
-- **Botón de abono habilitado** después de cada abono
-- **Actualización automática** de tabla de abonos al editar reservas
-- **Formato de fechas amigable** en edición de reservas
-- **Validaciones mejoradas** en todos los formularios
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
-## 👨‍💻 Desarrolladores
-
-- **William Diaz** - Desarrollo principal
-- **Equipo de Base de Datos** - Diseño de esquemas
-
-## 📞 Soporte
-
-Para reportar bugs o solicitar nuevas características, por favor abre un issue en el repositorio.
+Para reportar errores o solicitar nuevas características abre un issue en el repositorio.
 
 ---
-
-**¡Gracias por usar nuestro Sistema de Alquiler de Vehículos!** 🚗✨ 
+**¡Gracias por usar nuestro Sistema de Alquiler de Vehículos!** 🚗✨
