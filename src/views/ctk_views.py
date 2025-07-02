@@ -3318,7 +3318,16 @@ class GerenteView(BaseCTKView):
         btn_frame.pack(pady=5)
         ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_cliente, width=100).grid(row=0, column=0, padx=5)
         ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_cliente, width=120, fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
-        ctk.CTkButton(btn_frame, text="Eliminar", command=self._eliminar_cliente, width=120, fg_color="#F44336", hover_color="#B71C1C").grid(row=0, column=2, padx=5)
+        # Botón para eliminar el cliente seleccionado
+        self.btn_eliminar_cliente = ctk.CTkButton(
+            btn_frame,
+            text="Eliminar",
+            command=self._eliminar_cliente,
+            width=120,
+            fg_color="#F44336",
+            hover_color="#B71C1C",
+        )
+        self.btn_eliminar_cliente.grid(row=0, column=2, padx=5)
 
         self.lb_cli.bind("<<ListboxSelect>>", self._seleccionar_cliente)
         self._cargar_clientes()
