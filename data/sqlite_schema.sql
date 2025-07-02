@@ -250,3 +250,13 @@ CREATE TABLE IF NOT EXISTS Mantenimiento (
     fecha TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
 );
+
+-- Queue for failed remote operations
+CREATE TABLE IF NOT EXISTS retry_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    operation TEXT,
+    table_name TEXT,
+    payload TEXT,
+    target TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
