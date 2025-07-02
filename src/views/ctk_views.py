@@ -2932,14 +2932,46 @@ class EmpleadoMantenimientoView(BaseCTKView):
 
         ctk.CTkLabel(frame, text="Mantenimiento predictivo", font=("Arial", 18, "bold")).pack(pady=10)
 
+        # Selector de sucursal para filtrar
+        filter_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        filter_frame.pack(pady=(0, 10))
+        sucursales = self.db_manager.execute_query("SELECT id_sucursal, nombre FROM Sucursal") or []
+        opciones = [f"{s[0]} - {s[1]}" for s in sucursales]
+        self.sucursal_var = tk.StringVar()
+        if opciones:
+            default = next((o for o in opciones if o.startswith(str(self.user_data.get('id_sucursal')))), opciones[0])
+            self.sucursal_var.set(default)
+            tk.OptionMenu(filter_frame, self.sucursal_var, *opciones, command=lambda *_: self._cargar_predictivo_list()).pack()
+        else:
+            self.sucursal_var.set(str(self.user_data.get('id_sucursal')))
+
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
-        scrollbar.config(command=listbox.yview)
+        self.predictivo_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
+        scrollbar.config(command=self.predictivo_listbox.yview)
         scrollbar.pack(side="right", fill="y")
-        listbox.pack(side="left", fill="both", expand=True)
+        self.predictivo_listbox.pack(side="left", fill="both", expand=True)
+
+        btn_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        btn_frame.pack(pady=8)
+        ctk.CTkButton(btn_frame, text="Programar mantenimiento", command=self._programar_mantenimiento,
+                      fg_color="#3A86FF", hover_color="#265DAB").pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Marcar revisado", command=self._marcar_revisado,
+                      fg_color="#00C853", hover_color="#009624").pack(side="left", padx=5)
+
+        self._cargar_predictivo_list()
+
+    def _cargar_predictivo_list(self):
+        import tkinter as tk
+        from datetime import datetime, timedelta
+
+        self.predictivo_listbox.delete(0, 'end')
+        try:
+            id_sucursal = int(str(self.sucursal_var.get()).split(' -')[0])
+        except Exception:
+            id_sucursal = self.user_data.get('id_sucursal')
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
@@ -2949,19 +2981,22 @@ class EmpleadoMantenimientoView(BaseCTKView):
             f"WHERE v.id_sucursal = {placeholder} "
             "GROUP BY v.placa, v.modelo, v.kilometraje"
         )
-        filas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
+        filas = self.db_manager.execute_query(query, (id_sucursal,))
 
         if not filas:
-            listbox.insert('end', "Sin vehículos registrados")
+            self.predictivo_listbox.insert('end', "Sin vehículos registrados")
             return
 
         umbral_dias = 180
+        aviso_dias = 150
         hoy = datetime.now()
 
         for placa, modelo, km, fecha in filas:
             necesita = False
+            color = None
             if fecha is None:
                 necesita = True
+                color = '#FFCDD2'
                 fecha_txt = "N/A"
             else:
                 try:
@@ -2971,12 +3006,54 @@ class EmpleadoMantenimientoView(BaseCTKView):
                         fecha_dt = datetime.strptime(str(fecha), "%Y-%m-%d %H:%M:%S")
                     except Exception:
                         fecha_dt = None
-                if fecha_dt is None or hoy - fecha_dt > timedelta(days=umbral_dias):
+                dias = (hoy - fecha_dt).days if fecha_dt else umbral_dias + 1
+                if dias >= umbral_dias:
                     necesita = True
+                    color = '#FFCDD2'
+                elif dias >= aviso_dias:
+                    necesita = True
+                    color = '#FFF9C4'
                 fecha_txt = fecha_dt.strftime("%Y-%m-%d") if fecha_dt else str(fecha)
 
             if necesita:
-                listbox.insert('end', f"{placa} | {modelo} | {km} km | {fecha_txt}")
+                self.predictivo_listbox.insert('end', f"{placa} | {modelo} | {km} km | {fecha_txt}")
+                idx = self.predictivo_listbox.size() - 1
+                if color:
+                    self.predictivo_listbox.itemconfig(idx, background=color)
+
+    def _programar_mantenimiento(self):
+        from tkinter import messagebox
+        selection = self.predictivo_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Seleccione un vehículo")
+            return
+        item = self.predictivo_listbox.get(selection[0])
+        placa = item.split('|')[0].strip()
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
+        try:
+            self.db_manager.execute_query(query, (placa, 'Programado mantenimiento'), fetch=False)
+            messagebox.showinfo("Éxito", "Mantenimiento programado")
+            self._cargar_predictivo_list()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _marcar_revisado(self):
+        from tkinter import messagebox
+        selection = self.predictivo_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Seleccione un vehículo")
+            return
+        item = self.predictivo_listbox.get(selection[0])
+        placa = item.split('|')[0].strip()
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
+        try:
+            self.db_manager.execute_query(query, (placa, 'Revisión completada'), fetch=False)
+            messagebox.showinfo("Éxito", "Vehículo marcado como revisado")
+            self._cargar_predictivo_list()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
 
 class GerenteView(BaseCTKView):
     """Vista CTk para gerentes con gestión de empleados y reportes."""
