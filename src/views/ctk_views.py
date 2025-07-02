@@ -2111,11 +2111,11 @@ class EmpleadoVentasView(BaseCTKView):
 
     def _cargar_clientes(self):
         self.lb_clientes.delete(0, 'end')
-        placeholder = '%s' if not self.db_manager.offline else '?'
-        query = f"SELECT id_cliente, nombre, correo FROM Cliente WHERE id_sucursal = {placeholder}"
-        clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
-        if clientes:
-            for c in clientes:
+        rows = self.db_manager.execute_query(
+            "SELECT id_cliente, nombre, correo FROM Cliente"
+        )
+        if rows:
+            for c in rows:
                 self.lb_clientes.insert('end', f"{c[0]} | {c[1]} | {c[2]}")
 
     def _seleccionar_cliente(self, event):
