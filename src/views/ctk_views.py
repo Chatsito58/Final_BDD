@@ -3044,12 +3044,15 @@ class GerenteView(BaseCTKView):
     def _cargar_empleados(self):
         self.lb_emp.delete(0, 'end')
         rows = self.db_manager.execute_query(
-            "SELECT id_empleado, nombre, cargo FROM Empleado "
+            "SELECT id_empleado, nombre, cargo, documento, telefono, correo FROM Empleado "
             "WHERE LOWER(cargo) NOT IN ('gerente','administrador')"
         )
         if rows:
             for r in rows:
-                self.lb_emp.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+                id_e, nombre, cargo, doc, tel, cor = r
+                self.lb_emp.insert(
+                    'end', f"{id_e} | {nombre} | {cargo} | {doc} | {tel} | {cor}"
+                )
 
     def _seleccionar_empleado(self, event=None):
         sel = self.lb_emp.curselection()
