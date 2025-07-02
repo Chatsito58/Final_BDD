@@ -224,7 +224,9 @@ CREATE TABLE Mantenimiento (
 CREATE TABLE Descuento_alquiler (
   id_descuento      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   descripcion       VARCHAR(255),
-  valor             DECIMAL(10,2)
+  valor             DECIMAL(10,2),
+  fecha_inicio      DATETIME,
+  fecha_fin         DATETIME
 ) ENGINE=InnoDB;
 
 CREATE TABLE Estado_reserva (

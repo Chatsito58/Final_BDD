@@ -62,9 +62,9 @@ INSERT INTO Seguro_alquiler (estado, descripcion, vencimiento, costo) VALUES
 ('Vigente', 'Seguro básico', '2025-12-31', 20000);
 
 -- Descuentos de alquiler
-INSERT INTO Descuento_alquiler (descripcion, valor) VALUES
-('Descuento 10%', 30000),
-('Sin descuento', 0);
+INSERT INTO Descuento_alquiler (descripcion, valor, fecha_inicio, fecha_fin) VALUES
+('Descuento 10%', 30000, '2024-01-01 00:00:00', '2024-12-31 23:59:59'),
+('Sin descuento', 0, '2024-01-01 00:00:00', '2030-12-31 23:59:59');
 
 -- Alquileres de Carlos Ramírez
 INSERT INTO Alquiler (fecha_hora_salida, valor, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado, id_sucursal, id_medio_pago, id_estado, id_seguro, id_descuento)

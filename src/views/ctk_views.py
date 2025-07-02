@@ -186,7 +186,7 @@ class ClienteView(BaseCTKView):
     def _cargar_reservas_cliente(self, id_cliente):
         # Consulta todas las reservas del cliente, sin importar el estado
         query = '''
-            SELECT ra.id_reserva, a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, v.modelo, v.placa, a.valor, ra.saldo_pendiente, ra.abono, es.descripcion, s.descripcion, s.costo, d.descripcion, d.valor
+            SELECT ra.id_reserva, a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, v.modelo, v.placa, a.valor, ra.saldo_pendiente, ra.abono, es.descripcion, s.descripcion, s.costo, d.descripcion, d.valor, d.fecha_inicio, d.fecha_fin
             FROM Reserva_alquiler ra
             JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler
             JOIN Vehiculo v ON a.id_vehiculo = v.placa
@@ -207,7 +207,24 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(self.cards_pendientes, text="No tienes reservas registradas", font=("Arial", 12)).pack(pady=10)
             return
         for r in reservas:
-            id_reserva, salida, entrada, id_vehiculo, modelo, placa, valor, saldo, abono, estado, seguro, costo_seguro, desc, val_desc = r
+            (
+                id_reserva,
+                salida,
+                entrada,
+                id_vehiculo,
+                modelo,
+                placa,
+                valor,
+                saldo,
+                abono,
+                estado,
+                seguro,
+                costo_seguro,
+                desc,
+                val_desc,
+                fecha_inicio,
+                fecha_fin,
+            ) = r
             # Determinar estado y color
             if estado and ("pendiente" in estado.lower() or "aprob" in estado.lower()):
                 estado_str = "⏳ Pendiente"
@@ -698,7 +715,9 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
         ctk.CTkLabel(win, text="Descuento:", font=("Arial", 12)).pack(pady=4)
-        descuentos = self.db_manager.execute_query("SELECT id_descuento, descripcion, valor FROM Descuento_alquiler")
+        descuentos = self.db_manager.execute_query(
+            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
+        )
         descuento_var = tk.StringVar()
         if descuentos:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
@@ -1273,7 +1292,9 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(card, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4, padx=12)
         # Descuento
         ctk.CTkLabel(card, text="Descuento", font=("Arial", 12)).pack(anchor="w", pady=(10,0), padx=12)
-        descuentos = self.db_manager.execute_query("SELECT id_descuento, descripcion, valor FROM Descuento_alquiler")
+        descuentos = self.db_manager.execute_query(
+            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
+        )
         descuento_var = tk.StringVar()
         if descuentos:
             descuento_menu = tk.OptionMenu(card, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
@@ -1722,7 +1743,9 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
         ctk.CTkLabel(win, text="Descuento:", font=("Arial", 12)).pack(pady=4)
-        descuentos = self.db_manager.execute_query("SELECT id_descuento, descripcion, valor FROM Descuento_alquiler")
+        descuentos = self.db_manager.execute_query(
+            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
+        )
         descuento_var = tk.StringVar()
         if descuentos:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])
@@ -2449,7 +2472,9 @@ class EmpleadoVentasView(BaseCTKView):
             ctk.CTkLabel(win, text="No hay seguros disponibles", text_color="#FF5555").pack(pady=4)
         # Descuentos disponibles
         ctk.CTkLabel(win, text="Descuento:", font=("Arial", 12)).pack(pady=4)
-        descuentos = self.db_manager.execute_query("SELECT id_descuento, descripcion, valor FROM Descuento_alquiler")
+        descuentos = self.db_manager.execute_query(
+            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
+        )
         descuento_var = tk.StringVar()
         if descuentos:
             descuento_menu = tk.OptionMenu(win, descuento_var, *[f"{d[1]} (-${d[2]})" for d in descuentos])

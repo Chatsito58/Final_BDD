@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS Estado_reserva (
 CREATE TABLE IF NOT EXISTS Descuento_alquiler (
     id_descuento INTEGER PRIMARY KEY AUTOINCREMENT,
     descripcion TEXT,
-    valor REAL
+    valor REAL,
+    fecha_inicio TEXT,
+    fecha_fin TEXT
 );
 
 CREATE TABLE IF NOT EXISTS Seguro_alquiler (
