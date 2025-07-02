@@ -519,7 +519,7 @@ class ClienteView(BaseCTKView):
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
                    su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
-            FROM Vehiculo v
+            FROM Vehiculo v 
             JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
             JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
             LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
@@ -529,7 +529,7 @@ class ClienteView(BaseCTKView):
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
             WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """)
+        """
         vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
@@ -1553,7 +1553,7 @@ class ClienteView(BaseCTKView):
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
             WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """)
+        """
         vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
@@ -2280,7 +2280,7 @@ class EmpleadoVentasView(BaseCTKView):
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
             WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """)
+        """
         vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         
         if not vehiculos:
@@ -3573,6 +3573,50 @@ class GerenteView(BaseCTKView):
                 tree.heading("c1", text="Empleado")
             for r in rows:
                 tree.insert("", "end", values=r)
+
+    def _build_tab_sql_libre(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Consulta SQL:").pack(pady=(10, 5))
+        query_entry = ctk.CTkTextbox(frame, height=80)
+        query_entry.pack(fill="x", padx=5)
+
+        ctk.CTkLabel(frame, text="Resultado:").pack(pady=(10, 5))
+        result_box = ctk.CTkTextbox(frame)
+        result_box.pack(expand=True, fill="both", padx=5, pady=(0, 10))
+
+        def ejecutar():
+            query = query_entry.get("1.0", "end").strip()
+            if not query:
+                messagebox.showwarning("Error", "Ingrese una consulta SQL")
+                return
+            if not puede_ejecutar_sql_libre(self.user_data.get('rol')):
+                messagebox.showwarning("Error", "No autorizado")
+                return
+            result_box.delete("1.0", "end")
+            try:
+                rows = self.db_manager.execute_query(query)
+                if rows is None:
+                    result_box.insert("end", "Error al ejecutar la consulta")
+                elif len(rows) == 0:
+                    result_box.insert("end", "Consulta ejecutada correctamente")
+                else:
+                    for r in rows:
+                        result_box.insert("end", f"{r}\n")
+            except Exception as exc:
+                result_box.insert("end", str(exc))
+
+        ctk.CTkButton(
+            frame,
+            text="Ejecutar",
+            command=ejecutar,
+            fg_color=PRIMARY_COLOR,
+            hover_color=PRIMARY_COLOR_DARK,
+        ).pack(pady=5)
 
 
 class AdminView(BaseCTKView):
