@@ -3272,24 +3272,140 @@ class GerenteView(BaseCTKView):
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+
+        self._cliente_sel = None
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Listado de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Gestión de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
         scrollbar = tk.Scrollbar(list_frame, orient="vertical")
         self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.lb_cli.yview)
         scrollbar.pack(side="right", fill="y")
         self.lb_cli.pack(side="left", fill="both", expand=True)
-        self._cargar_clientes_overview()
 
-    def _cargar_clientes_overview(self):
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        ctk.CTkLabel(form, text="Documento:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Nombre:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Teléfono:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Dirección:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Correo:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_doc_c = ctk.CTkEntry(form, width=150)
+        self.ent_nom_c = ctk.CTkEntry(form, width=150)
+        self.ent_tel_c = ctk.CTkEntry(form, width=150)
+        self.ent_dir_c = ctk.CTkEntry(form, width=150)
+        self.ent_cor_c = ctk.CTkEntry(form, width=150)
+
+        self.ent_doc_c.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_nom_c.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_tel_c.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_dir_c.grid(row=3, column=1, padx=5, pady=5)
+        self.ent_cor_c.grid(row=4, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_cliente, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_cliente, width=120, fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
+        ctk.CTkButton(btn_frame, text="Eliminar", command=self._eliminar_cliente, width=120, fg_color="#F44336", hover_color="#B71C1C").grid(row=0, column=2, padx=5)
+
+        self.lb_cli.bind("<<ListboxSelect>>", self._seleccionar_cliente)
+        self._cargar_clientes()
+
+    def _cargar_clientes(self):
         self.lb_cli.delete(0, 'end')
         rows = self.db_manager.execute_query("SELECT id_cliente, nombre, correo FROM Cliente")
         if rows:
             for r in rows:
                 self.lb_cli.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _seleccionar_cliente(self, event=None):
+        sel = self.lb_cli.curselection()
+        if not sel:
+            return
+        self._cliente_sel = int(self.lb_cli.get(sel[0]).split('|')[0].strip())
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        row = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, direccion, correo FROM Cliente WHERE id_cliente = {placeholder}",
+            (self._cliente_sel,),
+        )
+        if row:
+            doc, nom, tel, dir_, cor = row[0]
+            self.ent_doc_c.delete(0, 'end'); self.ent_doc_c.insert(0, doc or '')
+            self.ent_nom_c.delete(0, 'end'); self.ent_nom_c.insert(0, nom or '')
+            self.ent_tel_c.delete(0, 'end'); self.ent_tel_c.insert(0, tel or '')
+            self.ent_dir_c.delete(0, 'end'); self.ent_dir_c.insert(0, dir_ or '')
+            self.ent_cor_c.delete(0, 'end'); self.ent_cor_c.insert(0, cor or '')
+
+    def _nuevo_cliente(self):
+        self._cliente_sel = None
+        for e in [self.ent_doc_c, self.ent_nom_c, self.ent_tel_c, self.ent_dir_c, self.ent_cor_c]:
+            e.delete(0, 'end')
+
+    def _guardar_cliente(self):
+        from tkinter import messagebox
+
+        doc = self.ent_doc_c.get().strip()
+        nom = self.ent_nom_c.get().strip()
+        tel = self.ent_tel_c.get().strip()
+        dir_ = self.ent_dir_c.get().strip()
+        cor = self.ent_cor_c.get().strip()
+
+        if not doc or not nom or not cor:
+            messagebox.showwarning("Aviso", "Documento, nombre y correo son obligatorios")
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            if self._cliente_sel:
+                q = (
+                    f"UPDATE Cliente SET documento={placeholder}, nombre={placeholder}, telefono={placeholder}, "
+                    f"direccion={placeholder}, correo={placeholder} WHERE id_cliente={placeholder}"
+                )
+                params = (doc, nom, tel, dir_, cor, self._cliente_sel)
+            else:
+                q = (
+                    f"INSERT INTO Cliente (documento, nombre, telefono, direccion, correo) "
+                    f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                )
+                params = (doc, nom, tel, dir_, cor)
+            self.db_manager.execute_query(q, params, fetch=False)
+            messagebox.showinfo("Éxito", "Cliente guardado correctamente")
+            self._nuevo_cliente()
+            self._cargar_clientes()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _eliminar_cliente(self):
+        from tkinter import messagebox
+
+        if not self._cliente_sel:
+            messagebox.showwarning("Aviso", "Seleccione un cliente")
+            return
+
+        if not messagebox.askyesno("Confirmar", "¿Eliminar cliente seleccionado?"):
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            self.db_manager.execute_query(
+                f"DELETE FROM Cliente WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            messagebox.showinfo("Éxito", "Cliente eliminado correctamente")
+            self._nuevo_cliente()
+            self._cargar_clientes()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
 
     def _build_tab_reportes(self, parent):
         import tkinter as tk
@@ -3542,24 +3658,140 @@ class AdminView(BaseCTKView):
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
+        from tkinter import messagebox
+
+        self._cliente_sel = None
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Listado de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Gestión de clientes", font=("Arial", 18, "bold")).pack(pady=10)
+
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
         scrollbar = tk.Scrollbar(list_frame, orient="vertical")
         self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.lb_cli.yview)
         scrollbar.pack(side="right", fill="y")
         self.lb_cli.pack(side="left", fill="both", expand=True)
-        self._cargar_clientes_overview()
 
-    def _cargar_clientes_overview(self):
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        ctk.CTkLabel(form, text="Documento:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Nombre:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Teléfono:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Dirección:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Correo:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_doc_c = ctk.CTkEntry(form, width=150)
+        self.ent_nom_c = ctk.CTkEntry(form, width=150)
+        self.ent_tel_c = ctk.CTkEntry(form, width=150)
+        self.ent_dir_c = ctk.CTkEntry(form, width=150)
+        self.ent_cor_c = ctk.CTkEntry(form, width=150)
+
+        self.ent_doc_c.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_nom_c.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_tel_c.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_dir_c.grid(row=3, column=1, padx=5, pady=5)
+        self.ent_cor_c.grid(row=4, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_cliente, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._guardar_cliente, width=120, fg_color="#3A86FF", hover_color="#265DAB").grid(row=0, column=1, padx=5)
+        ctk.CTkButton(btn_frame, text="Eliminar", command=self._eliminar_cliente, width=120, fg_color="#F44336", hover_color="#B71C1C").grid(row=0, column=2, padx=5)
+
+        self.lb_cli.bind("<<ListboxSelect>>", self._seleccionar_cliente)
+        self._cargar_clientes()
+
+    def _cargar_clientes(self):
         self.lb_cli.delete(0, 'end')
         rows = self.db_manager.execute_query("SELECT id_cliente, nombre, correo FROM Cliente")
         if rows:
             for r in rows:
                 self.lb_cli.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _seleccionar_cliente(self, event=None):
+        sel = self.lb_cli.curselection()
+        if not sel:
+            return
+        self._cliente_sel = int(self.lb_cli.get(sel[0]).split('|')[0].strip())
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        row = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, direccion, correo FROM Cliente WHERE id_cliente = {placeholder}",
+            (self._cliente_sel,),
+        )
+        if row:
+            doc, nom, tel, dir_, cor = row[0]
+            self.ent_doc_c.delete(0, 'end'); self.ent_doc_c.insert(0, doc or '')
+            self.ent_nom_c.delete(0, 'end'); self.ent_nom_c.insert(0, nom or '')
+            self.ent_tel_c.delete(0, 'end'); self.ent_tel_c.insert(0, tel or '')
+            self.ent_dir_c.delete(0, 'end'); self.ent_dir_c.insert(0, dir_ or '')
+            self.ent_cor_c.delete(0, 'end'); self.ent_cor_c.insert(0, cor or '')
+
+    def _nuevo_cliente(self):
+        self._cliente_sel = None
+        for e in [self.ent_doc_c, self.ent_nom_c, self.ent_tel_c, self.ent_dir_c, self.ent_cor_c]:
+            e.delete(0, 'end')
+
+    def _guardar_cliente(self):
+        from tkinter import messagebox
+
+        doc = self.ent_doc_c.get().strip()
+        nom = self.ent_nom_c.get().strip()
+        tel = self.ent_tel_c.get().strip()
+        dir_ = self.ent_dir_c.get().strip()
+        cor = self.ent_cor_c.get().strip()
+
+        if not doc or not nom or not cor:
+            messagebox.showwarning("Aviso", "Documento, nombre y correo son obligatorios")
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            if self._cliente_sel:
+                q = (
+                    f"UPDATE Cliente SET documento={placeholder}, nombre={placeholder}, telefono={placeholder}, "
+                    f"direccion={placeholder}, correo={placeholder} WHERE id_cliente={placeholder}"
+                )
+                params = (doc, nom, tel, dir_, cor, self._cliente_sel)
+            else:
+                q = (
+                    f"INSERT INTO Cliente (documento, nombre, telefono, direccion, correo) "
+                    f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                )
+                params = (doc, nom, tel, dir_, cor)
+            self.db_manager.execute_query(q, params, fetch=False)
+            messagebox.showinfo("Éxito", "Cliente guardado correctamente")
+            self._nuevo_cliente()
+            self._cargar_clientes()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _eliminar_cliente(self):
+        from tkinter import messagebox
+
+        if not self._cliente_sel:
+            messagebox.showwarning("Aviso", "Seleccione un cliente")
+            return
+
+        if not messagebox.askyesno("Confirmar", "¿Eliminar cliente seleccionado?"):
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            self.db_manager.execute_query(
+                f"DELETE FROM Cliente WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            messagebox.showinfo("Éxito", "Cliente eliminado correctamente")
+            self._nuevo_cliente()
+            self._cargar_clientes()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
 
     def _build_tab_reportes(self, parent):
         import tkinter as tk
