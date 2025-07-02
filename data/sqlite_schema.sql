@@ -138,11 +138,6 @@ CREATE TABLE IF NOT EXISTS Codigo_postal (
     ciudad TEXT
 );
 
-CREATE TABLE IF NOT EXISTS Tipo_cliente (
-    id_tipo INTEGER PRIMARY KEY,
-    descripcion TEXT
-);
-
 CREATE TABLE IF NOT EXISTS Estado_vehiculo (
     id_estado INTEGER PRIMARY KEY,
     descripcion TEXT

@@ -4,7 +4,6 @@ INSERT INTO Rol (nombre) VALUES ('cliente'), ('empleado'), ('gerente'), ('admin'
 -- Tipos y catálogos
 INSERT INTO Tipo_entidad (descripcion) VALUES ('Persona natural'), ('Empresa');
 INSERT INTO Medio_pago (descripcion) VALUES ('Efectivo'), ('Tarjeta'), ('Transferencia');
-INSERT INTO Tipo_cliente (descripcion) VALUES ('VIP'), ('Regular');
 INSERT INTO Tipo_documento (descripcion) VALUES ('CC'), ('CE'), ('NIT');
 INSERT INTO Codigo_postal (id_codigo_postal, pais, departamento, ciudad) VALUES ('110111', 'Colombia', 'Cundinamarca', 'Bogotá'), ('760001', 'Colombia', 'Valle del Cauca', 'Cali');
 INSERT INTO Categoria_licencia (descripcion) VALUES ('B1'), ('C1');
@@ -33,7 +32,7 @@ INSERT INTO Proveedor_vehiculo (nombre, direccion, telefono, correo) VALUES ('Au
 INSERT INTO Licencia_conduccion (estado, fecha_emision, fecha_vencimiento, id_categoria) VALUES ('Vigente', '2022-01-10', '2027-01-10', 1);
 
 -- Clientes y empleados
-INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_tipo_cliente, id_codigo_postal) VALUES ('987654321', 'Carlos Ramírez', '3111111111', 'Calle 12 #34-56, Bogotá', 'carlos.ramirez@email.com', 1, 1, 2, '110111');
+INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES ('987654321', 'Carlos Ramírez', '3111111111', 'Calle 12 #34-56, Bogotá', 'carlos.ramirez@email.com', 1, 1, '110111');
 
 -- Tipos de empleado (jerarquía)
 INSERT INTO Tipo_empleado (descripcion) VALUES ('admin'), ('gerente'), ('ventas'), ('caja'), ('mantenimiento');
