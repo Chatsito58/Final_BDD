@@ -48,10 +48,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src'
 from src.db_manager import DBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
-from src.views.main_view import MainView
-from src.views.ctk_views import ClienteView, AdminView, GerenteView
-from src.views.main_view import (
-    EmpleadoViewQt, EmpleadoVentasViewQt, EmpleadoMantenimientoViewQt, EmpleadoCajaViewQt
+from src.views.ctk_views import (
+    ClienteView,
+    AdminView,
+    GerenteView,
+    EmpleadoVentasView,
+    EmpleadoCajaView,
+    EmpleadoMantenimientoView,
 )
 from src.styles import MODERN_QSS
 
@@ -89,11 +92,8 @@ class AlquilerApp:
         from PyQt5.QtCore import QTimer
         rol = (user_data.get('rol') or '').lower()
         tipo_empleado = (user_data.get('tipo_empleado') or '').lower() if user_data.get('tipo_empleado') else None
-        username = user_data.get('usuario')
-        app = QApplication.instance()
         def handle_logout():
             QTimer.singleShot(0, on_logout)
-        view_kwargs = dict(db_manager=db_manager, auth_manager=auth_manager, app=app)
         if rol == 'admin':
             win = AdminView(user_data, db_manager, handle_logout)
             win.mainloop()
@@ -107,20 +107,16 @@ class AlquilerApp:
                 result = db_manager.execute_query(query, params)
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
-                from src.views.main_view import EmpleadoVentasViewQt
-                win = EmpleadoVentasViewQt(username, **view_kwargs)
+                win = EmpleadoVentasView(user_data, db_manager, handle_logout)
             elif tipo_empleado == 'mantenimiento':
-                from src.views.main_view import EmpleadoMantenimientoViewQt
-                win = EmpleadoMantenimientoViewQt(username, **view_kwargs)
+                win = EmpleadoMantenimientoView(user_data, db_manager, handle_logout)
             elif tipo_empleado == 'caja':
-                from src.views.main_view import EmpleadoCajaViewQt
-                win = EmpleadoCajaViewQt(username, **view_kwargs)
+                win = EmpleadoCajaView(user_data, db_manager, handle_logout)
             else:
-                from src.views.main_view import EmpleadoViewQt
-                win = EmpleadoViewQt(username, **view_kwargs)
-            win.logged_out.connect(handle_logout)
-            win.show()
-            win.exec_() if hasattr(win, 'exec_') else app.exec_()
+                QMessageBox.warning(None, "Error", "Tipo de empleado desconocido")
+                handle_logout()
+                return
+            win.mainloop()
         else:
             from src.views.ctk_views import ClienteView
             # Crear la vista de cliente directamente
