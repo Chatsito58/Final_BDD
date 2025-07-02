@@ -1515,7 +1515,11 @@ class ClienteView(BaseCTKView):
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
         # Listar reservas
         placeholder = '%s' if not self.db_manager.offline else '?'
-        query = f"SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva WHERE id_sucursal = {placeholder}"
+        query = (
+            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
+            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE a.id_sucursal = {placeholder}"
+        )
         reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         listbox = tk.Listbox(frame, height=18, width=180)
         listbox.pack(pady=10)
@@ -2689,7 +2693,10 @@ class EmpleadoCajaView(BaseCTKView):
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
         # Listar reservas
-        query = "SELECT id_reserva, id_cliente, id_vehiculo FROM Reserva"
+        query = (
+            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
+            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler"
+        )
         reservas = self.db_manager.execute_query(query)
         listbox = tk.Listbox(frame, height=18, width=180)
         listbox.pack(pady=10)
