@@ -58,27 +58,70 @@ class AuthManager:
         
         # Consultar base de datos
         is_sqlite = getattr(self.db, 'offline', False)
+
+        # Verificar si la columna id_sucursal existe en la tabla Empleado
+        has_branch_col = True
+        try:
+            if is_sqlite:
+                cols = self.db.execute_query("PRAGMA table_info(Empleado)")
+                has_branch_col = any(c[1] == 'id_sucursal' for c in cols)
+            else:
+                col_query = (
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    "WHERE TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'id_sucursal'"
+                )
+                res = self.db.execute_query(col_query)
+                has_branch_col = res and res[0][0] > 0
+        except Exception as e:  # pragma: no cover - should not happen in tests
+            self.logger.warning(
+                "No se pudo verificar la columna id_sucursal en Empleado: %s", e
+            )
+
+        if not has_branch_col:
+            self.logger.warning(
+                "Esquema de base de datos desactualizado: falta Empleado.id_sucursal"
+            )
         
         if is_sqlite:
             # Consulta para SQLite
-            query = """
-            SELECT u.id_usuario, u.usuario, r.nombre as rol,
-                   u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
-            FROM Usuario u
-            JOIN Rol r ON u.id_rol = r.id_rol
-            LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
-            WHERE u.usuario = ? AND u.contrasena = ?
-            """
+            if has_branch_col:
+                query = """
+                SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                       u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
+                FROM Usuario u
+                JOIN Rol r ON u.id_rol = r.id_rol
+                LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+                WHERE u.usuario = ? AND u.contrasena = ?
+                """
+            else:
+                query = """
+                SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                       u.id_cliente, u.id_empleado, e.cargo
+                FROM Usuario u
+                JOIN Rol r ON u.id_rol = r.id_rol
+                LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+                WHERE u.usuario = ? AND u.contrasena = ?
+                """
         else:
             # Consulta para MySQL
-            query = """
-            SELECT u.id_usuario, u.usuario, r.nombre as rol,
-                   u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
-            FROM Usuario u
-            JOIN Rol r ON u.id_rol = r.id_rol
-            LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
-            WHERE u.usuario = %s AND u.contrasena = %s
-            """
+            if has_branch_col:
+                query = """
+                SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                       u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
+                FROM Usuario u
+                JOIN Rol r ON u.id_rol = r.id_rol
+                LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+                WHERE u.usuario = %s AND u.contrasena = %s
+                """
+            else:
+                query = """
+                SELECT u.id_usuario, u.usuario, r.nombre as rol,
+                       u.id_cliente, u.id_empleado, e.cargo
+                FROM Usuario u
+                JOIN Rol r ON u.id_rol = r.id_rol
+                LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
+                WHERE u.usuario = %s AND u.contrasena = %s
+                """
             
         result = self.db.execute_query(query, (correo, hashed_pwd))
 
@@ -99,7 +142,7 @@ class AuthManager:
                 'id_cliente': row[3],
                 'id_empleado': row[4],
                 'tipo_empleado': row[5],
-                'id_sucursal': row[6]
+                'id_sucursal': row[6] if has_branch_col else None
             }
         # Credenciales incorrectas
         attempts = self.failed_attempts.get(correo, 0) + 1
