@@ -491,6 +491,44 @@ class DBManager:
         """Permite a las vistas registrar un callback para mostrar una ventana emergente de reconexión inmediata."""
         self.on_reconnect_callback = callback
 
+    def try_reconnect(self):
+        """Intentar reconectar con la base remota si se está en modo offline."""
+        if not self.offline:
+            return False
+        if mysql is None:
+            self.logger.warning("Conector MySQL no disponible para reconexión")
+            return False
+
+        config = {
+            'host': os.getenv('DB_REMOTE_HOST'),
+            'user': os.getenv('DB_REMOTE_USER'),
+            'password': os.getenv('DB_REMOTE_PASSWORD'),
+            'database': os.getenv('DB_REMOTE_NAME'),
+            'port': os.getenv('DB_REMOTE_PORT'),
+            'connection_timeout': 5,
+        }
+
+        try:
+            conn = mysql.connector.connect(**config)
+            conn.autocommit = True
+            conn.close()
+            self.offline = False
+            self.was_offline = False
+            try:
+                self.sync_critical_data_to_local()
+                self.sync_pending_reservations()
+            except Exception as exc:
+                self.logger.error(f"Error sincronizando tras reconexión: {exc}")
+            try:
+                if hasattr(self, 'on_reconnect_callback') and self.on_reconnect_callback:
+                    self.on_reconnect_callback()
+            except Exception as exc:  # pragma: no cover - callback errors are logged
+                self.logger.error(f"Error en callback de reconexión: {exc}")
+            return True
+        except Exception as exc:
+            self.logger.error(f"Fallo en reconexión: {exc}")
+            return False
+
     def update_user_password_both(self, usuario, hashed_nueva):
         """
         Actualiza la contraseña en ambas bases (remota y local) si hay conexión.
