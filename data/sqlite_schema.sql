@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS Empleado (
     nombre TEXT,
     telefono TEXT,
     correo TEXT,
-    cargo TEXT
+    cargo TEXT,
+    id_sucursal INTEGER
 );
 
 -- Insertar roles básicos

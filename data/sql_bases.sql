@@ -115,12 +115,15 @@ CREATE TABLE Empleado (
   telefono          VARCHAR(20),
   direccion         VARCHAR(150),
   correo            VARCHAR(100),
+  id_sucursal       INT UNSIGNED,
   id_tipo_documento INT UNSIGNED,
   id_tipo_empleado  INT UNSIGNED,
   FOREIGN KEY (id_tipo_documento)
     REFERENCES Tipo_documento(id_tipo_documento),
   FOREIGN KEY (id_tipo_empleado)
-    REFERENCES Tipo_empleado(id_tipo_empleado)
+    REFERENCES Tipo_empleado(id_tipo_empleado),
+  FOREIGN KEY (id_sucursal)
+    REFERENCES Sucursal(id_sucursal)
 ) ENGINE=InnoDB;
 
 CREATE TABLE Licencia_conduccion (

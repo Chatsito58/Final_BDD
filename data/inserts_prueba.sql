@@ -39,12 +39,12 @@ INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia
 INSERT INTO Tipo_empleado (descripcion) VALUES ('admin'), ('gerente'), ('ventas'), ('caja'), ('mantenimiento');
 
 -- Empleados de cada tipo
-INSERT INTO Empleado (documento, nombre, salario, cargo, telefono, direccion, correo, id_tipo_documento, id_tipo_empleado) VALUES
-('100000001', 'Admin Principal', 5000000, 'Administrador', '3000000001', 'Calle 1 #1-01', 'admin@email.com', 1, 1),
-('100000002', 'Gerente General', 4000000, 'Gerente', '3000000002', 'Calle 2 #2-02', 'gerente@email.com', 1, 2),
-('100000003', 'Vendedor Uno', 2500000, 'Ventas', '3000000003', 'Calle 3 #3-03', 'ventas@email.com', 1, 3),
-('100000004', 'Cajero Uno', 2200000, 'Caja', '3000000004', 'Calle 4 #4-04', 'caja@email.com', 1, 4),
-('100000005', 'Mantenimiento Uno', 2300000, 'Mantenimiento', '3000000005', 'Calle 5 #5-05', 'mantenimiento@email.com', 1, 5);
+INSERT INTO Empleado (documento, nombre, salario, cargo, telefono, direccion, correo, id_sucursal, id_tipo_documento, id_tipo_empleado) VALUES
+('100000001', 'Admin Principal', 5000000, 'Administrador', '3000000001', 'Calle 1 #1-01', 'admin@email.com', 1, 1, 1),
+('100000002', 'Gerente General', 4000000, 'Gerente', '3000000002', 'Calle 2 #2-02', 'gerente@email.com', 1, 1, 2),
+('100000003', 'Vendedor Uno', 2500000, 'Ventas', '3000000003', 'Calle 3 #3-03', 'ventas@email.com', 1, 1, 3),
+('100000004', 'Cajero Uno', 2200000, 'Caja', '3000000004', 'Calle 4 #4-04', 'caja@email.com', 1, 1, 4),
+('100000005', 'Mantenimiento Uno', 2300000, 'Mantenimiento', '3000000005', 'Calle 5 #5-05', 'mantenimiento@email.com', 2, 1, 5);
 
 -- Seguros de vehículos
 INSERT INTO Seguro_vehiculo (estado, descripcion, vencimiento, costo) VALUES
