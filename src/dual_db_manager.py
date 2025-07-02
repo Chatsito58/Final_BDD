@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from dotenv import load_dotenv
 
@@ -100,6 +101,43 @@ class DualDBManager:
 
     def _enqueue(self, target, query, params):
         self.pending.append((target, query, params))
+
+    # ------------------------------------------------------------------
+    # Retry queue helpers
+    # ------------------------------------------------------------------
+    def enqueue_failed_operation(self, operation, table_name, payload, target):
+        """Store a failed write operation in the SQLite retry queue."""
+        data = json.dumps(payload)
+        query = (
+            "INSERT INTO retry_queue (operation, table_name, payload, target, created_at) "
+            "VALUES (?, ?, ?, ?, datetime('now'))"
+        )
+        self.sqlite.execute_query(query, (operation, table_name, data, target), fetch=False)
+
+    def fetch_retry_queue(self):
+        """Return all pending retry entries as a list of dictionaries."""
+        rows = self.sqlite.execute_query(
+            "SELECT id, operation, table_name, payload, target FROM retry_queue ORDER BY id"
+        ) or []
+        result = []
+        for row in rows:
+            payload = json.loads(row[3]) if row[3] else None
+            result.append(
+                {
+                    "id": row[0],
+                    "operation": row[1],
+                    "table_name": row[2],
+                    "payload": payload,
+                    "target": row[4],
+                }
+            )
+        return result
+
+    def delete_retry_entry(self, entry_id):
+        """Remove an entry from the retry queue."""
+        self.sqlite.execute_query(
+            "DELETE FROM retry_queue WHERE id = ?", (entry_id,), fetch=False
+        )
 
     # ------------------------------------------------------------------
     # CRUD public API
