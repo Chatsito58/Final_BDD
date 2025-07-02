@@ -2770,12 +2770,21 @@ class EmpleadoCajaView(BaseCTKView):
             messagebox.showwarning("Error", "El monto debe ser mayor a 0")
             return
         placeholder = '%s' if not self.db_manager.offline else '?'
-        val_query = f"SELECT saldo_pendiente FROM Reserva_alquiler WHERE id_reserva={placeholder}"
+        val_query = (
+            "SELECT ra.saldo_pendiente, a.id_sucursal "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE ra.id_reserva={placeholder}"
+        )
         row = self.db_manager.execute_query(val_query, (id_reserva,))
         if not row:
             messagebox.showerror("Error", "Reserva no encontrada")
             return
         saldo = float(row[0][0])
+        sucursal_reserva = row[0][1]
+        if sucursal_reserva != self.user_data.get('id_sucursal'):
+            messagebox.showerror("Error", "No puedes procesar reservas de otra sucursal")
+            return
         if monto_f > saldo:
             messagebox.showwarning("Error", f"El monto excede el saldo (${saldo:,.0f})")
             return
