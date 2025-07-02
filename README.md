@@ -16,10 +16,11 @@ Este proyecto implementa una aplicación de alquiler de vehículos con una inter
 11. [Sistema de autenticación](#sistema-de-autenticacion)
 12. [Sistema de abonos](#sistema-de-abonos)
 13. [Logging](#logging)
-14. [Ejecutar pruebas](#ejecutar-pruebas)
-15. [Contribuir](#contribuir)
-16. [Licencia](#licencia)
-17. [Desarrolladores y soporte](#desarrolladores-y-soporte)
+14. [Gestor de doble escritura](#gestor-de-doble-escritura)
+15. [Ejecutar pruebas](#ejecutar-pruebas)
+16. [Contribuir](#contribuir)
+17. [Licencia](#licencia)
+18. [Desarrolladores y soporte](#desarrolladores-y-soporte)
 
 ## Características Principales
 - Interfaz gráfica moderna basada en **PyQt5** y **CustomTkinter**.
@@ -79,6 +80,11 @@ El archivo `.env` permite definir los parámetros de conexión:
 | `DB_REMOTE_USER`    | Usuario de la base de datos           | `root`                  |
 | `DB_REMOTE_PASSWORD`| Contraseña del usuario                | (vacío)                 |
 | `DB_REMOTE_NAME`    | Nombre de la base de datos            | `alquiler_vehiculos`    |
+| `DB_REMOTE_HOST2`   | Servidor de base de datos secundario  | `localhost`             |
+| `DB_REMOTE_PORT2`   | Puerto del servidor secundario        | `3306`                  |
+| `DB_REMOTE_USER2`   | Usuario de la base de datos secundario| `root`                  |
+| `DB_REMOTE_PASSWORD2`| Contraseña del usuario secundario     | (vacío)                 |
+| `DB_REMOTE_NAME2`   | Nombre de la base de datos secundario | `alquiler_vehiculos_2`  |
 | `LOCAL_DB_PATH`     | Ruta al archivo SQLite local          | `data/local.sqlite`     |
 
 Si no dispones de MySQL/MariaDB la aplicación funcionará automáticamente en modo offline usando solo SQLite.
@@ -112,7 +118,8 @@ Final_BDD/
 │   ├── views/           # Interfaces y ventanas
 │   ├── auth.py          # Manejo de autenticación
 │   ├── config.py        # Configuración global
-│   ├── db_manager.py    # Gestor de base de datos principal
+│   ├── dual_db_manager.py# Nuevo gestor de doble escritura
+│   ├── db_manager.py    # Gestor anterior (obsoleto)
 │   └── sqlite_manager.py# Gestor de la base local SQLite
 ├── data/                # Esquemas y datos de ejemplo
 ├── ui/                  # Archivos .ui para PyQt5
@@ -158,6 +165,29 @@ Toda la actividad relevante se almacena en el archivo `app.log`:
 - Consultas y errores de la base de datos.
 - Sincronización entre la base remota y local.
 - Registro de pagos y cambios de contraseña.
+
+## Gestor de Doble Escritura
+El módulo `src/dual_db_manager.py` reemplaza al antiguo `DBManager` y permite
+replicar todas las escrituras en **dos** servidores MySQL/MariaDB manteniendo
+un respaldo local en SQLite. Su objetivo principal es asegurar que ambas
+bases de datos remotas se mantengan sincronizadas y que la aplicación pueda
+seguir operando cuando no haya conexión.
+
+### Variables de entorno
+Define en el archivo `.env` los datos de ambos servidores y la ruta local:
+
+- `DB_REMOTE_HOST`, `DB_REMOTE_PORT`, `DB_REMOTE_USER`,
+  `DB_REMOTE_PASSWORD`, `DB_REMOTE_NAME` – conexión principal.
+- `DB_REMOTE_HOST2`, `DB_REMOTE_PORT2`, `DB_REMOTE_USER2`,
+  `DB_REMOTE_PASSWORD2`, `DB_REMOTE_NAME2` – servidor secundario.
+- `LOCAL_DB_PATH` – ubicación de la base SQLite y de la cola de reintentos.
+
+### Cola de reintentos y trabajador
+Cuando una escritura falla en alguna conexión remota, la consulta se almacena
+en memoria y en la tabla `retry_queue` de SQLite. La función `retry_pending()`
+reenvía estas operaciones una vez se restablece la comunicación.
+El método `start_worker()` inicia un hilo que cada ciertos minutos comprueba el
+estado de las conexiones y ejecuta `retry_pending()` automáticamente.
 
 ## Ejecutar Pruebas
 Las pruebas unitarias se encuentran en el directorio `tests` y utilizan `pytest`.
