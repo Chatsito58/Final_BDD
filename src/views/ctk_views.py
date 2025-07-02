@@ -3370,16 +3370,74 @@ class AdminView(BaseCTKView):
 
     def _build_tab_personal(self, parent):
         import tkinter as tk
+
+        self._emp_sel = None
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
-        ctk.CTkLabel(frame, text="Listado de empleados", font=("Arial", 18, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Gestión de empleados", font=("Arial", 18, "bold")).pack(pady=10)
+
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
         scrollbar = tk.Scrollbar(list_frame, orient="vertical")
         self.lb_staff = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.lb_staff.yview)
         scrollbar.pack(side="right", fill="y")
         self.lb_staff.pack(side="left", fill="both", expand=True)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=10)
+
+        ctk.CTkLabel(form, text="Documento:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Nombre:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Teléfono:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Correo:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ctk.CTkLabel(form, text="Cargo:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+
+        self.ent_doc_e = ctk.CTkEntry(form, width=150)
+        self.ent_nom_e = ctk.CTkEntry(form, width=150)
+        self.ent_tel_e = ctk.CTkEntry(form, width=150)
+        self.ent_cor_e = ctk.CTkEntry(form, width=150)
+        cargos_rows = self.db_manager.execute_query("SELECT descripcion FROM Tipo_empleado") or []
+        cargos = [c[0].capitalize() for c in cargos_rows] or [
+            "Administrador",
+            "Gerente",
+            "Ventas",
+            "Caja",
+            "Mantenimiento",
+        ]
+        self._cargos = cargos
+        self.cargo_var = ctk.StringVar(value=cargos[0])
+        self.ent_cargo_e = ctk.CTkOptionMenu(form, variable=self.cargo_var, values=cargos, width=150)
+
+        self.ent_doc_e.grid(row=0, column=1, padx=5, pady=5)
+        self.ent_nom_e.grid(row=1, column=1, padx=5, pady=5)
+        self.ent_tel_e.grid(row=2, column=1, padx=5, pady=5)
+        self.ent_cor_e.grid(row=3, column=1, padx=5, pady=5)
+        self.ent_cargo_e.grid(row=4, column=1, padx=5, pady=5)
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=5)
+        ctk.CTkButton(btn_frame, text="Nuevo", command=self._nuevo_empleado, width=100).grid(row=0, column=0, padx=5)
+        ctk.CTkButton(
+            btn_frame,
+            text="Guardar",
+            command=self._guardar_empleado,
+            width=120,
+            fg_color="#3A86FF",
+            hover_color="#265DAB",
+        ).grid(row=0, column=1, padx=5)
+        ctk.CTkButton(
+            btn_frame,
+            text="Eliminar",
+            command=self._eliminar_empleado,
+            width=120,
+            fg_color="#F44336",
+            hover_color="#B71C1C",
+        ).grid(row=0, column=2, padx=5)
+
+        self.lb_staff.bind("<<ListboxSelect>>", self._seleccionar_empleado)
         self._cargar_staff()
 
     def _cargar_staff(self):
@@ -3388,6 +3446,99 @@ class AdminView(BaseCTKView):
         if rows:
             for r in rows:
                 self.lb_staff.insert('end', f"{r[0]} | {r[1]} | {r[2]}")
+
+    def _seleccionar_empleado(self, event=None):
+        sel = self.lb_staff.curselection()
+        if not sel:
+            return
+        self._emp_sel = int(self.lb_staff.get(sel[0]).split('|')[0].strip())
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        row = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, correo, cargo FROM Empleado WHERE id_empleado = {placeholder}",
+            (self._emp_sel,),
+        )
+        if row:
+            doc, nom, tel, cor, cargo = row[0]
+            self.ent_doc_e.delete(0, 'end'); self.ent_doc_e.insert(0, doc or '')
+            self.ent_nom_e.delete(0, 'end'); self.ent_nom_e.insert(0, nom or '')
+            self.ent_tel_e.delete(0, 'end'); self.ent_tel_e.insert(0, tel or '')
+            self.ent_cor_e.delete(0, 'end'); self.ent_cor_e.insert(0, cor or '')
+            self.cargo_var.set(cargo or (self._cargos[0] if self._cargos else ''))
+
+    def _nuevo_empleado(self):
+        self._emp_sel = None
+        for e in [self.ent_doc_e, self.ent_nom_e, self.ent_tel_e, self.ent_cor_e]:
+            e.delete(0, 'end')
+        if self._cargos:
+            self.cargo_var.set(self._cargos[0])
+
+    def _guardar_empleado(self):
+        from tkinter import messagebox
+
+        doc = self.ent_doc_e.get().strip()
+        nom = self.ent_nom_e.get().strip()
+        tel = self.ent_tel_e.get().strip()
+        cor = self.ent_cor_e.get().strip()
+        cargo = self.cargo_var.get().strip()
+
+        if not doc or not nom or not cor or not cargo:
+            messagebox.showwarning("Aviso", "Documento, nombre, correo y cargo son obligatorios")
+            return
+
+        if cargo.lower() == 'gerente' and not puede_gestionar_gerentes(self.user_data.get('rol')):
+            messagebox.showwarning(
+                "Aviso",
+                "No tiene permiso para gestionar empleados con cargo 'gerente'",
+            )
+            return
+
+        if not verificar_permiso_creacion_empleado(cargo, self.user_data.get('rol')):
+            messagebox.showwarning("Aviso", "No tiene permiso para crear/editar este empleado")
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            if self._emp_sel:
+                q = (
+                    f"UPDATE Empleado SET documento={placeholder}, nombre={placeholder}, "
+                    f"telefono={placeholder}, correo={placeholder}, cargo={placeholder} WHERE id_empleado={placeholder}"
+                )
+                params = (doc, nom, tel, cor, cargo, self._emp_sel)
+            else:
+                q = (
+                    f"INSERT INTO Empleado (documento, nombre, telefono, correo, cargo) "
+                    f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+                )
+                params = (doc, nom, tel, cor, cargo)
+            self.db_manager.execute_query(q, params, fetch=False)
+            messagebox.showinfo("Éxito", "Empleado guardado correctamente")
+            self._nuevo_empleado()
+            self._cargar_staff()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
+
+    def _eliminar_empleado(self):
+        from tkinter import messagebox
+
+        if not self._emp_sel:
+            messagebox.showwarning("Aviso", "Seleccione un empleado")
+            return
+
+        if not messagebox.askyesno("Confirmar", "¿Eliminar empleado seleccionado?"):
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        try:
+            self.db_manager.execute_query(
+                f"DELETE FROM Empleado WHERE id_empleado = {placeholder}",
+                (self._emp_sel,),
+                fetch=False,
+            )
+            messagebox.showinfo("Éxito", "Empleado eliminado correctamente")
+            self._nuevo_empleado()
+            self._cargar_staff()
+        except Exception as exc:
+            messagebox.showerror("Error", str(exc))
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
