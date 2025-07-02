@@ -376,7 +376,6 @@ class DBManager:
             ("Rol", ["id_rol", "nombre"], "id_rol", True),
             ("Tipo_documento", ["id_tipo_documento", "descripcion"], "id_tipo_documento", True),
             ("Codigo_postal", ["id_codigo_postal", "pais", "departamento", "ciudad"], "id_codigo_postal", False),
-            ("Tipo_cliente", ["id_tipo", "descripcion"], "id_tipo", True),
             ("Estado_vehiculo", ["id_estado", "descripcion"], "id_estado", True),
             ("Marca_vehiculo", ["id_marca", "nombre_marca"], "id_marca", True),
             ("Color_vehiculo", ["id_color", "nombre_color"], "id_color", True),

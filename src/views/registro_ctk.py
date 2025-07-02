@@ -117,22 +117,6 @@ class RegistroCTk(ctk.CTk):
         t = threading.Thread(target=updater, daemon=True)
         t.start()
 
-    def _get_regular_tipo(self):
-        if self.is_sqlite:
-            return None
-        row = self.db.execute_query(
-            "SELECT id_tipo FROM Tipo_cliente WHERE LOWER(descripcion)='regular' LIMIT 1"
-        )
-        if row:
-            return row[0][0]
-        self.db.execute_query(
-            "INSERT INTO Tipo_cliente (descripcion) VALUES ('regular')",
-            fetch=False,
-        )
-        row = self.db.execute_query(
-            "SELECT id_tipo FROM Tipo_cliente WHERE LOWER(descripcion)='regular' LIMIT 1"
-        )
-        return row[0][0] if row else None
 
     def registrar(self):
         documento = self.doc_entry.get().strip()
@@ -165,10 +149,9 @@ class RegistroCTk(ctk.CTk):
             if self.cod_post_var:
                 desc = self.cod_post_var.get()
                 id_codigo = next((i for i, d in self.cod_post_opts if d == desc), None)
-            id_tipo_cliente = self._get_regular_tipo()
             insert_q = (
-                "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_tipo_documento, id_tipo_cliente, id_codigo_postal) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_tipo_documento, id_codigo_postal) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)"
             )
             params = (
                 documento,
@@ -177,7 +160,6 @@ class RegistroCTk(ctk.CTk):
                 direccion,
                 correo,
                 id_tipo_doc,
-                id_tipo_cliente,
                 id_codigo,
             )
         try:

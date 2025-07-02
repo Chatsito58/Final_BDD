@@ -11,10 +11,6 @@ CREATE TABLE Medio_pago (
   descripcion       VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
-CREATE TABLE Tipo_cliente (
-  id_tipo           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  descripcion       VARCHAR(100) NOT NULL
-) ENGINE=InnoDB;
 
 CREATE TABLE Tipo_documento (
   id_tipo_documento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -146,15 +142,12 @@ CREATE TABLE Cliente (
   infracciones      INT DEFAULT 0,
   id_licencia       INT UNSIGNED,
   id_tipo_documento INT UNSIGNED,
-  id_tipo_cliente   INT UNSIGNED,
   id_codigo_postal  VARCHAR(50),
   id_cuenta         INT UNSIGNED,
   FOREIGN KEY (id_licencia)
     REFERENCES Licencia_conduccion(id_licencia),
   FOREIGN KEY (id_tipo_documento)
     REFERENCES Tipo_documento(id_tipo_documento),
-  FOREIGN KEY (id_tipo_cliente)
-    REFERENCES Tipo_cliente(id_tipo),
   FOREIGN KEY (id_codigo_postal)
     REFERENCES Codigo_postal(id_codigo_postal)
 ) ENGINE=InnoDB;
