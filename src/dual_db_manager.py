@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import threading
 from dotenv import load_dotenv
 
 try:
@@ -21,6 +22,9 @@ class DualDBManager:
         self.pending = []  # [(target, query, params)]
         self.remote1_active = False
         self.remote2_active = False
+        self._thread = None
+        self._stop_event = threading.Event()
+        self._interval = 20 * 60  # 20 minutes by default
 
     # ------------------------------------------------------------------
     # Connection helpers
@@ -223,9 +227,62 @@ class DualDBManager:
                 conn = self.connect_remote2()
             if conn:
                 try:
+                    # Skip operations without updated_at when another server
+                    # stayed online to avoid overwriting newer data.
+                    has_updated = False
+                    if isinstance(params, dict):
+                        has_updated = 'updated_at' in params
+                    other_online = (
+                        self.remote2_active if target == 'remote1' else self.remote1_active
+                    )
+                    if not has_updated and other_online and 'updated_at' not in query.lower():
+                        continue
                     self._exec_mysql(conn, query, params, fetch=False)
                     continue
                 except Exception as exc:  # pragma: no cover - network errors
                     self.logger.error("Retry %s failed: %s", target, exc)
             remaining.append((target, query, params))
         self.pending = remaining
+
+    # ------------------------------------------------------------------
+    # Background worker
+    # ------------------------------------------------------------------
+    def _worker_cycle(self):
+        prev1 = self.remote1_active
+        prev2 = self.remote2_active
+
+        conn1 = self.connect_remote1()
+        if conn1:
+            conn1.close()
+
+        conn2 = self.connect_remote2()
+        if conn2:
+            conn2.close()
+
+        recovered1 = not prev1 and self.remote1_active
+        recovered2 = not prev2 and self.remote2_active
+
+        if recovered1 or recovered2:
+            self.retry_pending()
+
+    def _worker_loop(self):
+        while not self._stop_event.is_set():
+            self._worker_cycle()
+            self._stop_event.wait(self._interval)
+
+    def start_worker(self, interval_minutes=20):
+        """Start the background synchronization thread."""
+        self._interval = interval_minutes * 60
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._worker_loop, daemon=True)
+        self._thread.start()
+
+    def stop_worker(self):
+        """Stop the background synchronization thread."""
+        if not self._thread:
+            return
+        self._stop_event.set()
+        self._thread.join()
+        self._thread = None
