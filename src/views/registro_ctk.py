@@ -137,32 +137,40 @@ class RegistroCTk(ctk.CTk):
             messagebox.showwarning("Error", "El correo ya está registrado")
             return
 
-        if self.is_sqlite:
-            insert_q = "INSERT INTO Cliente (documento, nombre, telefono, correo) VALUES (?, ?, ?, ?)"
-            params = (documento, nombre, telefono, correo)
-        else:
-            id_tipo_doc = None
-            if self.tipo_doc_var:
-                desc = self.tipo_doc_var.get()
-                id_tipo_doc = next((i for i, d in self.tipo_doc_opts if d == desc), None)
-            id_codigo = None
-            if self.cod_post_var:
-                desc = self.cod_post_var.get()
-                id_codigo = next((i for i, d in self.cod_post_opts if d == desc), None)
-            insert_q = (
-                "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_tipo_documento, id_codigo_postal) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-            )
-            params = (
-                documento,
-                nombre,
-                telefono,
-                direccion,
-                correo,
-                id_tipo_doc,
-                id_codigo,
-            )
+        # Obtener IDs de tipo de documento y código postal
+        id_tipo_doc = None
+        if self.tipo_doc_var:
+            desc = self.tipo_doc_var.get()
+            id_tipo_doc = next((i for i, d in self.tipo_doc_opts if d == desc), None)
+        id_codigo = None
+        if self.cod_post_var:
+            desc = self.cod_post_var.get()
+            id_codigo = next((i for i, d in self.cod_post_opts if d == desc), None)
+        
+        # Crear licencia de conducción primero
+        licencia_query = "INSERT INTO Licencia_conduccion (estado, fecha_emision, fecha_vencimiento, id_categoria) VALUES (?, ?, ?, ?)" if self.is_sqlite else "INSERT INTO Licencia_conduccion (estado, fecha_emision, fecha_vencimiento, id_categoria) VALUES (%s, %s, %s, %s)"
+        from datetime import datetime, timedelta
+        fecha_emision = datetime.now().strftime('%Y-%m-%d')
+        fecha_vencimiento = (datetime.now() + timedelta(days=365*10)).strftime('%Y-%m-%d')  # 10 años
+        licencia_params = ('Vigente', fecha_emision, fecha_vencimiento, 3)  # Categoría B1 por defecto
+        
         try:
+            # Insertar licencia
+            self.db.execute_query(licencia_query, licencia_params, fetch=False)
+            
+            # Obtener ID de la licencia insertada
+            licencia_id_query = "SELECT last_insert_rowid()" if self.is_sqlite else "SELECT LAST_INSERT_ID()"
+            licencia_result = self.db.execute_query(licencia_id_query)
+            licencia_id = licencia_result[0][0] if licencia_result else None
+            
+            # Insertar cliente con la nueva estructura
+            if self.is_sqlite:
+                insert_q = "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                params = (documento, nombre, telefono, direccion, correo, licencia_id, id_tipo_doc, id_codigo)
+            else:
+                insert_q = "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                params = (documento, nombre, telefono, direccion, correo, licencia_id, id_tipo_doc, id_codigo)
+            
             self.db.execute_query(insert_q, params, fetch=False)
             sel_q = "SELECT id_cliente FROM Cliente WHERE correo = %s ORDER BY id_cliente DESC LIMIT 1" if not self.is_sqlite else "SELECT id_cliente FROM Cliente WHERE correo = ? ORDER BY id_cliente DESC LIMIT 1"
             row = self.db.execute_query(sel_q, (correo,))
