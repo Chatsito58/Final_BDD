@@ -44,8 +44,9 @@ class BaseCTKView(ctk.CTk):
         self.tab_reservas = self.tabview.add("Mis reservas")
         self._build_tab_mis_reservas(self.tabview.tab("Mis reservas"))
         # Pestaña: Crear reserva
-        self.tab_crear = self.tabview.add("Crear reserva")
-        self._build_tab_crear_reserva(self.tabview.tab("Crear reserva"))
+        if hasattr(self, '_build_tab_crear_reserva'):
+            self.tab_crear = self.tabview.add("Crear reserva")
+            self._build_tab_crear_reserva(self.tabview.tab("Crear reserva"))
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
@@ -145,8 +146,9 @@ class ClienteView(BaseCTKView):
         self.tab_reservas = self.tabview.add("Mis reservas")
         self._build_tab_mis_reservas(self.tabview.tab("Mis reservas"))
         # Pestaña: Crear reserva
-        self.tab_crear = self.tabview.add("Crear reserva")
-        self._build_tab_crear_reserva(self.tabview.tab("Crear reserva"))
+        if hasattr(self, '_build_tab_crear_reserva'):
+            self.tab_crear = self.tabview.add("Crear reserva")
+            self._build_tab_crear_reserva(self.tabview.tab("Crear reserva"))
         # Pestaña: Vehículos disponibles
         self.tab_vehiculos = self.tabview.add("Vehículos disponibles")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos disponibles"))
@@ -200,6 +202,16 @@ class ClienteView(BaseCTKView):
         id_cliente = self.user_data.get("id_cliente")
         self._cargar_reservas_cliente(id_cliente)
         self._cargar_reservas_pendientes(id_cliente)
+
+    def _build_tab_crear_reserva(self, parent):
+        """Muestra un botón para abrir el formulario de reserva."""
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both")
+        ctk.CTkLabel(frame, text="Crear nueva reserva", font=("Arial", 18, "bold")).pack(pady=20)
+        if hasattr(self, "_abrir_form_reserva"):
+            ctk.CTkButton(frame, text="Nueva reserva", command=lambda: self._abrir_form_reserva()).pack(pady=10)
+        else:
+            ctk.CTkLabel(frame, text="Formulario no disponible").pack(pady=10)
 
     def animar_transicion(self, card, destino):
         """Mueve la tarjeta al destino cambiando su color gradualmente."""
