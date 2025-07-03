@@ -584,3 +584,36 @@ class DBManager:
         except Exception as exc:
             self.logger.error(f"Error actualizando datos de cliente en ambas bases: {exc}")
             return False
+
+    def validar_estados_reserva(self, show_message=False):
+        """Comprueba que existan los estados de reserva requeridos."""
+        estados_requeridos = ("Pendiente", "Pagada", "Vencida")
+        placeholders = ", ".join(["%s"] * len(estados_requeridos))
+        query = (
+            f"SELECT descripcion FROM Estado_reserva "
+            f"WHERE descripcion IN ({placeholders})"
+        )
+
+        try:
+            rows = self.execute_query(query, estados_requeridos) or []
+            encontrados = {row[0] for row in rows}
+            faltantes = [e for e in estados_requeridos if e not in encontrados]
+            if faltantes:
+                msg = f"Estados de reserva faltantes: {', '.join(faltantes)}"
+                self.logger.warning(msg)
+                if show_message:
+                    try:
+                        from PyQt5.QtWidgets import QMessageBox
+
+                        QMessageBox.warning(None, "Advertencia", msg)
+                    except Exception as exc:  # pragma: no cover - GUI errors
+                        self.logger.error(
+                            f"No se pudo mostrar el mensaje de advertencia: {exc}"
+                        )
+                return False
+            return True
+        except Exception as exc:
+            self.logger.error(
+                f"Error validando estados de reserva requeridos: {exc}"
+            )
+            return False
