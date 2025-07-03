@@ -132,8 +132,13 @@ class RegistroCTk(ctk.CTk):
             messagebox.showwarning("Error", "Correo no válido")
             return
 
-        count_q = "SELECT COUNT(*) FROM Cliente WHERE correo = %s" if not self.is_sqlite else "SELECT COUNT(*) FROM Cliente WHERE correo = ?"
-        if self.db.execute_query(count_q, (correo,)) and self.db.execute_query(count_q, (correo,))[0][0] > 0:
+        count_q = (
+            "SELECT COUNT(*) FROM Cliente WHERE correo = %s"
+            if not self.is_sqlite
+            else "SELECT COUNT(*) FROM Cliente WHERE correo = ?"
+        )
+        correo_registrado = self.db.execute_query(count_q, (correo,))
+        if correo_registrado and correo_registrado[0][0] > 0:
             messagebox.showwarning("Error", "El correo ya está registrado")
             return
 
