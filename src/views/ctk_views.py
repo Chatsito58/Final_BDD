@@ -2718,22 +2718,41 @@ class EmpleadoCajaView(BaseCTKView):
 
     def _build_tab_reservas(self, parent):
         import tkinter as tk
+        from tkinter import ttk
+
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
-        # Listar reservas
+
+        # Listar reservas en tabla
         query = (
-            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
-            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler"
+            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo, "
+            "a.fecha_hora_salida, a.fecha_hora_entrada, es.descripcion "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "LEFT JOIN Estado_reserva es ON ra.id_estado_reserva = es.id_estado"
         )
         reservas = self.db_manager.execute_query(query)
-        listbox = tk.Listbox(frame, height=18, width=180)
-        listbox.pack(pady=10)
+
+        cols = ("c1", "c2", "c3", "c4", "c5", "c6")
+        tree = ttk.Treeview(frame, columns=cols, show="headings", height=18)
+        headers = [
+            ("c1", "ID"),
+            ("c2", "Cliente"),
+            ("c3", "Vehículo"),
+            ("c4", "Salida"),
+            ("c5", "Entrada"),
+            ("c6", "Estado"),
+        ]
+        for cid, text in headers:
+            tree.heading(cid, text=text)
+        tree.pack(fill="both", expand=True, pady=10)
+
         if reservas:
             for r in reservas:
-                listbox.insert('end', f"ID: {r[0]} | Cliente: {r[1]} | Vehículo: {r[2]}")
+                tree.insert("", "end", values=r)
         else:
-            listbox.insert('end', "No hay reservas registradas.")
+            tree.insert("", "end", values=("No hay reservas registradas",))
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
