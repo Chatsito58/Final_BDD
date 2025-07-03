@@ -19,8 +19,8 @@ def setup_branch_db(tmp_path):
     os.environ['LOCAL_DB_PATH'] = str(tmp_path / 'branch.db')
     db = DBManager()
     conn = db._sqlite.connect()
-    conn.execute("INSERT INTO Sucursal (id_sucursal, nombre) VALUES (1, 'Norte')")
-    conn.execute("INSERT INTO Sucursal (id_sucursal, nombre) VALUES (2, 'Sur')")
+    conn.execute("INSERT OR IGNORE INTO Sucursal (id_sucursal, nombre) VALUES (1, 'Norte')")
+    conn.execute("INSERT OR IGNORE INTO Sucursal (id_sucursal, nombre) VALUES (2, 'Sur')")
     conn.execute(
         """
         INSERT INTO Alquiler (

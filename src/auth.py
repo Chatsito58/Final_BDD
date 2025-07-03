@@ -59,27 +59,39 @@ class AuthManager:
         # Consultar base de datos
         is_sqlite = getattr(self.db, 'offline', False)
 
-        # La columna id_sucursal siempre está presente en el nuevo esquema
-        
-        if is_sqlite:
-            # Consulta para SQLite
-            query = """
+        # Verificar si la columna id_sucursal existe en la tabla Empleado
+        columna_sucursal = False
+        try:
+            check_q = (
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE table_name='Empleado' AND column_name='id_sucursal'"
+            )
+            res = self.db.execute_query(check_q)
+            columna_sucursal = res and res[0][0] > 0
+        except Exception:
+            pass
+
+        if not columna_sucursal:
+            # Consulta sin la columna id_sucursal
+            placeholder = '?' if is_sqlite else '%s'
+            query = f"""
             SELECT u.id_usuario, u.usuario, r.nombre as rol,
-                   u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
+                   u.id_cliente, u.id_empleado, e.cargo, NULL
             FROM Usuario u
             JOIN Rol r ON u.id_rol = r.id_rol
             LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
-            WHERE u.usuario = ? AND u.contrasena = ?
+            WHERE u.usuario = {placeholder} AND u.contrasena = {placeholder}
             """
         else:
-            # Consulta para MySQL
-            query = """
+            # Consulta con la columna disponible
+            placeholder = '?' if is_sqlite else '%s'
+            query = f"""
             SELECT u.id_usuario, u.usuario, r.nombre as rol,
                    u.id_cliente, u.id_empleado, e.cargo, e.id_sucursal
             FROM Usuario u
             JOIN Rol r ON u.id_rol = r.id_rol
             LEFT JOIN Empleado e ON u.id_empleado = e.id_empleado
-            WHERE u.usuario = %s AND u.contrasena = %s
+            WHERE u.usuario = {placeholder} AND u.contrasena = {placeholder}
             """
             
         result = self.db.execute_query(query, (correo, hashed_pwd))
