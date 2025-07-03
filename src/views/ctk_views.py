@@ -534,24 +534,28 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
         placeholder = '%s' if not self.db_manager.offline else '?'
+        id_sucursal = self.user_data.get('id_sucursal')
         query = f"""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
                    su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
-            FROM Vehiculo v 
-            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
-            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
-            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
-            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            FROM Vehiculo v
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision
             LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """
-        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
+            WHERE v.id_estado_vehiculo = 1"""
+        params = ()
+        if id_sucursal is not None:
+            query += f" AND v.id_sucursal = {placeholder}"
+            params = (id_sucursal,)
+        vehiculos = self.db_manager.execute_query(query, params)
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -1572,24 +1576,28 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
         placeholder = '%s' if not self.db_manager.offline else '?'
+        id_sucursal = self.user_data.get('id_sucursal')
         query = f"""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
                    su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
-            FROM Vehiculo v 
-            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
-            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
-            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
-            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            FROM Vehiculo v
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision
             LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """
-        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
+            WHERE v.id_estado_vehiculo = 1"""
+        params = ()
+        if id_sucursal is not None:
+            query += f" AND v.id_sucursal = {placeholder}"
+            params = (id_sucursal,)
+        vehiculos = self.db_manager.execute_query(query, params)
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -2307,24 +2315,28 @@ class EmpleadoVentasView(BaseCTKView):
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
         placeholder = '%s' if not self.db_manager.offline else '?'
+        id_sucursal = self.user_data.get('id_sucursal')
         query = f"""
             SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis,
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
                    su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
-            FROM Vehiculo v 
-            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca 
-            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
-            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color 
-            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision 
+            FROM Vehiculo v
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+            LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color
+            LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision
             LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje
             LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje
             LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro
             LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal
-            WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}
-        """
-        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
+            WHERE v.id_estado_vehiculo = 1"""
+        params = ()
+        if id_sucursal is not None:
+            query += f" AND v.id_sucursal = {placeholder}"
+            params = (id_sucursal,)
+        vehiculos = self.db_manager.execute_query(query, params)
         
         if not vehiculos:
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
@@ -2890,14 +2902,18 @@ class EmpleadoMantenimientoView(BaseCTKView):
         cont.pack(fill="both", expand=True, padx=10, pady=10)
 
         placeholder = '%s' if not self.db_manager.offline else '?'
+        id_sucursal = self.user_data.get('id_sucursal')
         query = (
             "SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion "
             "FROM Vehiculo v "
             "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
             "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
-            f"WHERE v.id_sucursal = {placeholder}"
         )
-        vehiculos = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
+        params = ()
+        if id_sucursal is not None:
+            query += f"WHERE v.id_sucursal = {placeholder}"
+            params = (id_sucursal,)
+        vehiculos = self.db_manager.execute_query(query, params)
 
         if not vehiculos:
             ctk.CTkLabel(cont, text="Sin vehículos asignados", font=("Arial", 13)).pack(pady=20)
