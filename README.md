@@ -197,6 +197,24 @@ pytest
 ```
 Estas pruebas validan los cálculos de los reportes de ventas usando una base SQLite temporal.
 
+## Verificación manual
+Los siguientes pasos se emplearon para verificar la integridad del proyecto:
+
+1. **Instalación de dependencias**
+   - Se intentó instalar `requirements.txt` dentro de un entorno virtual, pero la instalación de
+     `PyQt5` y otros paquetes falló por falta de acceso a internet.
+2. **Comprobación de archivos `.ui`**
+   - Los archivos de interfaz se encuentran en el directorio `ui/` y se cargan en
+     `src/views` mediante rutas relativas (por ejemplo, `login_view.py` carga `ui/login.ui`).
+3. **Verificación de sintaxis**
+   - Se ejecutó `python -m py_compile $(git ls-files '*.py')` sin reportar errores.
+4. **Ejecución de pruebas unitarias**
+   - Todas las pruebas en `pytest` finalizaron exitosamente.
+5. **Prueba de ejecución**
+   - Al ejecutar `python main.py` se produjo el error `ModuleNotFoundError: No module named 'dotenv'`
+     debido a la falta de dependencias instaladas.
+   - No se generó el archivo `app.log` porque la aplicación no inició correctamente.
+
 ## Contribuir
 1. Realiza un fork del proyecto y crea una rama para tu aportación.
 2. Envía tus cambios mediante un pull request descriptivo.
