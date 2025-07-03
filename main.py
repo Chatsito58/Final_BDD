@@ -64,6 +64,8 @@ class AlquilerApp:
         logger.info("Inicializando AlquilerApp...")
         # Inicializar gestores
         self.db_manager = DBManager()
+        # Validar que existan los estados de reserva requeridos
+        self.db_manager.validar_estados_reserva(show_message=True)
         self.auth_manager = AuthManager(self.db_manager)
         logger.info("Gestores inicializados correctamente")
 
