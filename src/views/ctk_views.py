@@ -178,17 +178,17 @@ class ClienteView(BaseCTKView):
         # Contenedores por estado con scroll
         self.cards_pendientes = ctk.CTkScrollableFrame(frame, fg_color="#FFF8E1")
         self.cards_pendientes.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
-        self.cards_pendientes.grid_propagate(False)
+        self.cards_pendientes.grid_propagate = False
         ctk.CTkLabel(self.cards_pendientes, text="⏳ Pendientes", font=("Arial", 15, "bold"), text_color="#B8860B").pack(anchor="w", padx=10, pady=(5,0))
 
         self.cards_pagadas = ctk.CTkScrollableFrame(frame, fg_color="#E8F5E9")
         self.cards_pagadas.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
-        self.cards_pagadas.grid_propagate(False)
+        self.cards_pagadas.grid_propagate = False
         ctk.CTkLabel(self.cards_pagadas, text="✅ Pagadas", font=("Arial", 15, "bold"), text_color="#388E3C").pack(anchor="w", padx=10, pady=(5,0))
 
         self.cards_vencidas = ctk.CTkScrollableFrame(frame, fg_color="#FFEBEE")
         self.cards_vencidas.grid(row=1, column=2, sticky="nsew", padx=5, pady=5)
-        self.cards_vencidas.grid_propagate(False)
+        self.cards_vencidas.grid_propagate = False
         ctk.CTkLabel(self.cards_vencidas, text="❌ Vencidas/Canceladas", font=("Arial", 15, "bold"), text_color="#C62828").pack(anchor="w", padx=10, pady=(5,0))
 
         for sf in (self.cards_pendientes, self.cards_pagadas, self.cards_vencidas):
