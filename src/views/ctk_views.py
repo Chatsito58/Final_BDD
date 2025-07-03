@@ -2871,6 +2871,9 @@ class EmpleadoMantenimientoView(BaseCTKView):
         # Pestaña: Reportar
         self.tab_reportar = self.tabview.add("Reportar")
         self._build_tab_reportar(self.tabview.tab("Reportar"))
+        # Pestaña: Editar vehículo
+        self.tab_edit = self.tabview.add("Editar vehículo")
+        self._build_tab_editar_vehiculo(self.tabview.tab("Editar vehículo"))
         # Pestaña: Historial
         self.tab_historial = self.tabview.add("Historial")
         self._build_tab_historial(self.tabview.tab("Historial"))
@@ -2929,23 +2932,70 @@ class EmpleadoMantenimientoView(BaseCTKView):
         ctk.CTkLabel(frame, text="Placa del vehículo:").pack(pady=5)
         self.rep_placa = ctk.CTkEntry(frame, width=150)
         self.rep_placa.pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Tipo de mantenimiento:").pack(pady=5)
+        tipos = self.db_manager.execute_query(
+            "SELECT id_tipo, descripcion FROM Tipo_mantenimiento"
+        ) or []
+        self.rep_tipo_map = {t[1]: t[0] for t in tipos}
+        self.rep_tipo_var = ctk.StringVar(
+            value=list(self.rep_tipo_map.keys())[0] if self.rep_tipo_map else ""
+        )
+        self.rep_tipo = ctk.CTkOptionMenu(
+            frame, variable=self.rep_tipo_var, values=list(self.rep_tipo_map.keys())
+        )
+        self.rep_tipo.pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Taller:").pack(pady=5)
+        talleres = self.db_manager.execute_query(
+            "SELECT id_taller, nombre FROM Taller_mantenimiento"
+        ) or []
+        self.rep_taller_map = {t[1]: t[0] for t in talleres}
+        self.rep_taller_var = ctk.StringVar(
+            value=list(self.rep_taller_map.keys())[0] if self.rep_taller_map else ""
+        )
+        self.rep_taller = ctk.CTkOptionMenu(
+            frame, variable=self.rep_taller_var, values=list(self.rep_taller_map.keys())
+        )
+        self.rep_taller.pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Costo:").pack(pady=5)
+        self.rep_costo = ctk.CTkEntry(frame, width=150)
+        self.rep_costo.pack(pady=5)
+
         ctk.CTkLabel(frame, text="Descripción del mantenimiento:").pack(pady=5)
         self.rep_desc = ctk.CTkEntry(frame, width=300)
         self.rep_desc.pack(pady=5)
 
         def guardar():
+            from datetime import datetime
             placa = self.rep_placa.get().strip()
             desc = self.rep_desc.get().strip()
-            if not placa or not desc:
+            costo = self.rep_costo.get().strip()
+            if not placa or not desc or not costo:
                 messagebox.showwarning("Aviso", "Complete todos los campos")
                 return
-            placeholder = '%s' if not self.db_manager.offline else '?'
-            query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
             try:
-                self.db_manager.execute_query(query, (placa, desc), fetch=False)
+                costo_val = float(costo)
+            except ValueError:
+                messagebox.showwarning("Aviso", "Costo inválido")
+                return
+            tipo = self.rep_tipo_map.get(self.rep_tipo_var.get()) if self.rep_tipo_var.get() else None
+            taller = self.rep_taller_map.get(self.rep_taller_var.get()) if self.rep_taller_var.get() else None
+            fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            query = (
+                "INSERT INTO Mantenimiento_vehiculo "
+                f"(descripcion, fecha_hora, valor, id_tipo, id_taller, id_vehiculo) "
+                f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+            )
+            params = (desc, fecha, costo_val, tipo, taller, placa)
+            try:
+                self.db_manager.execute_query(query, params, fetch=False)
                 messagebox.showinfo("Éxito", "Reporte registrado")
                 self.rep_placa.delete(0, 'end')
                 self.rep_desc.delete(0, 'end')
+                self.rep_costo.delete(0, 'end')
             except Exception as exc:
                 messagebox.showerror("Error", str(exc))
 
@@ -2959,28 +3009,49 @@ class EmpleadoMantenimientoView(BaseCTKView):
 
         ctk.CTkLabel(frame, text="Historial vehículos", font=("Arial", 18, "bold")).pack(pady=10)
 
+        filter_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        filter_frame.pack(pady=(0,5))
+        ctk.CTkLabel(filter_frame, text="Filtrar por placa:").pack(side="left", padx=5)
+        placas = self.db_manager.execute_query(
+            "SELECT placa FROM Vehiculo WHERE id_sucursal = ?",
+            (self.user_data.get('id_sucursal'),)
+        ) or []
+        opciones = ["Todos"] + [p[0] for p in placas]
+        self.hist_placa_var = tk.StringVar(value="Todos")
+        tk.OptionMenu(filter_frame, self.hist_placa_var, *opciones).pack(side="left")
+
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
-        scrollbar.config(command=listbox.yview)
+        self.hist_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
+        scrollbar.config(command=self.hist_listbox.yview)
         scrollbar.pack(side="right", fill="y")
-        listbox.pack(side="left", fill="both", expand=True)
+        self.hist_listbox.pack(side="left", fill="both", expand=True)
 
-        placeholder = '%s' if not self.db_manager.offline else '?'
-        query = (
-            "SELECT m.placa, m.descripcion, m.fecha "
-            "FROM Mantenimiento m JOIN Vehiculo v ON m.placa = v.placa "
-            f"WHERE v.id_sucursal = {placeholder} ORDER BY m.fecha DESC"
-        )
-        filas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
-        if filas:
-            for f in filas:
-                placa, desc, fecha = f
-                listbox.insert('end', f"{fecha} | {placa} | {desc}")
-        else:
-            listbox.insert('end', "Sin registros de mantenimiento")
+        def cargar():
+            self.hist_listbox.delete(0, 'end')
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            base = (
+                "SELECT m.id_vehiculo, m.descripcion, m.fecha_hora, m.valor "
+                "FROM Mantenimiento_vehiculo m JOIN Vehiculo v ON m.id_vehiculo = v.placa "
+                f"WHERE v.id_sucursal = {placeholder}"
+            )
+            params = [self.user_data.get('id_sucursal')]
+            placa = self.hist_placa_var.get()
+            if placa != 'Todos':
+                base += f" AND m.id_vehiculo = {placeholder}"
+                params.append(placa)
+            base += " ORDER BY m.fecha_hora DESC"
+            rows = self.db_manager.execute_query(base, tuple(params))
+            if rows:
+                for p, d, fch, val in rows:
+                    self.hist_listbox.insert('end', f"{fch} | {p} | {d} | ${val:,.0f}")
+            else:
+                self.hist_listbox.insert('end', "Sin registros de mantenimiento")
+
+        tk.Button(filter_frame, text="Aplicar", command=cargar).pack(side="left", padx=5)
+        cargar()
 
     def _build_tab_predictivo(self, parent):
         import tkinter as tk
@@ -3113,6 +3184,80 @@ class EmpleadoMantenimientoView(BaseCTKView):
             self._cargar_predictivo_list()
         except Exception as exc:
             messagebox.showerror("Error", str(exc))
+
+    def _build_tab_editar_vehiculo(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Editar vehículo", font=("Arial", 18, "bold")).pack(pady=10)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=5)
+
+        ctk.CTkLabel(form, text="Placa:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        placas = self.db_manager.execute_query(
+            "SELECT placa FROM Vehiculo WHERE id_sucursal = ?",
+            (self.user_data.get('id_sucursal'),)
+        ) or []
+        self.edit_placa_var = tk.StringVar(value=placas[0][0] if placas else "")
+
+        ctk.CTkLabel(form, text="Color:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        colores = self.db_manager.execute_query(
+            "SELECT id_color, nombre_color FROM Color_vehiculo"
+        ) or []
+        self.edit_color_map = {c[1]: c[0] for c in colores}
+        self.edit_color_var = tk.StringVar(value=list(self.edit_color_map.keys())[0] if colores else "")
+        tk.OptionMenu(form, self.edit_color_var, *self.edit_color_map.keys()).grid(row=1, column=1, padx=5, pady=5)
+
+        ctk.CTkLabel(form, text="Kilometraje:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        self.edit_km = ctk.CTkEntry(form, width=150)
+        self.edit_km.grid(row=2, column=1, padx=5, pady=5)
+
+        def cargar():
+            placa = self.edit_placa_var.get()
+            if not placa:
+                return
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            row = self.db_manager.execute_query(
+                f"SELECT id_color, kilometraje FROM Vehiculo WHERE placa={placeholder}",
+                (placa,)
+            )
+            if row:
+                id_color, km = row[0]
+                nombre = next((k for k,v in self.edit_color_map.items() if v == id_color), "")
+                self.edit_color_var.set(nombre)
+                self.edit_km.delete(0, 'end'); self.edit_km.insert(0, str(km or ''))
+
+        tk.OptionMenu(form, self.edit_placa_var, *[p[0] for p in placas], command=lambda *_: cargar()).grid(row=0, column=1, padx=5, pady=5)
+
+        def guardar():
+            placa = self.edit_placa_var.get().strip()
+            if not placa:
+                messagebox.showwarning("Aviso", "Seleccione una placa")
+                return
+            color = self.edit_color_map.get(self.edit_color_var.get()) if self.edit_color_var.get() else None
+            km = self.edit_km.get().strip()
+            try:
+                km_val = int(km) if km else 0
+            except ValueError:
+                messagebox.showwarning("Aviso", "Kilometraje inválido")
+                return
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            query = f"UPDATE Vehiculo SET id_color={placeholder}, kilometraje={placeholder} WHERE placa={placeholder}"
+            try:
+                self.db_manager.execute_query(query, (color, km_val, placa), fetch=False)
+                messagebox.showinfo("Éxito", "Vehículo actualizado")
+            except Exception as exc:
+                messagebox.showerror("Error", str(exc))
+
+        btn_frame = ctk.CTkFrame(frame)
+        btn_frame.pack(pady=10)
+        ctk.CTkButton(btn_frame, text="Guardar cambios", command=guardar, fg_color="#3A86FF", hover_color="#265DAB").pack()
+
+        cargar()
 
 class GerenteView(BaseCTKView):
     """Vista CTk para gerentes con gestión de empleados y reportes."""
