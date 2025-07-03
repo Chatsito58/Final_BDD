@@ -6,11 +6,58 @@ from src.services.roles import (
     puede_gestionar_gerentes,
     verificar_permiso_creacion_empleado,
     cargos_permitidos_para_gerente,
-    puede_ejecutar_sql_libre
+    puede_ejecutar_sql_libre,
 )
 from ..styles import BG_DARK, TEXT_COLOR, PRIMARY_COLOR, PRIMARY_COLOR_DARK
 
 logger = logging.getLogger(__name__)
+
+
+class SimpleList(ctk.CTkScrollableFrame):
+    """A very small replacement for Tkinter Listbox using CTkScrollableFrame."""
+
+    def __init__(self, master, width=200, height=200):
+        super().__init__(master, width=width, height=height)
+        self._items: list[ctk.CTkButton] = []
+        self._command = None
+        self._selected_index = None
+
+    def delete(self, start, end=None):
+        for widget in self._items:
+            widget.destroy()
+        self._items.clear()
+        self._selected_index = None
+
+    def insert(self, pos, text):
+        index = len(self._items)
+        btn = ctk.CTkButton(self, text=text, width=self.cget("width"),
+                            command=lambda i=index: self._on_select(i))
+        btn.pack(fill="x", padx=2, pady=1)
+        self._items.append(btn)
+
+    def bind(self, event, callback):
+        if event == "<<ListboxSelect>>":
+            self._command = callback
+
+    def _on_select(self, index):
+        self._selected_index = index
+        if self._command:
+            self._command(None)
+
+    def curselection(self):
+        return () if self._selected_index is None else (self._selected_index,)
+
+    def get(self, index):
+        if 0 <= index < len(self._items):
+            return self._items[index].cget("text")
+        return ""
+
+    def size(self):
+        return len(self._items)
+
+    def itemconfig(self, index, **kwargs):
+        if 0 <= index < len(self._items):
+            self._items[index].configure(**kwargs)
 
 class BaseCTKView(ctk.CTk):
     def __init__(self, user_data, db_manager, on_logout=None):
@@ -960,7 +1007,6 @@ class EmpleadoVentasView(BaseCTKView):
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
 
     def _build_tab_clientes(self, parent):
-        import tkinter as tk
         from tkinter import messagebox
 
         self._cliente_sel = None
@@ -973,11 +1019,8 @@ class EmpleadoVentasView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_clientes = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_clientes.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_clientes.pack(side="left", fill="both", expand=True)
+        self.lb_clientes = SimpleList(list_frame, width=560)
+        self.lb_clientes.pack(fill="both", expand=True)
 
         form = ctk.CTkFrame(frame)
         form.pack(pady=10)
@@ -1015,7 +1058,6 @@ class EmpleadoVentasView(BaseCTKView):
         self._refresh_clientes = refresh
 
     def _build_tab_reservas(self, parent):
-        import tkinter as tk
         from tkinter import messagebox
         from tkcalendar import DateEntry
 
@@ -1031,11 +1073,8 @@ class EmpleadoVentasView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_reservas = tk.Listbox(list_frame, height=10, width=80, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_reservas.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_reservas.pack(side="left", fill="both", expand=True)
+        self.lb_reservas = SimpleList(list_frame, width=560)
+        self.lb_reservas.pack(fill="both", expand=True)
 
         btns = ctk.CTkFrame(frame)
         btns.pack(pady=5)
@@ -1521,7 +1560,6 @@ class EmpleadoCajaView(BaseCTKView):
         self._cargar_reservas_pendientes_global()
 
     def _build_tab_reservas(self, parent):
-        import tkinter as tk
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
@@ -1531,8 +1569,8 @@ class EmpleadoCajaView(BaseCTKView):
             "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler"
         )
         reservas = self.db_manager.execute_query(query)
-        listbox = tk.Listbox(frame, height=18, width=180)
-        listbox.pack(pady=10)
+        listbox = SimpleList(frame, width=560)
+        listbox.pack(pady=10, fill="both", expand=True)
         if reservas:
             for r in reservas:
                 listbox.insert('end', f"ID: {r[0]} | Cliente: {r[1]} | Vehículo: {r[2]}")
@@ -1540,7 +1578,6 @@ class EmpleadoCajaView(BaseCTKView):
             listbox.insert('end', "No hay reservas registradas.")
 
     def _build_tab_clientes(self, parent):
-        import tkinter as tk
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
         ctk.CTkLabel(frame, text="Clientes", font=("Arial", 16)).pack(pady=10)
@@ -1548,8 +1585,8 @@ class EmpleadoCajaView(BaseCTKView):
         placeholder = '%s' if not self.db_manager.offline else '?'
         query = f"SELECT id_cliente, nombre, correo FROM Cliente WHERE id_sucursal = {placeholder}"
         clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
-        listbox = tk.Listbox(frame, height=10, width=60)
-        listbox.pack(pady=10)
+        listbox = SimpleList(frame, width=560)
+        listbox.pack(pady=10, fill="both", expand=True)
         if clientes:
             for c in clientes:
                 listbox.insert('end', f"ID: {c[0]} | Nombre: {c[1]} | Correo: {c[2]}")
@@ -1733,7 +1770,6 @@ class EmpleadoMantenimientoView(BaseCTKView):
         ctk.CTkButton(frame, text="Registrar", command=guardar, fg_color="#3A86FF", hover_color="#265DAB").pack(pady=10)
 
     def _build_tab_historial(self, parent):
-        import tkinter as tk
 
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
@@ -1743,11 +1779,8 @@ class EmpleadoMantenimientoView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
-        scrollbar.config(command=listbox.yview)
-        scrollbar.pack(side="right", fill="y")
-        listbox.pack(side="left", fill="both", expand=True)
+        listbox = SimpleList(list_frame, width=560)
+        listbox.pack(fill="both", expand=True)
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
@@ -1788,11 +1821,8 @@ class EmpleadoMantenimientoView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.predictivo_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, width=80)
-        scrollbar.config(command=self.predictivo_listbox.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.predictivo_listbox.pack(side="left", fill="both", expand=True)
+        self.predictivo_listbox = SimpleList(list_frame, width=560)
+        self.predictivo_listbox.pack(fill="both", expand=True)
 
         btn_frame = ctk.CTkFrame(frame, fg_color="transparent")
         btn_frame.pack(pady=8)
@@ -1804,7 +1834,6 @@ class EmpleadoMantenimientoView(BaseCTKView):
         self._cargar_predictivo_list()
 
     def _cargar_predictivo_list(self):
-        import tkinter as tk
         from datetime import datetime, timedelta
 
         self.predictivo_listbox.delete(0, 'end')
@@ -1939,7 +1968,6 @@ class GerenteView(BaseCTKView):
             self._build_tab_sql_libre(self.tabview.tab("SQL Libre"))
 
     def _build_tab_empleados(self, parent):
-        import tkinter as tk
         from tkinter import messagebox
 
         self._emp_sel = None
@@ -1951,11 +1979,8 @@ class GerenteView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_emp = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_emp.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_emp.pack(side="left", fill="both", expand=True)
+        self.lb_emp = SimpleList(list_frame, width=560)
+        self.lb_emp.pack(fill="both", expand=True)
 
         form = ctk.CTkFrame(frame)
         form.pack(pady=10)
@@ -2222,7 +2247,6 @@ class GerenteView(BaseCTKView):
             messagebox.showerror("Error", str(exc))
 
     def _build_tab_clientes(self, parent):
-        import tkinter as tk
         from tkinter import messagebox
 
         self._cliente_sel = None
@@ -2235,11 +2259,8 @@ class GerenteView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_cli.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_cli.pack(side="left", fill="both", expand=True)
+        self.lb_cli = SimpleList(list_frame, width=560)
+        self.lb_cli.pack(fill="both", expand=True)
 
         form = ctk.CTkFrame(frame)
         form.pack(pady=10)
@@ -2491,7 +2512,6 @@ class AdminView(BaseCTKView):
             self._build_tab_sql_libre(self.tabview.tab("SQL Libre"))
 
     def _build_tab_personal(self, parent):
-        import tkinter as tk
 
         self._emp_sel = None
         frame = ctk.CTkFrame(parent)
@@ -2502,11 +2522,8 @@ class AdminView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_staff = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_staff.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_staff.pack(side="left", fill="both", expand=True)
+        self.lb_staff = SimpleList(list_frame, width=560)
+        self.lb_staff.pack(fill="both", expand=True)
 
         form = ctk.CTkFrame(frame)
         form.pack(pady=10)
@@ -2663,7 +2680,6 @@ class AdminView(BaseCTKView):
             messagebox.showerror("Error", str(exc))
 
     def _build_tab_clientes(self, parent):
-        import tkinter as tk
         from tkinter import messagebox
 
         self._cliente_sel = None
@@ -2676,11 +2692,8 @@ class AdminView(BaseCTKView):
         list_frame = ctk.CTkFrame(frame, fg_color="#E3F2FD")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
-        self.lb_cli = tk.Listbox(list_frame, height=8, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lb_cli.yview)
-        scrollbar.pack(side="right", fill="y")
-        self.lb_cli.pack(side="left", fill="both", expand=True)
+        self.lb_cli = SimpleList(list_frame, width=560)
+        self.lb_cli.pack(fill="both", expand=True)
 
         form = ctk.CTkFrame(frame)
         form.pack(pady=10)
