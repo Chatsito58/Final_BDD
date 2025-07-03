@@ -972,9 +972,6 @@ class ClienteView(BaseCTKView):
             else:
                 messagebox.showinfo("Abono procesado", f"Abono de ${monto:,.0f} procesado exitosamente con {metodo}.")
             
-            # Recargar las listas de reservas y abonos
-            self.recargar_listas()
-            
             # Limpiar campos y HABILITAR para nuevo abono
             self.input_abono.delete(0, 'end')
             self._abono_seleccionado = None
@@ -982,6 +979,9 @@ class ClienteView(BaseCTKView):
             self.input_abono.configure(state="normal")
             self.metodo_pago_menu.configure(state="normal")
             self.btn_abonar.configure(state="normal")
+
+            # Recargar las listas de reservas y abonos
+            self.recargar_listas()
             
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar el abono: {exc}")
