@@ -163,24 +163,30 @@ class ClienteView(BaseCTKView):
         import tkinter as tk
         from tkinter import messagebox
         id_cliente = self.user_data.get('id_cliente')
-        # Frame principal centrado
+        # Contenedor principal con tres columnas
         frame = ctk.CTkFrame(parent)
-        frame.pack(expand=True, fill="both")
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-        inner = ctk.CTkFrame(frame)
-        inner.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(inner, text="Mis reservas", font=("Arial", 20, "bold")).pack(pady=10)
-        # Contenedores para cada estado
-        self.cards_pendientes = ctk.CTkFrame(inner, fg_color="#FFF8E1")  # Amarillo pastel
-        self.cards_pendientes.pack(pady=8, fill="x")
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        for i in range(3):
+            frame.grid_columnconfigure(i, weight=1)
+        frame.grid_rowconfigure(1, weight=1)
+
+        ctk.CTkLabel(frame, text="Mis reservas", font=("Arial", 20, "bold")).grid(row=0, column=0, columnspan=3, pady=(0,10))
+
+        # Contenedores por estado con scroll
+        self.cards_pendientes = ctk.CTkScrollableFrame(frame, fg_color="#FFF8E1")
+        self.cards_pendientes.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
         ctk.CTkLabel(self.cards_pendientes, text="⏳ Pendientes", font=("Arial", 15, "bold"), text_color="#B8860B").pack(anchor="w", padx=10, pady=(5,0))
-        self.cards_pagadas = ctk.CTkFrame(inner, fg_color="#E8F5E9")  # Verde pastel
-        self.cards_pagadas.pack(pady=8, fill="x")
+
+        self.cards_pagadas = ctk.CTkScrollableFrame(frame, fg_color="#E8F5E9")
+        self.cards_pagadas.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
         ctk.CTkLabel(self.cards_pagadas, text="✅ Pagadas", font=("Arial", 15, "bold"), text_color="#388E3C").pack(anchor="w", padx=10, pady=(5,0))
-        self.cards_vencidas = ctk.CTkFrame(inner, fg_color="#FFEBEE")  # Rojo pastel
-        self.cards_vencidas.pack(pady=8, fill="x")
+
+        self.cards_vencidas = ctk.CTkScrollableFrame(frame, fg_color="#FFEBEE")
+        self.cards_vencidas.grid(row=1, column=2, sticky="nsew", padx=5, pady=5)
         ctk.CTkLabel(self.cards_vencidas, text="❌ Vencidas/Canceladas", font=("Arial", 15, "bold"), text_color="#C62828").pack(anchor="w", padx=10, pady=(5,0))
+
+        for sf in (self.cards_pendientes, self.cards_pagadas, self.cards_vencidas):
+            sf.grid_columnconfigure(0, weight=1)
         self._cargar_reservas_cliente(id_cliente)
 
     def _cargar_reservas_cliente(self, id_cliente):
@@ -247,8 +253,9 @@ class ClienteView(BaseCTKView):
                 badge_color = "#E0E0E0"
                 text_color = "#616161"
             # Tarjeta visual
-            card = ctk.CTkFrame(card_parent, fg_color="white", corner_radius=12)
+            card = ctk.CTkFrame(card_parent, fg_color="white", corner_radius=12, height=160)
             card.pack(fill="x", padx=10, pady=6)
+            card.pack_propagate(False)
             # Encabezado
             header = ctk.CTkFrame(card, fg_color="white")
             header.pack(fill="x", pady=(0,2))
