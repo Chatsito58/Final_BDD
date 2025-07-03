@@ -192,6 +192,12 @@ class ClienteView(BaseCTKView):
             sf.grid_columnconfigure(0, weight=1, uniform="cols")
         self._cargar_reservas_cliente(id_cliente)
 
+    def recargar_listas(self):
+        """Vuelve a cargar las reservas y los abonos pendientes del cliente."""
+        id_cliente = self.user_data.get("id_cliente")
+        self._cargar_reservas_cliente(id_cliente)
+        self._cargar_reservas_pendientes(id_cliente)
+
     def _cargar_reservas_cliente(self, id_cliente):
         # Consulta todas las reservas del cliente, sin importar el estado
         query = '''
@@ -299,7 +305,7 @@ class ClienteView(BaseCTKView):
         try:
             self.db_manager.execute_query(query, (id_reserva,), fetch=False)
             messagebox.showinfo("Éxito", "Reserva cancelada")
-            self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+            self.recargar_listas()
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo cancelar la reserva: {exc}")
 
@@ -521,7 +527,7 @@ class ClienteView(BaseCTKView):
                 # Usar el método _actualizar_reserva que ya incluye validación de abonos
                 if self._actualizar_reserva(id_reserva, nueva_salida, nueva_entrada, id_vehiculo, id_seguro, id_descuento):
                     win.destroy()
-                    self._cargar_reservas_cliente(self.user_data.get('id_cliente'))
+                    self.recargar_listas()
                 
             except ValueError:
                 messagebox.showerror("Error", "Formato de fecha inválido. Use YYYY-MM-DD HH:MM")
@@ -966,8 +972,8 @@ class ClienteView(BaseCTKView):
             else:
                 messagebox.showinfo("Abono procesado", f"Abono de ${monto:,.0f} procesado exitosamente con {metodo}.")
             
-            # Recargar la lista de reservas
-            self._cargar_reservas_pendientes(self.user_data.get('id_cliente'))
+            # Recargar las listas de reservas y abonos
+            self.recargar_listas()
             
             # Limpiar campos y HABILITAR para nuevo abono
             self.input_abono.delete(0, 'end')
