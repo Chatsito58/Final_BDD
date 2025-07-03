@@ -1097,8 +1097,10 @@ class ClienteView(BaseCTKView):
         ctk.CTkLabel(info_frame, text="• El primer abono debe ser al menos el 30% del valor total", font=("Arial", 11)).pack(pady=2)
         ctk.CTkLabel(info_frame, text="• Los siguientes abonos pueden ser de cualquier valor", font=("Arial", 11)).pack(pady=2)
         ctk.CTkLabel(info_frame, text="• Seleccione una reserva y complete los campos para abonar", font=("Arial", 11)).pack(pady=2)
-        # Contenedor de tarjetas de reservas pendientes
-        self.cards_abonos = ctk.CTkFrame(frame, fg_color="#FFF8E1")  # Amarillo pastel
+        # Contenedor de tarjetas de reservas pendientes con scroll vertical
+        self.cards_abonos = ctk.CTkScrollableFrame(
+            frame, fg_color="#FFF8E1", height=300, orientation="vertical"
+        )  # Amarillo pastel
         self.cards_abonos.pack(fill="both", expand=True, padx=10, pady=10)
         # Frame para entrada de monto y método de pago
         input_frame = ctk.CTkFrame(frame)
