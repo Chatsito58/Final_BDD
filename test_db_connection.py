@@ -5,9 +5,14 @@ Script de prueba para verificar la conexión a la base de datos y el esquema act
 
 import sys
 import os
+import types
 
 # Agregar el directorio src al path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+# Crear stub de dotenv si la librería no está instalada
+if 'dotenv' not in sys.modules:
+    sys.modules['dotenv'] = types.SimpleNamespace(load_dotenv=lambda *a, **k: None)
 
 from src.db_manager import DBManager
 from src.auth import AuthManager
@@ -104,13 +109,13 @@ def test_database_connection():
             print("⚠️  No hay usuarios para probar autenticación")
         
         print("\n=== PRUEBA COMPLETADA ===")
-        return True
+        assert True
         
     except Exception as e:
         print(f"❌ Error general: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False
 
 def test_schema_compatibility():
     """Prueba la compatibilidad del esquema con las consultas principales."""
@@ -162,12 +167,12 @@ def test_schema_compatibility():
                     print(f"❌ {consulta['nombre']}: Error en la consulta")
             except Exception as e:
                 print(f"❌ {consulta['nombre']}: {e}")
-        
-        return True
+
+        assert True
         
     except Exception as e:
         print(f"❌ Error en prueba de compatibilidad: {e}")
-        return False
+        assert False
 
 if __name__ == "__main__":
     print("Iniciando pruebas de base de datos...")
