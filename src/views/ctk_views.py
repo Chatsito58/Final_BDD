@@ -177,12 +177,20 @@ class ClienteView(BaseCTKView):
 
         self.cards_pendientes = ctk.CTkFrame(inner, fg_color="#FFF8E1")  # Amarillo pastel
         self.cards_pendientes.grid(row=1, column=0, sticky="nsew", padx=5, pady=8)
+        self.cards_pendientes.grid_propagate()
+        self.cards_pendientes.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_pendientes, text="⏳ Pendientes", font=("Arial", 15, "bold"), text_color="#B8860B").pack(anchor="w", padx=10, pady=(5,0))
+
         self.cards_pagadas = ctk.CTkFrame(inner, fg_color="#E8F5E9")  # Verde pastel
         self.cards_pagadas.grid(row=1, column=1, sticky="nsew", padx=5, pady=8)
+        self.cards_pagadas.grid_propagate()
+        self.cards_pagadas.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_pagadas, text="✅ Pagadas", font=("Arial", 15, "bold"), text_color="#388E3C").pack(anchor="w", padx=10, pady=(5,0))
+
         self.cards_vencidas = ctk.CTkFrame(inner, fg_color="#FFEBEE")  # Rojo pastel
         self.cards_vencidas.grid(row=1, column=2, sticky="nsew", padx=5, pady=8)
+        self.cards_vencidas.grid_propagate()
+        self.cards_vencidas.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_vencidas, text="❌ Vencidas/Canceladas", font=("Arial", 15, "bold"), text_color="#C62828").pack(anchor="w", padx=10, pady=(5,0))
         self._cargar_reservas_cliente(id_cliente)
 
