@@ -170,27 +170,19 @@ class ClienteView(BaseCTKView):
         frame.grid_columnconfigure(0, weight=1)
         inner = ctk.CTkFrame(frame)
         inner.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(inner, text="Mis reservas", font=("Arial", 20, "bold")).pack(pady=10)
-        # Contenedores para cada estado
-        # Configurar distribución en tres columnas para cada estado
+        # Usar grid para todo en inner
         inner.grid_columnconfigure((0, 1, 2), weight=1)
-
-        self.cards_pendientes = ctk.CTkFrame(inner, fg_color="#FFF8E1")  # Amarillo pastel
+        # Título usando grid
+        ctk.CTkLabel(inner, text="Mis reservas", font=("Arial", 20, "bold")).grid(row=0, column=0, columnspan=3, pady=10)
+        # Contenedores por estado
+        self.cards_pendientes = ctk.CTkFrame(inner, fg_color="#FFF8E1")
         self.cards_pendientes.grid(row=1, column=0, sticky="nsew", padx=5, pady=8)
-        self.cards_pendientes.grid_propagate()
-        self.cards_pendientes.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_pendientes, text="⏳ Pendientes", font=("Arial", 15, "bold"), text_color="#B8860B").pack(anchor="w", padx=10, pady=(5,0))
-
-        self.cards_pagadas = ctk.CTkFrame(inner, fg_color="#E8F5E9")  # Verde pastel
+        self.cards_pagadas = ctk.CTkFrame(inner, fg_color="#E8F5E9")
         self.cards_pagadas.grid(row=1, column=1, sticky="nsew", padx=5, pady=8)
-        self.cards_pagadas.grid_propagate()
-        self.cards_pagadas.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_pagadas, text="✅ Pagadas", font=("Arial", 15, "bold"), text_color="#388E3C").pack(anchor="w", padx=10, pady=(5,0))
-
-        self.cards_vencidas = ctk.CTkFrame(inner, fg_color="#FFEBEE")  # Rojo pastel
+        self.cards_vencidas = ctk.CTkFrame(inner, fg_color="#FFEBEE")
         self.cards_vencidas.grid(row=1, column=2, sticky="nsew", padx=5, pady=8)
-        self.cards_vencidas.grid_propagate()
-        self.cards_vencidas.configure(grid_propagate=False)
         ctk.CTkLabel(self.cards_vencidas, text="❌ Vencidas/Canceladas", font=("Arial", 15, "bold"), text_color="#C62828").pack(anchor="w", padx=10, pady=(5,0))
         self._cargar_reservas_cliente(id_cliente)
 
