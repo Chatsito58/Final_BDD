@@ -35,6 +35,7 @@ class ReservaView(QtWidgets.QWidget):
 
     def load_vehicles(self):
         """Load available vehicles into the combo box."""
+        conn = None
         try:
             conn = self.db_manager.connect()
             cursor = conn.cursor()
@@ -46,9 +47,13 @@ class ReservaView(QtWidgets.QWidget):
             cursor.close()
         except Error as exc:
             QtWidgets.QMessageBox.critical(self, 'Error', f'Error al cargar veh\u00edculos: {exc}')
+        finally:
+            if conn is not None:
+                conn.close()
 
     def load_reservations(self):
         """Populate the table with reservations for the current client."""
+        conn = None
         try:
             conn = self.db_manager.connect()
             cursor = conn.cursor()
@@ -71,6 +76,9 @@ class ReservaView(QtWidgets.QWidget):
                     self.table.setItem(row_idx, col_idx, item)
         except Error as exc:
             QtWidgets.QMessageBox.critical(self, 'Error', f'Error al cargar reservas: {exc}')
+        finally:
+            if conn is not None:
+                conn.close()
 
     def create_reservation(self):
         """Insert a new reservation in the database."""
@@ -110,6 +118,7 @@ class ReservaView(QtWidgets.QWidget):
         if row == -1:
             return
         reserva_id = self.table.item(row, 0).text()
+        conn = None
         try:
             conn = self.db_manager.connect()
             cursor = conn.cursor()
@@ -121,6 +130,10 @@ class ReservaView(QtWidgets.QWidget):
             cursor.close()
             self.load_reservations()
         except Error as exc:
-            if conn.is_connected():
+            if conn is not None and conn.is_connected():
                 conn.rollback()
             QtWidgets.QMessageBox.critical(self, 'Error', f'Error al cancelar reserva: {exc}')
+
+        finally:
+            if conn is not None:
+                conn.close()
