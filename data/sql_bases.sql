@@ -370,7 +370,7 @@ CREATE TABLE Rol (
 -- Tabla de usuarios
 CREATE TABLE Usuario (
   id_usuario INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario VARCHAR(100) NOT NULL,
+  usuario VARCHAR(100) NOT NULL UNIQUE,
   contrasena VARCHAR(255) NOT NULL,
   id_rol INT UNSIGNED,
   id_cliente INT UNSIGNED,
