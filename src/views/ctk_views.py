@@ -646,10 +646,15 @@ class ClienteView(BaseCTKView):
             btn_frame = ctk.CTkFrame(card, fg_color="transparent")
             btn_frame.pack(fill="x", padx=10, pady=(5, 10))
             
-            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
-                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
-                         fg_color="#4CAF50", hover_color="#388E3C", 
-                         font=("Arial", 12, "bold")).pack(pady=5)
+            vehiculo_info = (placa, modelo, marca, tipo_vehiculo, tarifa_dia)
+            ctk.CTkButton(
+                btn_frame,
+                text="🚗 Reservar este vehículo",
+                command=lambda v=vehiculo_info: self._abrir_nueva_reserva_vehiculo(v),
+                fg_color="#4CAF50",
+                hover_color="#388E3C",
+                font=("Arial", 12, "bold"),
+            ).pack(pady=5)
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -1684,10 +1689,15 @@ class ClienteView(BaseCTKView):
             btn_frame = ctk.CTkFrame(card, fg_color="transparent")
             btn_frame.pack(fill="x", padx=10, pady=(5, 10))
             
-            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
-                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
-                         fg_color="#4CAF50", hover_color="#388E3C", 
-                         font=("Arial", 12, "bold")).pack(pady=5)
+            vehiculo_info = (placa, modelo, marca, tipo_vehiculo, tarifa_dia)
+            ctk.CTkButton(
+                btn_frame,
+                text="🚗 Reservar este vehículo",
+                command=lambda v=vehiculo_info: self._abrir_nueva_reserva_vehiculo(v),
+                fg_color="#4CAF50",
+                hover_color="#388E3C",
+                font=("Arial", 12, "bold"),
+            ).pack(pady=5)
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -2419,10 +2429,15 @@ class EmpleadoVentasView(BaseCTKView):
             btn_frame = ctk.CTkFrame(card, fg_color="transparent")
             btn_frame.pack(fill="x", padx=10, pady=(5, 10))
             
-            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
-                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
-                         fg_color="#4CAF50", hover_color="#388E3C", 
-                         font=("Arial", 12, "bold")).pack(pady=5)
+            vehiculo_info = (placa, modelo, marca, tipo_vehiculo, tarifa_dia)
+            ctk.CTkButton(
+                btn_frame,
+                text="🚗 Reservar este vehículo",
+                command=lambda v=vehiculo_info: self._abrir_nueva_reserva_vehiculo(v),
+                fg_color="#4CAF50",
+                hover_color="#388E3C",
+                font=("Arial", 12, "bold"),
+            ).pack(pady=5)
         
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
