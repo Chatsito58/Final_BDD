@@ -198,6 +198,30 @@ class ClienteView(BaseCTKView):
         self._cargar_reservas_cliente(id_cliente)
         self._cargar_reservas_pendientes(id_cliente)
 
+    def animar_transicion(self, card, destino):
+        """Mueve la tarjeta al destino cambiando su color gradualmente."""
+        start_rgb = (255, 245, 157)  # amarillo claro
+        end_rgb = (255, 255, 255)
+        steps = 15
+
+        def rgb_to_hex(rgb):
+            return "#%02x%02x%02x" % rgb
+
+        def step(i=0):
+            if i == 0:
+                card.pack_forget()
+                card.pack(in_=destino, fill="x", padx=10, pady=6)
+            if i > steps:
+                card.configure(fg_color=rgb_to_hex(end_rgb))
+                return
+            r = int(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * i / steps)
+            g = int(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * i / steps)
+            b = int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * i / steps)
+            card.configure(fg_color=rgb_to_hex((r, g, b)))
+            card.after(30, lambda: step(i + 1))
+
+        step()
+
     def _cargar_reservas_cliente(self, id_cliente):
         # Consulta todas las reservas del cliente, sin importar el estado
         query = '''
@@ -214,6 +238,7 @@ class ClienteView(BaseCTKView):
         params = (id_cliente,)
         reservas = self.db_manager.execute_query(query, params)
         # Limpiar frames
+        self._reserva_cards = {}
         for frame in [self.cards_pendientes, self.cards_pagadas, self.cards_vencidas]:
             for widget in frame.winfo_children():
                 if isinstance(widget, ctk.CTkFrame):
@@ -265,6 +290,7 @@ class ClienteView(BaseCTKView):
             card = ctk.CTkFrame(card_parent, fg_color="white", corner_radius=12, height=160)
             card.pack(fill="x", padx=10, pady=6)
             card.pack_propagate(False)
+            self._reserva_cards[id_reserva] = card
             # Encabezado
             header = ctk.CTkFrame(card, fg_color="white")
             header.pack(fill="x", pady=(0,2))
@@ -290,10 +316,14 @@ class ClienteView(BaseCTKView):
             if "pendiente" in estado_str.lower():
                 btns = ctk.CTkFrame(card, fg_color="white")
                 btns.pack(fill="x", pady=4)
-                ctk.CTkButton(btns, text="Cancelar reserva", command=lambda rid=id_reserva: self._cancelar_reserva_card(rid)).pack(side="left", padx=8)
+                ctk.CTkButton(
+                    btns,
+                    text="Cancelar reserva",
+                    command=lambda rid=id_reserva, c=card: self._cancelar_reserva_card(rid, c),
+                ).pack(side="left", padx=8)
                 ctk.CTkButton(btns, text="Editar fechas", command=lambda rid=id_reserva: self._editar_reserva_card(rid)).pack(side="left", padx=8)
 
-    def _cancelar_reserva_card(self, id_reserva):
+    def _cancelar_reserva_card(self, id_reserva, card=None):
         from tkinter import messagebox
         placeholder = '%s' if not self.db_manager.offline else '?'
         estado_query = f"SELECT id_estado_reserva FROM Reserva_alquiler WHERE id_reserva = {placeholder}"
@@ -305,7 +335,11 @@ class ClienteView(BaseCTKView):
         try:
             self.db_manager.execute_query(query, (id_reserva,), fetch=False)
             messagebox.showinfo("Éxito", "Reserva cancelada")
-            self.recargar_listas()
+            if card:
+                self.animar_transicion(card, self.cards_vencidas)
+                self.after(500, self.recargar_listas)
+            else:
+                self.recargar_listas()
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo cancelar la reserva: {exc}")
 
@@ -946,6 +980,7 @@ class ClienteView(BaseCTKView):
             
             # Calcular nuevo saldo pendiente
             nuevo_saldo_pendiente = max(0, valor_total - total_abonado)
+            card = None
             
             # Actualizar saldo pendiente en la reserva
             update_query = f"""
@@ -959,12 +994,18 @@ class ClienteView(BaseCTKView):
             if nuevo_saldo_pendiente <= 0:
                 # Cambiar estado a pagada
                 estado_query = f"""
-                    UPDATE Reserva_alquiler 
-                    SET id_estado_reserva = 2 
+                    UPDATE Reserva_alquiler
+                    SET id_estado_reserva = 2
                     WHERE id_reserva = {placeholder}
                 """
                 self.db_manager.execute_query(estado_query, (id_reserva,), fetch=False)
                 messagebox.showinfo("¡Reserva pagada!", "¡Felicidades! Tu reserva ha sido completamente pagada.")
+                card = self._reserva_cards.get(id_reserva)
+                if card:
+                    self.animar_transicion(card, self.cards_pagadas)
+                    self.after(500, self.recargar_listas)
+                else:
+                    self.recargar_listas()
             
             # Mostrar mensaje de éxito
             if metodo == "Efectivo":
@@ -980,8 +1021,9 @@ class ClienteView(BaseCTKView):
             self.metodo_pago_menu.configure(state="normal")
             self.btn_abonar.configure(state="normal")
 
-            # Recargar las listas de reservas y abonos
-            self.recargar_listas()
+            # Recargar las listas de reservas y abonos si no se programó por animación
+            if nuevo_saldo_pendiente > 0 or card is None:
+                self.recargar_listas()
             
         except Exception as exc:
             messagebox.showerror("Error", f"No se pudo registrar el abono: {exc}")
