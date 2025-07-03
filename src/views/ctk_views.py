@@ -3554,6 +3554,32 @@ class GerenteView(BaseCTKView):
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         try:
+            # Eliminar de forma manual los registros dependientes para imitar
+            # un comportamiento ON DELETE CASCADE en ambas bases de datos
+            self.db_manager.execute_query(
+                f"DELETE FROM Abono_reserva WHERE id_reserva IN ("
+                f"SELECT ra.id_reserva FROM Reserva_alquiler ra "
+                f"JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+                f"WHERE a.id_cliente = {placeholder})",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Reserva_alquiler WHERE id_alquiler IN ("
+                f"SELECT id_alquiler FROM Alquiler WHERE id_cliente = {placeholder})",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Alquiler WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Usuario WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
             self.db_manager.execute_query(
                 f"DELETE FROM Cliente WHERE id_cliente = {placeholder}",
                 (self._cliente_sel,),
@@ -3849,6 +3875,29 @@ class AdminView(BaseCTKView):
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         try:
+            # Eliminar reservas, alquileres y abonos ligados al empleado para
+            # replicar un borrado en cascada multiplataforma
+            self.db_manager.execute_query(
+                f"DELETE FROM Abono_reserva WHERE id_reserva IN ("
+                f"SELECT id_reserva FROM Reserva_alquiler WHERE id_empleado = {placeholder})",
+                (self._emp_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Reserva_alquiler WHERE id_empleado = {placeholder}",
+                (self._emp_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Alquiler WHERE id_empleado = {placeholder}",
+                (self._emp_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Usuario WHERE id_empleado = {placeholder}",
+                (self._emp_sel,),
+                fetch=False,
+            )
             self.db_manager.execute_query(
                 f"DELETE FROM Empleado WHERE id_empleado = {placeholder}",
                 (self._emp_sel,),
@@ -3986,6 +4035,32 @@ class AdminView(BaseCTKView):
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         try:
+            # Borrado manual de pagos, reservas y alquileres asociados para
+            # simular la eliminación en cascada en MySQL y SQLite
+            self.db_manager.execute_query(
+                f"DELETE FROM Abono_reserva WHERE id_reserva IN ("
+                f"SELECT ra.id_reserva FROM Reserva_alquiler ra "
+                f"JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+                f"WHERE a.id_cliente = {placeholder})",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Reserva_alquiler WHERE id_alquiler IN ("
+                f"SELECT id_alquiler FROM Alquiler WHERE id_cliente = {placeholder})",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Alquiler WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
+            self.db_manager.execute_query(
+                f"DELETE FROM Usuario WHERE id_cliente = {placeholder}",
+                (self._cliente_sel,),
+                fetch=False,
+            )
             self.db_manager.execute_query(
                 f"DELETE FROM Cliente WHERE id_cliente = {placeholder}",
                 (self._cliente_sel,),
