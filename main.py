@@ -27,20 +27,17 @@ try:
         'port': os.getenv('DB_REMOTE_PORT'),
         'connection_timeout': 10,
     }
-    print("[TEST-CONN-MAIN] Intentando conectar antes de importar PyQt5...")
+    logger.info("[TEST-CONN-MAIN] Intentando conectar antes de importar PyQt5...")
     conn = mysql.connector.connect(**config)
-    print("[TEST-CONN-MAIN] Conexión directa exitosa!")
     cursor = conn.cursor()
     cursor.execute("SELECT 1")
     result = cursor.fetchone()
-    print(f"[TEST-CONN-MAIN] Resultado SELECT 1: {result}")
+    logger.info(f"[TEST-CONN-MAIN] Resultado SELECT 1: {result}")
     cursor.close()
     conn.close()
-    print("[TEST-CONN-MAIN] Conexión cerrada correctamente.")
+    logger.info("[TEST-CONN-MAIN] Conexión directa exitosa y cerrada.")
 except Exception as e:
-    print(f"[TEST-CONN-MAIN] Error de conexión directa: {e}")
-    logger.error(f"[TEST-CONN-MAIN] Error de conexión directa: {e}")
-    sys.exit(1)
+    logger.warning(f"[TEST-CONN-MAIN] Error de conexión directa: {e}. Continuando en modo offline...")
 
 # --- IMPORTS PyQt5 y módulos dependientes ---
 from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
