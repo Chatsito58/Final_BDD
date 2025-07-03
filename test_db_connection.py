@@ -189,4 +189,4 @@ if __name__ == "__main__":
         print("Revisa los errores anteriores y corrige los problemas.")
     
     print("\nPresiona Enter para salir...")
-    input() 
+# input() 
