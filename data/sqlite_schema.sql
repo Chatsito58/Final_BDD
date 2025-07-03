@@ -384,3 +384,11 @@ CREATE TABLE IF NOT EXISTS retry_queue (
     target TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS Mantenimiento (
+    id_mantenimiento INTEGER PRIMARY KEY AUTOINCREMENT,
+    placa TEXT,
+    descripcion TEXT,
+    fecha TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
+);
