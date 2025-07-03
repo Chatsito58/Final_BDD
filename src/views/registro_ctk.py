@@ -1,4 +1,5 @@
 import re
+import hashlib
 import customtkinter as ctk
 from tkinter import messagebox
 import threading
@@ -176,11 +177,58 @@ class RegistroCTk(ctk.CTk):
             else:
                 insert_q = "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 params = (documento, nombre, telefono, direccion, correo, licencia_id, id_tipo_doc, id_codigo)
-            
-            self.db.execute_query(insert_q, params, fetch=False)
-            sel_q = "SELECT id_cliente FROM Cliente WHERE correo = %s ORDER BY id_cliente DESC LIMIT 1" if not self.is_sqlite else "SELECT id_cliente FROM Cliente WHERE correo = ? ORDER BY id_cliente DESC LIMIT 1"
-            row = self.db.execute_query(sel_q, (correo,))
-            cliente_id = row[0][0] if row else ""
+
+            cliente_id = self.db.execute_query(
+                insert_q,
+                params,
+                fetch=False,
+                return_lastrowid=True,
+            )
+            if not cliente_id:
+                sel_q = (
+                    "SELECT id_cliente FROM Cliente WHERE correo = %s ORDER BY id_cliente DESC LIMIT 1"
+                    if not self.is_sqlite
+                    else "SELECT id_cliente FROM Cliente WHERE correo = ? ORDER BY id_cliente DESC LIMIT 1"
+                )
+                row = self.db.execute_query(sel_q, (correo,))
+                cliente_id = row[0][0] if row else ""
+
+            # Crear usuario asociado
+            placeholder = "?" if self.db.offline else "%s"
+            rol_q = f"SELECT id_rol FROM Rol WHERE nombre = {placeholder}"
+            rol_res = self.db.execute_query(rol_q, ("cliente",))
+            rol_id = rol_res[0][0] if rol_res else 1
+            usuario_q = (
+                "INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente) VALUES (?, ?, ?, ?)"
+                if self.db.offline
+                else "INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente) VALUES (%s, %s, %s, %s)"
+            )
+            hashed_doc = hashlib.sha256(documento.encode()).hexdigest()
+            usuario_params = (correo, hashed_doc, rol_id, cliente_id)
+            if self.db.offline:
+                self.db.save_pending_registro(
+                    "Usuario",
+                    {
+                        "usuario": correo,
+                        "contrasena": hashed_doc,
+                        "id_rol": rol_id,
+                        "id_cliente": cliente_id,
+                        "id_empleado": None,
+                    },
+                )
+            else:
+                self.db.execute_query(usuario_q, usuario_params, fetch=False)
+                if self.db.offline:
+                    self.db.save_pending_registro(
+                        "Usuario",
+                        {
+                            "usuario": correo,
+                            "contrasena": hashed_doc,
+                            "id_rol": rol_id,
+                            "id_cliente": cliente_id,
+                            "id_empleado": None,
+                        },
+                    )
             messagebox.showinfo(
                 "Registro exitoso",
                 "Cliente registrado exitosamente.\n\nSu contraseña inicial es su número de documento.\nPodrá cambiarla después de iniciar sesión.\n\nSerá redirigido al login para iniciar sesión.",
