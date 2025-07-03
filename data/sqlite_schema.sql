@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS Empleado (
   telefono TEXT,
   direccion TEXT,
   correo TEXT,
-  id_sucursal INTEGER,
+  id_sucursal INTEGER NOT NULL,
   id_tipo_documento INTEGER,
   id_tipo_empleado INTEGER,
   FOREIGN KEY (id_tipo_documento) REFERENCES Tipo_documento(id_tipo_documento),
