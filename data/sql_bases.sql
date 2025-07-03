@@ -111,7 +111,7 @@ CREATE TABLE Empleado (
   telefono          VARCHAR(20),
   direccion         VARCHAR(150),
   correo            VARCHAR(100),
-  id_sucursal       INT UNSIGNED,
+  id_sucursal       INT UNSIGNED NOT NULL,
   id_tipo_documento INT UNSIGNED,
   id_tipo_empleado  INT UNSIGNED,
   FOREIGN KEY (id_tipo_documento)
