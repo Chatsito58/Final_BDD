@@ -561,26 +561,17 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
             return
         
-        # Crear scrollable frame para las tarjetas
-        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
-        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
-        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
+        # Limitar la cantidad de tarjetas para evitar barras de desplazamiento
+        max_cards = 5
+        vehiculos = vehiculos[:max_cards]
+
         for i, vehiculo in enumerate(vehiculos):
-            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
-             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
+             capacidad, combustible, color, transmision, cilindraje, blindaje,
              seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
-            
+
             # Crear tarjeta con información completa
-            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
             card.pack(fill="x", padx=10, pady=5)
             
             # Header de la tarjeta
@@ -652,8 +643,7 @@ class ClienteView(BaseCTKView):
                          fg_color="#4CAF50", hover_color="#388E3C", 
                          font=("Arial", 12, "bold")).pack(pady=5)
         
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
@@ -1603,26 +1593,17 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
             return
         
-        # Crear scrollable frame para las tarjetas
-        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
-        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
-        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
+        # Limitar la cantidad de tarjetas mostradas
+        max_cards = 5
+        vehiculos = vehiculos[:max_cards]
+
         for i, vehiculo in enumerate(vehiculos):
-            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
-             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
+             capacidad, combustible, color, transmision, cilindraje, blindaje,
              seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
-            
+
             # Crear tarjeta con información completa
-            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
             card.pack(fill="x", padx=10, pady=5)
             
             # Header de la tarjeta
@@ -1694,8 +1675,7 @@ class ClienteView(BaseCTKView):
                          fg_color="#4CAF50", hover_color="#388E3C", 
                          font=("Arial", 12, "bold")).pack(pady=5)
         
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
@@ -2342,26 +2322,17 @@ class EmpleadoVentasView(BaseCTKView):
             ctk.CTkLabel(self.cards_vehiculos, text="No hay vehículos disponibles", font=("Arial", 14)).pack(pady=20)
             return
         
-        # Crear scrollable frame para las tarjetas
-        canvas = tk.Canvas(self.cards_vehiculos, bg="#E3F2FD")
-        scrollbar = tk.Scrollbar(self.cards_vehiculos, orient="vertical", command=canvas.yview)
-        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
+        # Limitar la cantidad de tarjetas mostradas
+        max_cards = 5
+        vehiculos = vehiculos[:max_cards]
+
         for i, vehiculo in enumerate(vehiculos):
-            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, 
-             capacidad, combustible, color, transmision, cilindraje, blindaje, 
+            (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
+             capacidad, combustible, color, transmision, cilindraje, blindaje,
              seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
-            
+
             # Crear tarjeta con información completa
-            card = ctk.CTkFrame(scrollable_frame, fg_color="#FFFFFF", corner_radius=15)
+            card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
             card.pack(fill="x", padx=10, pady=5)
             
             # Header de la tarjeta
@@ -2433,8 +2404,7 @@ class EmpleadoVentasView(BaseCTKView):
                          fg_color="#4CAF50", hover_color="#388E3C", 
                          font=("Arial", 12, "bold")).pack(pady=5)
         
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
