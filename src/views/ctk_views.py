@@ -2395,17 +2395,19 @@ class EmpleadoVentasView(BaseCTKView):
                     ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}", 
                                 font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
             
-            # Botón de reservar
+            # Botón de reservar (solo para empleados de ventas)
             btn_frame = ctk.CTkFrame(card, fg_color="transparent")
             btn_frame.pack(fill="x", padx=10, pady=(5, 10))
-            
-            ctk.CTkButton(btn_frame, text="🚗 Reservar este vehículo", 
-                         command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
-                         fg_color="#4CAF50", hover_color="#388E3C", 
-                         font=("Arial", 12, "bold")).pack(pady=5)
-        
 
-
+            if (self.user_data.get("tipo_empleado") or "").lower() == "ventas":
+                ctk.CTkButton(
+                    btn_frame,
+                    text="🚗 Reservar este vehículo",
+                    command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                    fg_color="#4CAF50",
+                    hover_color="#388E3C",
+                    font=("Arial", 12, "bold"),
+                ).pack(pady=5)
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
         from tkinter import messagebox
