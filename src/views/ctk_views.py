@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import threading
 import time
+import logging
 from src.services.roles import (
     puede_gestionar_gerentes,
     verificar_permiso_creacion_empleado,
@@ -8,6 +9,8 @@ from src.services.roles import (
     puede_ejecutar_sql_libre
 )
 from ..styles import BG_DARK, TEXT_COLOR, PRIMARY_COLOR, PRIMARY_COLOR_DARK
+
+logger = logging.getLogger(__name__)
 
 class BaseCTKView(ctk.CTk):
     def __init__(self, user_data, db_manager, on_logout=None):
@@ -867,7 +870,9 @@ class ClienteView(BaseCTKView):
                 if total < 0:
                     total = 0
                 
-                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})")
+                logger.info(
+                    f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})"
+                )
                 
                 # Validar abono mínimo
                 abono_min = int(total * 0.3)
@@ -879,7 +884,7 @@ class ClienteView(BaseCTKView):
                 metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
                 
-                print(f"Insertando en Alquiler...")
+                logger.info("Insertando en Alquiler...")
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
@@ -896,11 +901,13 @@ class ClienteView(BaseCTKView):
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
                     return
                 
-                print(f"ID Alquiler obtenido: {id_alquiler}")
+                logger.info(f"ID Alquiler obtenido: {id_alquiler}")
                 
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono
-                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                logger.info(
+                    f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}"
+                )
                 reserva_query = f"""
                     INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
                     VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
@@ -914,18 +921,20 @@ class ClienteView(BaseCTKView):
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
-                print(f"ID Reserva obtenido: {id_reserva}")
+                logger.info(f"ID Reserva obtenido: {id_reserva}")
                 
                 # Insertar abono inicial
                 id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
-                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                logger.info(
+                    f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}"
+                )
                 abono_query = f"""
                     INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
                     VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
                 """
                 self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
                 
-                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                logger.info(f"Reserva creada exitosamente. ID: {id_reserva}")
                 
                 # Mostrar mensaje según método de pago
                 if metodo in ("Tarjeta", "Transferencia"):
@@ -934,7 +943,7 @@ class ClienteView(BaseCTKView):
                     messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
                 
                 # Recargar lista de reservas
-                print(f"Recargando lista de reservas...")
+                logger.info("Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
                 
                 # Limpiar formulario
@@ -942,7 +951,7 @@ class ClienteView(BaseCTKView):
                 
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-                print(f"Error detallado: {exc}")
+                logger.error(f"Error detallado: {exc}")
         
         ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
@@ -1455,7 +1464,7 @@ class ClienteView(BaseCTKView):
                 abono_min = int(total * 0.3)
                 abono_label.configure(text=f"Abono mínimo (30%): ${abono_min:,.0f}")
             except Exception as e:
-                print(f"Error en calcular_total: {e}")
+                logger.error(f"Error en calcular_total: {e}")
                 total_label.configure(text="Total: $0")
                 abono_label.configure(text="Abono mínimo (30%): $0")
         # Vincular cambios para recalcular automáticamente
@@ -1581,7 +1590,7 @@ class ClienteView(BaseCTKView):
                 """
                 self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
                 
-                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                logger.info(f"Reserva creada exitosamente. ID: {id_reserva}")
                 
                 # Mostrar mensaje según método de pago
                 if metodo in ("Tarjeta", "Transferencia"):
@@ -1590,7 +1599,7 @@ class ClienteView(BaseCTKView):
                     messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
                 
                 # Recargar lista de reservas
-                print(f"Recargando lista de reservas...")
+                logger.info("Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
                 
                 # Limpiar formulario
@@ -1598,7 +1607,7 @@ class ClienteView(BaseCTKView):
                 
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-                print(f"Error detallado: {exc}")
+                logger.error(f"Error detallado: {exc}")
         
         ctk.CTkButton(frame, text="Guardar reserva", command=crear_reserva, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
@@ -1920,7 +1929,9 @@ class ClienteView(BaseCTKView):
                 if total < 0:
                     total = 0
                 
-                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})")
+                logger.info(
+                    f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})"
+                )
                 
                 # Validar abono mínimo
                 abono_min = int(total * 0.3)
@@ -1932,7 +1943,7 @@ class ClienteView(BaseCTKView):
                 metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
                 
-                print(f"Insertando en Alquiler...")
+                logger.info("Insertando en Alquiler...")
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
@@ -1949,11 +1960,13 @@ class ClienteView(BaseCTKView):
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
                     return
                 
-                print(f"ID Alquiler obtenido: {id_alquiler}")
+                logger.info(f"ID Alquiler obtenido: {id_alquiler}")
                 
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono
-                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                logger.info(
+                    f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}"
+                )
                 reserva_query = f"""
                     INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
                     VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
@@ -1967,18 +1980,20 @@ class ClienteView(BaseCTKView):
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
-                print(f"ID Reserva obtenido: {id_reserva}")
+                logger.info(f"ID Reserva obtenido: {id_reserva}")
                 
                 # Insertar abono inicial
                 id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
-                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                logger.info(
+                    f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}"
+                )
                 abono_query = f"""
                     INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
                     VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
                 """
                 self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
                 
-                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                logger.info(f"Reserva creada exitosamente. ID: {id_reserva}")
                 
                 # Mostrar mensaje según método de pago
                 if metodo in ("Tarjeta", "Transferencia"):
@@ -1987,7 +2002,7 @@ class ClienteView(BaseCTKView):
                     messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
                 
                 # Recargar lista de reservas
-                print(f"Recargando lista de reservas...")
+                logger.info("Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
                 
                 # Limpiar formulario
@@ -1995,7 +2010,7 @@ class ClienteView(BaseCTKView):
                 
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-                print(f"Error detallado: {exc}")
+                logger.error(f"Error detallado: {exc}")
         
         ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
@@ -2661,7 +2676,9 @@ class EmpleadoVentasView(BaseCTKView):
                 if total < 0:
                     total = 0
                 
-                print(f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})")
+                logger.info(
+                    f"Total calculado: ${total:,.0f} (días: {dias}, tarifa: ${tarifa}, seguro: ${seguro_costo}, descuento: ${valor_descuento})"
+                )
                 
                 # Validar abono mínimo
                 abono_min = int(total * 0.3)
@@ -2673,7 +2690,7 @@ class EmpleadoVentasView(BaseCTKView):
                 metodo = metodo_var.get()
                 id_cliente = self.user_data.get('id_cliente')
                 
-                print(f"Insertando en Alquiler...")
+                logger.info("Insertando en Alquiler...")
                 # Insertar en Alquiler
                 placeholder = '%s' if not self.db_manager.offline else '?'
                 alquiler_query = f"""
@@ -2690,11 +2707,13 @@ class EmpleadoVentasView(BaseCTKView):
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
                     return
                 
-                print(f"ID Alquiler obtenido: {id_alquiler}")
+                logger.info(f"ID Alquiler obtenido: {id_alquiler}")
                 
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono
-                print(f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}")
+                logger.info(
+                    f"Insertando en Reserva_alquiler con saldo pendiente: ${saldo_pendiente}"
+                )
                 reserva_query = f"""
                     INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
                     VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
@@ -2708,18 +2727,20 @@ class EmpleadoVentasView(BaseCTKView):
                 if not id_reserva:
                     raise Exception("No se pudo obtener el ID de la reserva")
                 
-                print(f"ID Reserva obtenido: {id_reserva}")
+                logger.info(f"ID Reserva obtenido: {id_reserva}")
                 
                 # Insertar abono inicial
                 id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
-                print(f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}")
+                logger.info(
+                    f"Insertando abono inicial de ${abono} con medio de pago {id_medio_pago}"
+                )
                 abono_query = f"""
                     INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
                     VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
                 """
                 self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
                 
-                print(f"Reserva creada exitosamente. ID: {id_reserva}")
+                logger.info(f"Reserva creada exitosamente. ID: {id_reserva}")
                 
                 # Mostrar mensaje según método de pago
                 if metodo in ("Tarjeta", "Transferencia"):
@@ -2728,7 +2749,7 @@ class EmpleadoVentasView(BaseCTKView):
                     messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
                 
                 # Recargar lista de reservas
-                print(f"Recargando lista de reservas...")
+                logger.info("Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
                 
                 # Limpiar formulario
@@ -2736,7 +2757,7 @@ class EmpleadoVentasView(BaseCTKView):
                 
             except Exception as exc:
                 messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-                print(f"Error detallado: {exc}")
+                logger.error(f"Error detallado: {exc}")
         
         ctk.CTkButton(frame, text="Guardar reserva", command=guardar, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
 
