@@ -181,8 +181,8 @@ class LoginView(QDialog):
             self.hide()
 
             def volver_a_login(correo_registrado=None):
-                if hasattr(self, '_registro_window'):
-                    self._registro_window.destroy()  # Cerrar completamente para detener el loop de Tk
+                if getattr(self, "_registro_window", None) and self._registro_window.winfo_exists():
+                    self._registro_window.destroy()
                     self._registro_window._stop_status = True
                 self.show()
                 self.raise_()
