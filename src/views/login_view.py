@@ -26,7 +26,8 @@ class LoginView(QDialog):
         
         self.auth_manager = auth_manager
         self.user_data = None
-        self._status_label = None
+        self._status_label1 = None
+        self._status_label2 = None
         self._stop_status = False
         self._modern_stylesheet = '''
             QDialog, QWidget {
@@ -85,13 +86,17 @@ class LoginView(QDialog):
             self.setWindowTitle("Login - Sistema de Alquiler")
             self.setModal(True)
             
-            # Agregar label de estado de conexión arriba del todo
-            self._status_label = QLabel(self)
-            self._status_label.setText("")
-            self._status_label.setAlignment(Qt.AlignCenter)
-            self._status_label.setStyleSheet("font-size: 15px; margin-bottom: 10px;")
-            self.layout().insertWidget(0, self._status_label)
-            self._update_status_label()
+            # Agregar labels de estado de conexión (remoto1/remoto2) arriba del todo
+            self._status_label1 = QLabel(self)
+            self._status_label1.setAlignment(Qt.AlignCenter)
+            self._status_label1.setStyleSheet("font-size: 15px; margin-bottom: 2px;")
+            self._status_label2 = QLabel(self)
+            self._status_label2.setAlignment(Qt.AlignCenter)
+            self._status_label2.setStyleSheet("font-size: 15px; margin-bottom: 10px;")
+            # Insertar en orden inverso para que label1 quede arriba
+            self.layout().insertWidget(0, self._status_label2)
+            self.layout().insertWidget(0, self._status_label1)
+            self._update_status_labels()
             self._start_status_updater()
             self.showMaximized()
             
@@ -221,20 +226,30 @@ class LoginView(QDialog):
             self._stop_status = False
             self._start_status_updater()
 
-    def _update_status_label(self):
-        online = not getattr(self.auth_manager.db, 'offline', False)
-        emoji = "🟢" if online else "🔴"
-        estado = "ONLINE" if online else "OFFLINE"
-        if self._status_label:
-            self._status_label.setText(f"{emoji} Estado: {estado}")
-            color = "#00FF00" if online else "#FF5555"
-            self._status_label.setStyleSheet(f"color: {color}; font-size: 15px; margin-bottom: 10px;")
+    def _update_status_labels(self):
+        db = getattr(self.auth_manager, 'db', None)
+        if db is None:
+            return
+        r1 = getattr(db, 'is_remote1_active', lambda: getattr(db, 'remote1_active', False))()
+        r2 = getattr(db, 'is_remote2_active', lambda: getattr(db, 'remote2_active', False))()
+        emoji1 = "🟢" if r1 else "🔴"
+        emoji2 = "🟢" if r2 else "🔴"
+        estado1 = "ONLINE" if r1 else "OFFLINE"
+        estado2 = "ONLINE" if r2 else "OFFLINE"
+        if self._status_label1:
+            color1 = "#00FF00" if r1 else "#FF5555"
+            self._status_label1.setText(f"{emoji1} Remote1: {estado1}")
+            self._status_label1.setStyleSheet(f"color: {color1}; font-size: 15px; margin-bottom: 2px;")
+        if self._status_label2:
+            color2 = "#00FF00" if r2 else "#FF5555"
+            self._status_label2.setText(f"{emoji2} Remote2: {estado2}")
+            self._status_label2.setStyleSheet(f"color: {color2}; font-size: 15px; margin-bottom: 10px;")
 
     def _start_status_updater(self):
         import threading, time
         def updater():
             while not self._stop_status:
-                self._update_status_label()
+                self._update_status_labels()
                 time.sleep(2)
         t = threading.Thread(target=updater, daemon=True)
         t.start()

@@ -20,12 +20,13 @@ class RegistroCTk(ctk.CTk):
         self.geometry("400x500")
         if self.on_back:
             self.protocol("WM_DELETE_WINDOW", self.volver)
-        self._status_label = None
+        self._status_label1 = None
+        self._status_label2 = None
         self._stop_status = False
         self.is_sqlite = getattr(self.db, "offline", False)
         self._load_options()
         self._build_form()
-        self._update_status_label()
+        self._update_status_labels()
         self._start_status_updater()
         self.after(100, self._maximize_and_focus)
 
@@ -66,8 +67,10 @@ class RegistroCTk(ctk.CTk):
 
     def _build_form(self):
         pad = {"padx": 10, "pady": 5}
-        self._status_label = ctk.CTkLabel(self, text="", text_color="#F5F6FA", font=("Arial", 13))
-        self._status_label.pack(pady=(10, 0))
+        self._status_label1 = ctk.CTkLabel(self, text="", text_color="#F5F6FA", font=("Arial", 13))
+        self._status_label1.pack(pady=(10, 0))
+        self._status_label2 = ctk.CTkLabel(self, text="", text_color="#F5F6FA", font=("Arial", 13))
+        self._status_label2.pack()
         ctk.CTkLabel(self, text="Documento *").pack(**pad)
         self.doc_entry = ctk.CTkEntry(self)
         self.doc_entry.pack(**pad)
@@ -156,15 +159,20 @@ class RegistroCTk(ctk.CTk):
         else:
             messagebox.showwarning("Atención", "No se puede volver atrás porque no se definió una función de retorno al login. La ventana permanecerá abierta.")
 
-    def _update_status_label(self):
-        estado = "ONLINE" if not getattr(self.db, 'offline', False) else "OFFLINE"
-        if self._status_label:
-            self._status_label.configure(text=f"Estado: {estado}")
+    def _update_status_labels(self):
+        r1 = getattr(self.db, 'is_remote1_active', lambda: getattr(self.db, 'remote1_active', False))()
+        r2 = getattr(self.db, 'is_remote2_active', lambda: getattr(self.db, 'remote2_active', False))()
+        estado1 = "ONLINE" if r1 else "OFFLINE"
+        estado2 = "ONLINE" if r2 else "OFFLINE"
+        if self._status_label1:
+            self._status_label1.configure(text=f"Remote1: {estado1}")
+        if self._status_label2:
+            self._status_label2.configure(text=f"Remote2: {estado2}")
 
     def _start_status_updater(self):
         def updater():
             while not self._stop_status:
-                self._update_status_label()
+                self._update_status_labels()
                 time.sleep(2)
         t = threading.Thread(target=updater, daemon=True)
         t.start()
