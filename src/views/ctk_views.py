@@ -4531,6 +4531,67 @@ class EmpleadoCajaView(BaseCTKView):
 
         _cargar_reservas()
 
+    def _build_tab_perfil(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        id_emp = self.user_data.get("id_empleado")
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Editar perfil", font=("Arial", 16)).pack(pady=10)
+
+        placeholder = "%s" if not self.db_manager.offline else "?"
+        datos = self.db_manager.execute_query(
+            f"SELECT documento, nombre, telefono, correo FROM Empleado WHERE id_empleado = {placeholder}",
+            (id_emp,),
+        ) or []
+
+        documento = tk.StringVar(value=datos[0][0] if datos else "")
+        nombre = tk.StringVar(value=datos[0][1] if datos else "")
+        telefono = tk.StringVar(value=datos[0][2] if datos else "")
+        correo = tk.StringVar(value=datos[0][3] if datos else "")
+
+        ctk.CTkLabel(frame, text="Documento:").pack()
+        entry_doc = ctk.CTkEntry(frame, textvariable=documento)
+        entry_doc.pack()
+        ctk.CTkLabel(frame, text="Nombre:").pack()
+        entry_nombre = ctk.CTkEntry(frame, textvariable=nombre)
+        entry_nombre.pack()
+        ctk.CTkLabel(frame, text="Teléfono:").pack()
+        entry_tel = ctk.CTkEntry(frame, textvariable=telefono)
+        entry_tel.pack()
+        ctk.CTkLabel(frame, text="Correo:").pack()
+        entry_correo = ctk.CTkEntry(frame, textvariable=correo)
+        entry_correo.pack()
+
+        def guardar():
+            params = (
+                entry_doc.get(),
+                entry_nombre.get(),
+                entry_tel.get(),
+                entry_correo.get(),
+                id_emp,
+            )
+            query = (
+                "UPDATE Empleado SET documento = %s, nombre = %s, telefono = %s, correo = %s "
+                "WHERE id_empleado = %s"
+            )
+            prev_offline = self.db_manager.offline
+            try:
+                if not self.db_manager.offline:
+                    self.db_manager.execute_query(query, params, fetch=False)
+                self.db_manager.offline = True
+                self.db_manager.execute_query(query, params, fetch=False)
+                messagebox.showinfo("Éxito", "Perfil actualizado correctamente")
+            except Exception as exc:
+                messagebox.showerror("Error", f"No se pudo actualizar el perfil: {exc}")
+            finally:
+                self.db_manager.offline = prev_offline
+
+        ctk.CTkButton(frame, text="Guardar cambios", command=guardar).pack(pady=10)
+
 
 class EmpleadoMantenimientoView(BaseCTKView):
     def _welcome_message(self):
