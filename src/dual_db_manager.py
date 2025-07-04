@@ -38,6 +38,17 @@ class DualDBManager:
         self._interval = minutes * 60
 
     # ------------------------------------------------------------------
+    # Public helpers
+    # ------------------------------------------------------------------
+    def is_remote1_active(self):
+        """Return True if the primary remote database is reachable."""
+        return self.remote1_active
+
+    def is_remote2_active(self):
+        """Return True if the secondary remote database is reachable."""
+        return self.remote2_active
+
+    # ------------------------------------------------------------------
     # Connection helpers
     # ------------------------------------------------------------------
     def _config_remote1(self):

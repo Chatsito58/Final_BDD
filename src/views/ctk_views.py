@@ -16,12 +16,13 @@ class BaseCTKView(ctk.CTk):
         self.user_data = user_data
         self.db_manager = db_manager
         self.on_logout = on_logout
-        self._status_label = None
+        self._status_label1 = None
+        self._status_label2 = None
         self._stop_status = False
         self.geometry("600x400")
         self.configure(bg=BG_DARK)
         self._build_ui()
-        self._update_status_label()
+        self._update_status_labels()
         self._start_status_updater()
         self.after(100, self._maximize_and_focus)
 
@@ -33,10 +34,14 @@ class BaseCTKView(ctk.CTk):
         # Frame superior con estado y cerrar sesión
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -67,7 +72,7 @@ class BaseCTKView(ctk.CTk):
         if hasattr(self, "_build_tab_perfil"):
             self.tab_perfil = self.tabview.add("Editar perfil")
             self._build_tab_perfil(self.tabview.tab("Editar perfil"))
-        self._update_status_label()
+        self._update_status_labels()
 
     def _build_cambiar_contrasena_tab(self, parent):
         import tkinter as tk
@@ -120,17 +125,22 @@ class BaseCTKView(ctk.CTk):
     def _welcome_message(self):
         return f"Bienvenido, {self.user_data.get('usuario', '')}"
 
-    def _update_status_label(self, estado="Conectado", emoji="🟢"):
-        if self._status_label is not None:
-            online = not self.db_manager.offline
-            emoji = "🟢" if online else "🔴"
-            estado = "ONLINE" if online else "OFFLINE"
-            self._status_label.configure(text=f"{emoji} Estado: {estado}")
+    def _update_status_labels(self):
+        online1 = getattr(self.db_manager, 'is_remote1_active', lambda: getattr(self.db_manager, 'remote1_active', False))()
+        online2 = getattr(self.db_manager, 'is_remote2_active', lambda: getattr(self.db_manager, 'remote2_active', False))()
+        emoji1 = "🟢" if online1 else "🔴"
+        emoji2 = "🟢" if online2 else "🔴"
+        estado1 = "ONLINE" if online1 else "OFFLINE"
+        estado2 = "ONLINE" if online2 else "OFFLINE"
+        if self._status_label1 is not None:
+            self._status_label1.configure(text=f"{emoji1} R1: {estado1}")
+        if self._status_label2 is not None:
+            self._status_label2.configure(text=f"{emoji2} R2: {estado2}")
 
     def _start_status_updater(self):
         def updater():
             while not self._stop_status:
-                self._update_status_label()
+                self._update_status_labels()
                 time.sleep(2)
 
         t = threading.Thread(target=updater, daemon=True)
@@ -157,10 +167,14 @@ class ClienteView(BaseCTKView):
         # Frame superior con estado y cerrar sesión
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -191,7 +205,7 @@ class ClienteView(BaseCTKView):
         if hasattr(self, "_build_tab_perfil"):
             self.tab_perfil = self.tabview.add("Editar perfil")
             self._build_tab_perfil(self.tabview.tab("Editar perfil"))
-        self._update_status_label()
+        self._update_status_labels()
 
     def _build_tab_mis_reservas(self, parent):
         import tkinter as tk
@@ -2808,10 +2822,14 @@ class EmpleadoVentasView(BaseCTKView):
         # Frame superior con estado y cerrar sesión
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -3766,10 +3784,14 @@ class EmpleadoCajaView(BaseCTKView):
         # Frame superior con estado y cerrar sesión
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -4121,10 +4143,14 @@ class EmpleadoMantenimientoView(BaseCTKView):
         # Frame superior con estado y cerrar sesión
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -4736,10 +4762,14 @@ class GerenteView(BaseCTKView):
     def _build_ui(self):
         topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",
@@ -5573,10 +5603,14 @@ class AdminView(BaseCTKView):
     def _build_ui(self):
         topbar = ctk.CTkFrame(self, fg_color="#222831")
         topbar.pack(fill="x", pady=(0, 5))
-        self._status_label = ctk.CTkLabel(
+        self._status_label1 = ctk.CTkLabel(
             topbar, text="", font=("Arial", 12, "bold"), text_color="#FFFFFF"
         )
-        self._status_label.pack(side="left", padx=10, pady=8)
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color="#FFFFFF"
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
         ctk.CTkButton(
             topbar,
             text="Cerrar sesión",

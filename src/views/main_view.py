@@ -149,9 +149,14 @@ class MainView(QtWidgets.QMainWindow):
         self.deleteLater()
 
     def _update_status_bar(self):
-        estado = "ONLINE" if not self._db_manager.offline else "OFFLINE"
+        r1 = getattr(self._db_manager, 'is_remote1_active', lambda: getattr(self._db_manager, 'remote1_active', False))()
+        r2 = getattr(self._db_manager, 'is_remote2_active', lambda: getattr(self._db_manager, 'remote2_active', False))()
+        estado1 = "ONLINE" if r1 else "OFFLINE"
+        estado2 = "ONLINE" if r2 else "OFFLINE"
         if self.statusBar():
-            self.statusBar().showMessage(f"Usuario: {self._username} | Rol: {self._role} | Estado: {estado}")
+            self.statusBar().showMessage(
+                f"Usuario: {self._username} | Rol: {self._role} | R1: {estado1} | R2: {estado2}"
+            )
 
     def _sync_and_update_status(self):
         self._db_manager.sync_pending_reservations()
