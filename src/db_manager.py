@@ -240,6 +240,24 @@ class DBManager:
             self.logger.error(traceback.format_exc())
             return None
 
+    def execute_query_with_headers(self, query, params=None):
+        """Execute a query and return (rows, column_names)."""
+        try:
+            conn = self.connect()
+            if self.is_sqlite():
+                query = query.replace('%s', '?')
+            if conn is None:
+                return None, []
+            cursor = conn.cursor()
+            cursor.execute(query, params or ())
+            rows = cursor.fetchall()
+            headers = [d[0] for d in cursor.description]
+            cursor.close()
+            conn.close()
+            return rows, headers
+        except Exception:
+            return None, []
+
     def save_pending_reservation(self, data):
         """Persist reservation data in the local SQLite database."""
         self._sqlite.save_pending_reservation(data)
