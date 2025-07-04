@@ -1202,7 +1202,7 @@ class ClienteView(BaseCTKView):
                 ]
                 id_seguro = seguros[idx_seg[0]][0] if idx_seg else None
                 costo_seguro = float(seguros[idx_seg[0]][2]) if idx_seg else 0
-                id_descuento = id_descuento_act
+                id_descuento = descuento_id
                 valor_descuento = float(desc_val) if id_descuento_act else 0
                 total = precio + costo_seguro - valor_descuento
                 if total < 0:
@@ -1811,10 +1811,9 @@ class ClienteView(BaseCTKView):
         card = ctk.CTkFrame(frame, fg_color="#E3F2FD", corner_radius=16)
         card.pack(padx=20, pady=20, fill="x")
 
-        # Listar descuentos vigentes para el cliente
+        # Listar todos los descuentos registrados
         lista_desc = self.db_manager.execute_query(
-            "SELECT descripcion, fecha_inicio, fecha_fin FROM Descuento_alquiler "
-            "WHERE fecha_inicio <= CURRENT_TIMESTAMP AND fecha_fin >= CURRENT_TIMESTAMP"
+            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
         )
         if lista_desc:
             info = ctk.CTkFrame(frame)
@@ -1822,16 +1821,39 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(
                 info, text="Descuentos disponibles", font=("Arial", 14, "bold")
             ).pack(anchor="w")
-            for d in lista_desc:
-                ctk.CTkLabel(
-                    info,
-                    text=f"- {d[0]} ({str(d[1])[:10]} a {str(d[2])[:10]})",
-                    font=("Arial", 12),
-                ).pack(anchor="w")
+            descuento_labels = []
         else:
-            ctk.CTkLabel(frame, text="No hay descuentos disponibles actualmente").pack(
-                padx=20
-            )
+            info = None
+            descuento_labels = []
+            ctk.CTkLabel(frame, text="No hay descuentos registrados").pack(padx=20)
+
+        descuento_id = None
+        descuento_valor = 0.0
+
+        def actualizar_descuentos():
+            nonlocal descuento_id, descuento_valor
+            if not info:
+                return
+            for lbl in descuento_labels:
+                lbl.destroy()
+            descuento_labels.clear()
+            fecha_salida = salida_date.get_date()
+            fecha_entrada = entrada_date.get_date()
+            descuento_id = None
+            descuento_valor = 0.0
+            for d in lista_desc:
+                d_id, desc, val, ini, fin = d
+                aplica = ini.date() <= fecha_entrada and fin.date() >= fecha_salida
+                texto = f"- {desc} ({str(ini)[:10]} a {str(fin)[:10]})"
+                if not aplica:
+                    texto += " - No aplica para las fechas seleccionadas"
+                else:
+                    if descuento_id is None:
+                        descuento_id = d_id
+                        descuento_valor = float(val)
+                lbl = ctk.CTkLabel(info, text=texto, font=("Arial", 12))
+                lbl.pack(anchor="w")
+                descuento_labels.append(lbl)
         # Selección de vehículo
         ctk.CTkLabel(card, text="Vehículo", font=("Arial", 13, "bold")).pack(
             anchor="w", pady=(10, 0), padx=12
@@ -1928,18 +1950,8 @@ class ClienteView(BaseCTKView):
             ctk.CTkLabel(
                 card, text="No hay seguros disponibles", text_color="#FF5555"
             ).pack(pady=4, padx=12)
-        # Descuento activo
-        id_descuento_act, desc_text, desc_val = self._obtener_descuento_activo()
-        if id_descuento_act:
-            ctk.CTkLabel(
-                card,
-                text=f"Descuento aplicado: {desc_text} (-${desc_val})",
-                font=("Arial", 12),
-            ).pack(anchor="w", pady=(10, 0), padx=12)
-        else:
-            ctk.CTkLabel(card, text="Sin descuentos activos").pack(
-                anchor="w", pady=(10, 0), padx=12
-            )
+        # Descuentos según fechas seleccionadas
+        actualizar_descuentos()
         # Método de pago
         ctk.CTkLabel(card, text="Método de pago", font=("Arial", 12)).pack(
             anchor="w", pady=(10, 0), padx=12
@@ -1968,8 +1980,8 @@ class ClienteView(BaseCTKView):
         entry_abono = ctk.CTkEntry(card, width=120)
         entry_abono.pack(pady=4, padx=12)
 
-        # Función para calcular total y abono mínimo (igual que antes)
-        def calcular_total(*_):
+        # Función para calcular total y abono mínimo
+        def actualizar_total(*_):
             try:
                 if not vehiculos or not vehiculo_var.get():
                     total_label.configure(text="Total: $0")
@@ -2006,8 +2018,8 @@ class ClienteView(BaseCTKView):
                                 break
                     except:
                         seguro_costo = 0
-                # Calcular descuento activo
-                descuento_val = float(desc_val) if id_descuento_act else 0
+                # Calcular descuento aplicable
+                descuento_val = float(descuento_valor)
                 total = dias * tarifa + seguro_costo - descuento_val
                 if total < 0:
                     total = 0
@@ -2015,18 +2027,25 @@ class ClienteView(BaseCTKView):
                 abono_min = int(total * 0.3)
                 abono_label.configure(text=f"Abono mínimo (30%): ${abono_min:,.0f}")
             except Exception as e:
-                print(f"Error en calcular_total: {e}")
+                print(f"Error en actualizar_total: {e}")
                 total_label.configure(text="Total: $0")
                 abono_label.configure(text="Abono mínimo (30%): $0")
 
         # Vincular cambios para recalcular automáticamente
         if vehiculos:
-            vehiculo_var.trace_add("write", calcular_total)
+            vehiculo_var.trace_add("write", actualizar_total)
         if seguros:
-            seguro_var.trace_add("write", calcular_total)
-        salida_date.bind("<<DateEntrySelected>>", calcular_total)
-        entrada_date.bind("<<DateEntrySelected>>", calcular_total)
-        calcular_total()
+            seguro_var.trace_add("write", actualizar_total)
+
+        def _fecha_cambio(*_):
+            actualizar_descuentos()
+            actualizar_total()
+
+        salida_date.bind("<<DateEntrySelected>>", _fecha_cambio)
+        entrada_date.bind("<<DateEntrySelected>>", _fecha_cambio)
+
+        actualizar_descuentos()
+        actualizar_total()
         # Botón para crear reserva
 
         def crear_reserva():
@@ -2085,7 +2104,7 @@ class ClienteView(BaseCTKView):
                             id_seguro = s[0]
                             break
 
-                id_descuento = id_descuento_act
+                id_descuento = descuento_id
 
                 # Calcular total real
                 vehiculo_query = """
@@ -2114,7 +2133,7 @@ class ClienteView(BaseCTKView):
                             seguro_costo = float(s[2])
                             break
 
-                descuento_val = float(desc_val) if id_descuento else 0
+                descuento_val = float(descuento_valor) if id_descuento else 0
                 total = dias * tarifa + seguro_costo - descuento_val
                 total = max(0, total)
 
