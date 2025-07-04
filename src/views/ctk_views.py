@@ -4670,6 +4670,13 @@ class EmpleadoMantenimientoView(BaseCTKView):
         item = self.predictivo_listbox.get(selection[0])
         placa = item.split("|")[0].strip()
         placeholder = "%s" if not self.db_manager.offline else "?"
+        estado_q = f"SELECT id_estado_vehiculo FROM Vehiculo WHERE placa = {placeholder}"
+        estado = self.db_manager.execute_query(estado_q, (placa,)) or []
+        if estado and int(estado[0][0]) in (2, 3):
+            messagebox.showerror(
+                "Error", "El vehículo seleccionado no se puede marcar"
+            )
+            return
         query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
         try:
             self.db_manager.execute_query(
