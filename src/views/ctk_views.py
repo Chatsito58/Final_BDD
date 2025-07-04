@@ -1692,6 +1692,8 @@ class ClienteView(BaseCTKView):
         ctk.CTkLabel(card, text="Vehículo", font=("Arial", 13, "bold")).pack(
             anchor="w", pady=(10, 0), padx=12
         )
+        if hasattr(self.db_manager, "update_maintenance_states"):
+            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = (
@@ -2148,6 +2150,8 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(scrollable_frame, fg_color="#E3F2FD")
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
+        if hasattr(self.db_manager, "update_maintenance_states"):
+            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = f"""
@@ -3134,6 +3138,8 @@ class EmpleadoVentasView(BaseCTKView):
         opt_cliente.pack(pady=4)
 
         # Vehículos disponibles
+        if hasattr(self.db_manager, "update_maintenance_states"):
+            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         vehiculos = (
             self.db_manager.execute_query(
@@ -3249,6 +3255,8 @@ class EmpleadoVentasView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
+        if hasattr(self.db_manager, "update_maintenance_states"):
+            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = f"""

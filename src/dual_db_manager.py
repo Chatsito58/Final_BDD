@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import threading
+import datetime
 from dotenv import load_dotenv
 
 try:
@@ -36,6 +37,16 @@ class DualDBManager:
         # the ``DB_WORKER_INTERVAL`` environment variable (minutes).
         minutes = int(os.getenv("DB_WORKER_INTERVAL", "20"))
         self._interval = minutes * 60
+
+    def update_maintenance_states(self):
+        """Release vehicles from maintenance whose end date has passed."""
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        query = (
+            "UPDATE Vehiculo SET id_estado_vehiculo = 1 "
+            "WHERE id_estado_vehiculo = 3 AND placa IN "
+            "(SELECT placa FROM Mantenimiento WHERE fecha_fin <= %s)"
+        )
+        self.execute_query(query, (now,), fetch=False)
 
     # ------------------------------------------------------------------
     # Public helpers
