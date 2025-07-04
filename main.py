@@ -65,14 +65,12 @@ from src.triple_db_manager import TripleDBManager
 from src.backup_manager import BackupManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
-from src.views.ctk_views import (
-    ClienteView,
-    AdminView,
-    GerenteView,
-    EmpleadoVentasView,
-    EmpleadoCajaView,
-    EmpleadoMantenimientoView,
-)
+from src.views.client_view import ClienteView
+from src.views.admin_view import AdminView
+from src.views.gerente_view import GerenteView
+from src.views.empleado_ventas_view import EmpleadoVentasView
+from src.views.empleado_caja_view import EmpleadoCajaView
+from src.views.empleado_mantenimiento_view import EmpleadoMantenimientoView
 from src.styles import MODERN_QSS
 
 
@@ -181,7 +179,7 @@ class AlquilerApp:
                 return
             win.mainloop()
         else:
-            from src.views.ctk_views import ClienteView
+            from src.views.client_view import ClienteView
             # Crear la vista de cliente directamente
             cliente_view = ClienteView(user_data, db_manager, on_logout)
             cliente_view.mainloop()
