@@ -2825,7 +2825,6 @@ class EmpleadoCajaView(BaseCTKView):
         self._cargar_reservas_pendientes_global()
 
     def _build_tab_reservas(self, parent):
-        import tkinter as tk
         from tkinter import ttk
 
         frame = ctk.CTkFrame(parent)
@@ -2996,6 +2995,9 @@ class EmpleadoMantenimientoView(BaseCTKView):
         # Pestaña: Predictivo
         self.tab_predictivo = self.tabview.add("Predictivo")
         self._build_tab_predictivo(self.tabview.tab("Predictivo"))
+        # Pestaña: Reservas
+        self.tab_reservas = self.tabview.add("Reservas")
+        self._build_tab_reservas(self.tabview.tab("Reservas"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -3300,6 +3302,56 @@ class EmpleadoMantenimientoView(BaseCTKView):
             self._cargar_predictivo_list()
         except Exception as exc:
             messagebox.showerror("Error", str(exc))
+
+    def _build_tab_reservas(self, parent):
+        from tkinter import ttk
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Reservas programadas", font=("Arial", 18, "bold")).pack(pady=10)
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = (
+            "SELECT ra.id_reserva, v.placa, c.nombre, a.fecha_hora_salida, a.fecha_hora_entrada "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
+            f"WHERE a.id_sucursal = {placeholder} "
+            "ORDER BY a.fecha_hora_salida DESC"
+        )
+        reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),)) or []
+
+        cols = ("c1", "c2", "c3", "c4", "c5")
+        tree = ttk.Treeview(frame, columns=cols, show="headings", height=15)
+
+        headers = [
+            ("c1", "ID"),
+            ("c2", "Vehículo"),
+            ("c3", "Cliente"),
+            ("c4", "Salida"),
+            ("c5", "Entrada"),
+        ]
+
+        def sort_by(treeview, col, descending):
+            data = [(treeview.set(child, col), child) for child in treeview.get_children("")]
+            try:
+                data.sort(key=lambda t: float(t[0]), reverse=descending)
+            except ValueError:
+                data.sort(reverse=descending)
+            for index, (val, k) in enumerate(data):
+                treeview.move(k, "", index)
+            treeview.heading(col, command=lambda: sort_by(treeview, col, not descending))
+
+        for cid, text in headers:
+            tree.heading(cid, text=text, command=lambda c=cid: sort_by(tree, c, False))
+            tree.column(cid, anchor="center", width=120)
+        tree.pack(fill="both", expand=True, pady=10)
+
+        for r in reservas:
+            rid, veh, cli, sal, ent = r
+            tree.insert("", "end", values=(rid, veh, cli, str(sal), str(ent)))
 
     def _build_tab_editar_vehiculo(self, parent):
         import tkinter as tk
