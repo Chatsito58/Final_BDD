@@ -1054,6 +1054,16 @@ class ClienteView(BaseCTKView):
 
                 print(f"ID Alquiler obtenido: {id_alquiler}")
 
+                # Cambiar estado del vehículo a reservado
+                update_vehicle = (
+                    f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+                )
+                self.db_manager.execute_query(
+                    update_vehicle,
+                    (placa,),
+                    fetch=False,
+                )
+
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono
                 print(
@@ -2005,6 +2015,12 @@ class ClienteView(BaseCTKView):
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
                     return
 
+                # Cambiar estado del vehículo a reservado
+                update_vehicle = (
+                    f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+                )
+                self.db_manager.execute_query(update_vehicle, (placa,), fetch=False)
+
                 saldo_pendiente = total - abono
                 reserva_query = f"""
                     INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
@@ -2620,6 +2636,12 @@ class ClienteView(BaseCTKView):
 
                 print(f"ID Alquiler obtenido: {id_alquiler}")
 
+                # Cambiar estado del vehículo a reservado
+                update_vehicle = (
+                    f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+                )
+                self.db_manager.execute_query(update_vehicle, (placa,), fetch=False)
+
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono
                 print(
@@ -3175,6 +3197,10 @@ class EmpleadoVentasView(BaseCTKView):
                         return_lastrowid=True,
                     )
                     if id_alq:
+                        update_vehicle = (
+                            f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+                        )
+                        self.db_manager.execute_query(update_vehicle, (veh,), fetch=False)
                         q2 = (
                             f"INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)"
                             f" VALUES ({placeholder}, 1, 0, 0, {placeholder})"
@@ -3702,6 +3728,12 @@ class EmpleadoVentasView(BaseCTKView):
                     return
 
                 print(f"ID Alquiler obtenido: {id_alquiler}")
+
+                # Cambiar estado del vehículo a reservado
+                update_vehicle = (
+                    f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+                )
+                self.db_manager.execute_query(update_vehicle, (placa,), fetch=False)
 
                 # Insertar en Reserva_alquiler
                 saldo_pendiente = total - abono

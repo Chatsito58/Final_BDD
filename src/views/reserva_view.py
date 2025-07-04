@@ -81,15 +81,18 @@ class ReservaView(QtWidgets.QWidget):
         start = self.start_date.date().toPyDate()
         end = self.end_date.date().toPyDate()
         seguro = 1 if self.insurance_checkbox.isChecked() else None
+        placeholder = "%s" if not self.db_manager.offline else "?"
         query = (
             "INSERT INTO Alquiler "
             "(fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) "
-            "VALUES (%s, %s, %s, %s, %s, %s)"
+            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
         params = (start, end, vehicle, self.client_id, seguro, 1)
 
         try:
             self.db_manager.execute_query(query, params)
+            update_q = f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+            self.db_manager.execute_query(update_q, (vehicle,), fetch=False)
             self.load_reservations()
         except Exception:
             datos = {
@@ -101,6 +104,11 @@ class ReservaView(QtWidgets.QWidget):
                 "id_estado": 1,
             }
             self.db_manager.save_pending_reservation(datos)
+            self.db_manager.execute_query(
+                f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}",
+                (vehicle,),
+                fetch=False,
+            )
             QtWidgets.QMessageBox.warning(
                 self,
                 'Aviso',
