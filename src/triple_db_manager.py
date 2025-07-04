@@ -199,11 +199,22 @@ class TripleDBManager:
         """Log whenever the connection state of a remote changes."""
         if self.remote1_active != self.previous_remote1_state:
             state = "online" if self.remote1_active else "offline"
-            self.connection_logger.info("Remote1 is %s", state)
+            log = (
+                self.connection_logger.info
+                if self.remote1_active
+                else self.connection_logger.warning
+            )
+            log("Remote1 is %s", state)
             self.previous_remote1_state = self.remote1_active
+
         if self.remote2_active != self.previous_remote2_state:
             state = "online" if self.remote2_active else "offline"
-            self.connection_logger.info("Remote2 is %s", state)
+            log = (
+                self.connection_logger.info
+                if self.remote2_active
+                else self.connection_logger.warning
+            )
+            log("Remote2 is %s", state)
             self.previous_remote2_state = self.remote2_active
 
     # ------------------------------------------------------------------
