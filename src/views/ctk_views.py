@@ -140,8 +140,11 @@ class BaseCTKView(ctk.CTk):
     def _start_status_updater(self):
         def updater():
             while not self._stop_status:
-                self._update_status_labels()
-                time.sleep(2)
+                try:
+                    self._update_status_labels()
+                    time.sleep(1)
+                except Exception:
+                    time.sleep(5)
 
         t = threading.Thread(target=updater, daemon=True)
         t.start()
