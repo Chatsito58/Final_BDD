@@ -1837,10 +1837,17 @@ class ClienteView(BaseCTKView):
             anchor="w", pady=(10, 0), padx=12
         )
         placeholder = "%s" if not self.db_manager.offline else "?"
-        vehiculos = self.db_manager.execute_query(
-            f"SELECT v.placa, v.modelo, m.nombre_marca FROM Vehiculo v JOIN Marca_vehiculo m ON v.id_marca = m.id_marca WHERE v.id_estado_vehiculo = 1 AND v.id_sucursal = {placeholder}",
-            (self.user_data.get("id_sucursal"),),
+        id_sucursal = self.user_data.get("id_sucursal")
+        query = (
+            "SELECT v.placa, v.modelo, m.nombre_marca FROM Vehiculo v "
+            "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
+            "WHERE v.id_estado_vehiculo = 1"
         )
+        params = ()
+        if id_sucursal is not None:
+            query += f" AND v.id_sucursal = {placeholder}"
+            params = (id_sucursal,)
+        vehiculos = self.db_manager.execute_query(query, params)
         vehiculo_var = tk.StringVar()
         if vehiculos:
             vehiculo_menu = tk.OptionMenu(
