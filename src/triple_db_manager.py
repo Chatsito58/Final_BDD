@@ -51,13 +51,17 @@ class TripleDBManager:
 
     def update_maintenance_states(self):
         """Release vehicles from maintenance whose end date has passed."""
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        query = (
-            "UPDATE Vehiculo SET id_estado_vehiculo = 1 "
-            "WHERE id_estado_vehiculo = 3 AND placa IN "
-            "(SELECT placa FROM Mantenimiento WHERE fecha_fin <= %s)"
-        )
-        self.execute_query(query, (now,), fetch=False)
+        try:
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            query = (
+                "UPDATE Vehiculo SET id_estado_vehiculo = 1 "
+                "WHERE id_estado_vehiculo = 3 AND placa IN "
+                "(SELECT placa FROM Mantenimiento WHERE fecha_fin <= %s)"
+            )
+            self.execute_query(query, (now,), fetch=False)
+        except Exception as exc:
+            # Si la columna fecha_fin no existe, simplemente logear el error y continuar
+            self.logger.warning("No se pudo actualizar estados de mantenimiento (posible columna fecha_fin faltante): %s", exc)
 
     # ------------------------------------------------------------------
     # Public helpers
@@ -431,41 +435,27 @@ class TripleDBManager:
         return self.update(query, params)
 
     def execute_query_with_headers(self, query, params=None):
-        """Execute a query and also return column headers."""
-        conn = self.connect_remote1()
-        if conn:
-            try:
-                cursor = conn.cursor()
-                cursor.execute(query, params or ())
-                rows = cursor.fetchall()
-                headers = [d[0] for d in cursor.description]
-                cursor.close()
-                conn.close()
-                return rows, headers
-            except Exception as exc:
-                self.logger.error("Headers remote1 failed: %s", exc)
-                self.remote1_active = False
-        conn = self.connect_remote2()
-        if conn:
-            try:
-                cursor = conn.cursor()
-                cursor.execute(query, params or ())
-                rows = cursor.fetchall()
-                headers = [d[0] for d in cursor.description]
-                cursor.close()
-                conn.close()
-                return rows, headers
-            except Exception as exc:
-                self.logger.error("Headers remote2 failed: %s", exc)
-                self.remote2_active = False
-        q = query.replace('%s', '?')
-        conn = self.sqlite.connect()
-        if not conn:
-            return None, []
-        cursor = conn.cursor()
-        cursor.execute(q, params or ())
-        rows = cursor.fetchall()
-        headers = [d[0] for d in cursor.description]
-        cursor.close()
-        conn.close()
-        return rows, headers
+        """Execute a query and return results with column headers."""
+        result = self.execute_query(query, params)
+        if not result:
+            return [], []
+        
+        # Get headers from the first row's keys if it's a dict
+        if isinstance(result[0], dict):
+            headers = list(result[0].keys())
+            rows = [list(row.values()) for row in result]
+        else:
+            # For tuple results, we don't have headers
+            headers = []
+            rows = result
+        
+        return headers, rows
+
+    def save_pending_registro(self, tabla, data):
+        """Insertar un registro pendiente en cualquier tabla con columna 'pendiente'."""
+        # data: dict con los campos y valores
+        campos = ', '.join(data.keys()) + ', pendiente'
+        placeholders = ', '.join(['?'] * len(data)) + ', 1'
+        query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
+        params = tuple(data.values())
+        self.sqlite.execute_query(query, params, fetch=False)

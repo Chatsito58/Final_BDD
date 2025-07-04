@@ -1692,8 +1692,6 @@ class ClienteView(BaseCTKView):
         ctk.CTkLabel(card, text="Vehículo", font=("Arial", 13, "bold")).pack(
             anchor="w", pady=(10, 0), padx=12
         )
-        if hasattr(self.db_manager, "update_maintenance_states"):
-            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = (
@@ -2150,8 +2148,6 @@ class ClienteView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(scrollable_frame, fg_color="#E3F2FD")
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
-        if hasattr(self.db_manager, "update_maintenance_states"):
-            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = f"""
@@ -3318,8 +3314,6 @@ class EmpleadoVentasView(BaseCTKView):
         self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
-        if hasattr(self.db_manager, "update_maintenance_states"):
-            self.db_manager.update_maintenance_states()
         placeholder = "%s" if not self.db_manager.offline else "?"
         id_sucursal = self.user_data.get("id_sucursal")
         query = f"""
@@ -3890,196 +3884,6 @@ class EmpleadoVentasView(BaseCTKView):
             hover_color="#265DAB",
             font=("Arial", 13, "bold"),
         ).pack(pady=18)
-
-
-class EmpleadoCajaView(BaseCTKView):
-    def _welcome_message(self):
-        return f"Bienvenido empleado de caja, {self.user_data.get('usuario', '')}"
-
-    def _build_ui(self):
-        # Frame superior con estado y cerrar sesión
-        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
-        topbar.pack(fill="x", pady=(0, 5))
-        self._status_label1 = ctk.CTkLabel(
-            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
-        )
-        self._status_label1.pack(side="left", padx=10, pady=8)
-        self._status_label2 = ctk.CTkLabel(
-            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
-        )
-        self._status_label2.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(
-            topbar,
-            text="Cerrar sesión",
-            command=self.logout,
-            fg_color=PRIMARY_COLOR,
-            hover_color=PRIMARY_COLOR_DARK,
-            width=140,
-            height=32,
-        ).pack(side="right", padx=10, pady=8)
-        self.tabview = ctk.CTkTabview(self)
-        self.tabview.pack(expand=True, fill="both")
-        # Tab: Pagos
-        self.tab_pagos = self.tabview.add("Pagos")
-        self._build_tab_pagos(self.tabview.tab("Pagos"))
-        # Tab: Pagos manuales
-        self.tab_manuales = self.tabview.add("Pagos manuales")
-        self._build_tab_pagos_manuales(self.tabview.tab("Pagos manuales"))
-        # Pestaña: Reservas
-        self.tab_reservas = self.tabview.add("Reservas")
-        self._build_tab_reservas(self.tabview.tab("Reservas"))
-        # Pestaña: Clientes
-        self.tab_clientes = self.tabview.add("Clientes")
-        self._build_tab_clientes(self.tabview.tab("Clientes"))
-        # Pestaña: Cambiar contraseña
-        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
-        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
-        self.tabview.set("Pagos")
-
-    def _build_tab_pagos(self, parent):
-        import tkinter as tk
-        from tkinter import messagebox
-
-        frame = ctk.CTkFrame(parent)
-        frame.pack(expand=True, fill="both", padx=10, pady=10)
-
-        ctk.CTkLabel(frame, text="Procesar pagos", font=("Arial", 18, "bold")).pack(
-            pady=10
-        )
-
-        self.cards_abonos = ctk.CTkFrame(frame, fg_color="#FFF8E1")
-        self.cards_abonos.pack(fill="both", expand=True, padx=10, pady=10)
-
-        input_frame = ctk.CTkFrame(frame)
-        input_frame.pack(pady=15)
-
-        ctk.CTkLabel(
-            input_frame, text="Monto a abonar ($):", font=("Arial", 12, "bold")
-        ).grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        self.input_abono = ctk.CTkEntry(input_frame, width=120, state="disabled")
-        self.input_abono.grid(row=0, column=1, padx=5, pady=5)
-
-        ctk.CTkLabel(
-            input_frame, text="Método de pago:", font=("Arial", 12, "bold")
-        ).grid(row=0, column=2, padx=5, pady=5, sticky="w")
-        self.metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
-        self.metodo_pago_var = tk.StringVar()
-        self.metodo_pago_var.set(self.metodos_pago[0])
-        self.metodo_pago_menu = tk.OptionMenu(
-            input_frame, self.metodo_pago_var, *self.metodos_pago
-        )
-        self.metodo_pago_menu.grid(row=0, column=3, padx=5, pady=5)
-        self.metodo_pago_menu.configure(state="disabled")
-
-        self.btn_abonar = ctk.CTkButton(
-            frame,
-            text="💳 Registrar Abono",
-            command=self._realizar_abono_global,
-            fg_color="#00AA00",
-            hover_color="#008800",
-            font=("Arial", 13, "bold"),
-            state="disabled",
-        )
-        self.btn_abonar.pack(pady=10)
-
-        self._abono_seleccionado = None
-        self._cargar_reservas_pendientes_global()
-
-    def _build_tab_pagos_manuales(self, parent):
-        import tkinter as tk
-        from tkinter import messagebox
-
-        frame = ctk.CTkFrame(parent)
-        frame.pack(expand=True, fill="both", padx=10, pady=10)
-
-        ctk.CTkLabel(
-            frame, text="Pago manual en efectivo", font=("Arial", 16, "bold")
-        ).pack(pady=10)
-
-        form = ctk.CTkFrame(frame)
-        form.pack(pady=15)
-
-        placeholder = "%s" if not self.db_manager.offline else "?"
-        query = (
-            "SELECT DISTINCT c.id_cliente, c.nombre "
-            "FROM Cliente c "
-            "JOIN Alquiler a ON c.id_cliente = a.id_cliente "
-            "JOIN Reserva_alquiler ra ON a.id_alquiler = ra.id_alquiler "
-            f"WHERE a.id_sucursal = {placeholder} "
-            "ORDER BY c.nombre"
-        )
-        clientes = (
-            self.db_manager.execute_query(query, (self.user_data.get("id_sucursal"),))
-            or []
-        )
-
-        self._pm_cliente_var = tk.StringVar(
-            value=f"{clientes[0][0]} - {clientes[0][1]}" if clientes else ""
-        )
-
-        tk.Label(form, text="Cliente:").grid(
-            row=0, column=0, padx=5, pady=5, sticky="e"
-        )
-        tk.OptionMenu(
-            form, self._pm_cliente_var, *[f"{c[0]} - {c[1]}" for c in clientes]
-        ).grid(row=0, column=1, padx=5, pady=5)
-
-        tk.Label(form, text="Monto efectivo:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="e"
-        )
-        self._pm_monto = ctk.CTkEntry(form, width=120)
-        self._pm_monto.grid(row=1, column=1, padx=5, pady=5)
-
-        ctk.CTkButton(
-            frame,
-            text="Registrar pago",
-            command=self._registrar_pago_manual,
-            fg_color="#00AA00",
-            hover_color="#008800",
-        ).pack(pady=10)
-
-    def _registrar_pago_manual(self):
-        from tkinter import messagebox
-
-        cliente_raw = self._pm_cliente_var.get()
-        if not cliente_raw:
-            messagebox.showwarning("Aviso", "Seleccione un cliente")
-            return
-        try:
-            id_cliente = int(cliente_raw.split("-")[0].strip())
-        except ValueError:
-            messagebox.showerror("Error", "Cliente inválido")
-            return
-
-        monto_str = self._pm_monto.get().strip()
-        if not monto_str:
-            messagebox.showwarning("Error", "Ingrese un monto")
-            return
-        try:
-            monto = float(monto_str)
-        except ValueError:
-            messagebox.showwarning("Error", "Monto inválido")
-            return
-        if monto <= 0:
-            messagebox.showwarning("Error", "El monto debe ser mayor a 0")
-            return
-
-        placeholder = "%s" if not self.db_manager.offline else "?"
-        res = self.db_manager.execute_query(
-            "SELECT ra.id_reserva FROM Reserva_alquiler ra "
-            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
-            f"WHERE a.id_cliente = {placeholder} AND ra.saldo_pendiente > 0 "
-            "ORDER BY ra.id_reserva LIMIT 1",
-            (id_cliente,),
-        )
-        if not res:
-            messagebox.showinfo("Aviso", "El cliente no tiene reservas pendientes")
-            return
-
-        id_reserva = res[0][0]
-        self._registrar_abono(id_reserva, monto, "Efectivo", None)
-        self._pm_monto.delete(0, "end")
-        self._cargar_reservas_pendientes_global()
 
     def _build_tab_reservas(self, parent):
         from tkinter import ttk

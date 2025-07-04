@@ -1,15 +1,19 @@
 import pytest
+import unittest
+import tempfile
+import os
+import sys
 
 try:  # Skip tests if customtkinter is not available
     import customtkinter  # noqa: F401
 except Exception:  # pragma: no cover - dependency missing
     pytest.skip("customtkinter not installed", allow_module_level=True)
 
-from src.dual_db_manager import DualDBManager
+from src.triple_db_manager import TripleDBManager
 from src.views.registro_ctk import RegistroCTk
 
 def test_load_options_offline():
-    db = DualDBManager()
+    db = TripleDBManager()
     db.offline = True
     reg = RegistroCTk.__new__(RegistroCTk)
     reg.db = db

@@ -25,7 +25,7 @@ try:
         'password': os.getenv('DB_REMOTE_PASSWORD'),
         'database': os.getenv('DB_REMOTE_NAME'),
         'port': os.getenv('DB_REMOTE_PORT'),
-        'connection_timeout': 10,
+        'connection_timeout': 4,
     }
     print("[TEST-CONN-MAIN] Intentando conectar antes de importar PyQt5...")
     conn = mysql.connector.connect(**config)
