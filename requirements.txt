@@ -24,6 +24,7 @@ pytest>=7.0.0
 # Compatibilidad con versiones antiguas de Python
 pathlib2>=2.3.0; python_version<"3.4"
 
-black
+black>=24.3.0
+
 # Nota: Los siguientes módulos son parte de la biblioteca estándar de Python
 # y no necesitan instalación: threading, time, datetime, re, os, sys, logging
