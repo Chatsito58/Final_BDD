@@ -13,14 +13,20 @@ from src.views.reserva_view import ReservaView
 
 
 class DummyDB:
-    def __init__(self, state=1):
+    def __init__(self, state=1, conflict=False, maintenance=False):
         self.state = state
+        self.conflict = conflict
+        self.maintenance = maintenance
         self.queries = []
 
     def execute_query(self, query, params=None, fetch=True, return_lastrowid=False):
         self.queries.append(query)
         if "SELECT id_estado_vehiculo" in query:
             return [(self.state,)]
+        if "FROM Reserva_alquiler" in query and "JOIN Alquiler" in query:
+            return [(1,)] if self.conflict else []
+        if "FROM Mantenimiento" in query:
+            return [(1,)] if self.maintenance else []
         return []
 
     def save_pending_reservation(self, datos):
@@ -81,3 +87,44 @@ def test_actualizar_reserva_checks_vehicle_state(monkeypatch):
     assert not ok
     assert "err" in called
     assert any("SELECT id_estado_vehiculo" in q for q in db.queries)
+
+
+def test_actualizar_reserva_detects_overlap(monkeypatch):
+    db = DummyDB(conflict=True)
+    view = ctk_views.ClienteView.__new__(ctk_views.ClienteView)
+    view.db_manager = db
+    view._cargar_reservas_cliente = lambda *_: None
+    view._cargar_reservas_pendientes = lambda *_: None
+    called = {}
+    monkeypatch.setattr(ctk_views.messagebox, "showerror", lambda *a, **k: called.setdefault("err", True))
+    ok = ctk_views.ClienteView._actualizar_reserva(view, 1, "2023-01-03 10:00", "2023-01-04 10:00", "X", None, None)
+    assert not ok
+    assert "err" in called
+    assert any("FROM Reserva_alquiler" in q for q in db.queries)
+
+
+def test_actualizar_reserva_detects_maintenance(monkeypatch):
+    db = DummyDB(maintenance=True)
+    view = ctk_views.ClienteView.__new__(ctk_views.ClienteView)
+    view.db_manager = db
+    view._cargar_reservas_cliente = lambda *_: None
+    view._cargar_reservas_pendientes = lambda *_: None
+    called = {}
+    monkeypatch.setattr(ctk_views.messagebox, "showerror", lambda *a, **k: called.setdefault("err", True))
+    ok = ctk_views.ClienteView._actualizar_reserva(view, 1, "2023-01-03 10:00", "2023-01-04 10:00", "X", None, None)
+    assert not ok
+    assert "err" in called
+    assert any("FROM Mantenimiento" in q for q in db.queries)
+
+
+def test_actualizar_reserva_rejects_past_date(monkeypatch):
+    db = DummyDB()
+    view = ctk_views.ClienteView.__new__(ctk_views.ClienteView)
+    view.db_manager = db
+    view._cargar_reservas_cliente = lambda *_: None
+    view._cargar_reservas_pendientes = lambda *_: None
+    called = {}
+    monkeypatch.setattr(ctk_views.messagebox, "showerror", lambda *a, **k: called.setdefault("err", True))
+    ok = ctk_views.ClienteView._actualizar_reserva(view, 1, "2020-01-01 10:00", "2020-01-02 10:00", "X", None, None)
+    assert not ok
+    assert "err" in called
