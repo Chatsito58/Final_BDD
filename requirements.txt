@@ -26,5 +26,7 @@ pathlib2>=2.3.0; python_version<"3.4"
 
 black>=24.3.0
 
+# funciona menos el registrar cliente desde el login
+
 # Nota: Los siguientes módulos son parte de la biblioteca estándar de Python
 # y no necesitan instalación: threading, time, datetime, re, os, sys, logging
