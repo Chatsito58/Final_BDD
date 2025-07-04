@@ -204,6 +204,7 @@ CREATE TABLE IF NOT EXISTS Mantenimiento (
   placa TEXT,
   descripcion TEXT,
   fecha TEXT DEFAULT (datetime('now')),
+  fecha_fin TEXT,
   FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
 );
 
