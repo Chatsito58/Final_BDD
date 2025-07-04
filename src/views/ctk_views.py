@@ -4053,6 +4053,61 @@ class EmpleadoVentasView(BaseCTKView):
         self._cargar_reservas_pendientes_global()
 
 
+class EmpleadoCajaView(BaseCTKView):
+    """Vista para empleados de caja."""
+
+    def _welcome_message(self):
+        return f"Bienvenido empleado de caja, {self.user_data.get('usuario', '')}"
+
+    def _build_ui(self):
+        topbar = ctk.CTkFrame(self, fg_color=BG_DARK)
+        topbar.pack(fill="x", pady=(0, 5))
+        self._status_label1 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label1.pack(side="left", padx=10, pady=8)
+        self._status_label2 = ctk.CTkLabel(
+            topbar, text="", font=("Arial", 12, "bold"), text_color=TEXT_COLOR
+        )
+        self._status_label2.pack(side="left", padx=10, pady=8)
+        ctk.CTkButton(
+            topbar,
+            text="Cerrar sesión",
+            command=self.logout,
+            fg_color=PRIMARY_COLOR,
+            hover_color=PRIMARY_COLOR_DARK,
+            width=140,
+            height=32,
+        ).pack(side="right", padx=10, pady=8)
+
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(expand=True, fill="both")
+
+        self.tab_pagos = self.tabview.add("Pagos en efectivo")
+        self._build_tab_pagos_efectivo(self.tabview.tab("Pagos en efectivo"))
+
+        self.tab_caja_dia = self.tabview.add("Caja del día")
+        self._build_tab_caja_dia(self.tabview.tab("Caja del día"))
+
+        self.tab_clientes = self.tabview.add("Clientes")
+        self._build_tab_clientes(self.tabview.tab("Clientes"))
+
+        self.tab_cambiar = self.tabview.add("Cambiar contraseña")
+        self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+
+        self.tab_perfil = self.tabview.add("Editar perfil")
+        self._build_tab_perfil(self.tabview.tab("Editar perfil"))
+
+    def _build_tab_pagos_efectivo(self, parent):
+        ctk.CTkLabel(parent, text="Pagos en efectivo").pack(pady=20)
+
+    def _build_tab_caja_dia(self, parent):
+        ctk.CTkLabel(parent, text="Caja del día").pack(pady=20)
+
+    def _build_tab_clientes(self, parent):
+        ctk.CTkLabel(parent, text="Clientes").pack(pady=20)
+
+
 class EmpleadoMantenimientoView(BaseCTKView):
     def _welcome_message(self):
         return (
