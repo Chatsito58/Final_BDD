@@ -230,6 +230,11 @@ class LoginView(QDialog):
         db = getattr(self.auth_manager, 'db', None)
         if db is None:
             return
+        if hasattr(db, 'ping_remotes'):
+            try:
+                db.ping_remotes()
+            except Exception as exc:
+                logger.error(f"Error pinging remotes: {exc}")
         r1 = getattr(db, 'is_remote1_active', lambda: getattr(db, 'remote1_active', False))()
         r2 = getattr(db, 'is_remote2_active', lambda: getattr(db, 'remote2_active', False))()
         emoji1 = "🟢" if r1 else "🔴"
