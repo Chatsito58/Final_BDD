@@ -62,12 +62,18 @@ class AuthManager:
         # Verificar si la columna id_sucursal existe en la tabla Empleado
         columna_sucursal = False
         try:
-            check_q = (
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                "WHERE table_name='Empleado' AND column_name='id_sucursal'"
-            )
-            res = self.db.execute_query(check_q)
-            columna_sucursal = res and res[0][0] > 0
+            if is_sqlite:
+                res = self.db.execute_query("PRAGMA table_info(Empleado)")
+                columna_sucursal = any(
+                    r[1] == "id_sucursal" for r in (res or [])
+                )
+            else:
+                check_q = (
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    "WHERE table_name='Empleado' AND column_name='id_sucursal'"
+                )
+                res = self.db.execute_query(check_q)
+                columna_sucursal = res and res[0][0] > 0
         except Exception:
             pass
 
