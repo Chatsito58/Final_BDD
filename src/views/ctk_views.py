@@ -4099,7 +4099,181 @@ class EmpleadoCajaView(BaseCTKView):
         self._build_tab_perfil(self.tabview.tab("Editar perfil"))
 
     def _build_tab_pagos_efectivo(self, parent):
-        ctk.CTkLabel(parent, text="Pagos en efectivo").pack(pady=20)
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(
+            frame, text="Pagos en efectivo", font=("Arial", 18, "bold")
+        ).pack(pady=10)
+
+        canvas = tk.Canvas(
+            frame,
+            borderwidth=0,
+            background="#FFF8E1",
+            highlightthickness=0,
+        )
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scroll_y.pack(side="right", fill="y", pady=10)
+
+        scrollable = ctk.CTkFrame(canvas, fg_color="#FFF8E1")
+        inner_id = canvas.create_window((0, 0), window=scrollable, anchor="nw")
+
+        def _resize_inner(event):
+            canvas_width = event.width
+            canvas.itemconfig(inner_id, width=canvas_width)
+
+        canvas.bind("<Configure>", _resize_inner)
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        scrollable.bind("<Configure>", _on_frame_configure)
+        canvas.configure(yscrollcommand=scroll_y.set)
+
+        self.cards_efectivo = ctk.CTkFrame(scrollable, fg_color="#FFF8E1")
+        self.cards_efectivo.pack(fill="both", expand=True, padx=10, pady=10)
+
+        input_frame = ctk.CTkFrame(frame)
+        input_frame.pack(pady=10)
+
+        ctk.CTkLabel(
+            input_frame, text="Monto recibido ($):", font=("Arial", 12, "bold")
+        ).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        self.entry_monto_efectivo = ctk.CTkEntry(
+            input_frame, width=120, state="disabled", placeholder_text="Ej: 50000"
+        )
+        self.entry_monto_efectivo.grid(row=0, column=1, padx=5, pady=5)
+
+        self.btn_aprobar_efectivo = ctk.CTkButton(
+            frame,
+            text="Aprobar pago",
+            command=self._aprobar_pago_efectivo,
+            fg_color="#00AA00",
+            hover_color="#008800",
+            state="disabled",
+        )
+        self.btn_aprobar_efectivo.pack(pady=10)
+
+        self._reserva_efectivo_sel = None
+        self._cargar_reservas_pendientes_efectivo()
+
+    def _cargar_reservas_pendientes_efectivo(self):
+        for w in self.cards_efectivo.winfo_children():
+            w.destroy()
+        placeholder = "%s" if not self.db_manager.offline else "?"
+        query = (
+            "SELECT ra.id_reserva, a.id_cliente, v.modelo, v.placa, "
+            "ra.saldo_pendiente, a.fecha_hora_salida "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler AND a.id_sucursal = {placeholder} "
+            "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
+            "WHERE ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2) "
+            "ORDER BY a.fecha_hora_salida"
+        )
+        reservas = self.db_manager.execute_query(
+            query, (self.user_data.get("id_sucursal"),)
+        ) or []
+        self._efectivo_cards = {}
+        for rid, cid, modelo, placa, saldo, fecha in reservas:
+            card = ctk.CTkFrame(self.cards_efectivo, fg_color="white", corner_radius=12)
+            card.pack(fill="x", padx=10, pady=5)
+            ctk.CTkLabel(
+                card, text=f"Reserva {rid} - Cliente {cid}", font=("Arial", 13, "bold")
+            ).pack(anchor="w", padx=10, pady=(4, 0))
+            ctk.CTkLabel(
+                card, text=f"{modelo} ({placa})", font=("Arial", 12)
+            ).pack(anchor="w", padx=10)
+            ctk.CTkLabel(
+                card,
+                text=f"Saldo pendiente: ${saldo:,.0f}",
+                font=("Arial", 12),
+                text_color="#B8860B",
+            ).pack(anchor="w", padx=10)
+            ctk.CTkLabel(
+                card,
+                text=f"Fecha: {str(fecha)[:16]}",
+                font=("Arial", 11),
+            ).pack(anchor="w", padx=10)
+            ctk.CTkButton(
+                card,
+                text="Seleccionar",
+                command=lambda rid=rid: self._seleccionar_reserva_efectivo(rid),
+                width=120,
+                fg_color=PRIMARY_COLOR,
+                hover_color=PRIMARY_COLOR_DARK,
+            ).pack(padx=10, pady=6, anchor="e")
+            self._efectivo_cards[rid] = card
+        if not reservas:
+            ctk.CTkLabel(
+                self.cards_efectivo, text="No hay reservas pendientes", font=("Arial", 13)
+            ).pack(pady=20)
+        self._reserva_efectivo_sel = None
+        self.entry_monto_efectivo.configure(state="disabled")
+        self.btn_aprobar_efectivo.configure(state="disabled")
+
+    def _seleccionar_reserva_efectivo(self, id_reserva):
+        for rid, card in self._efectivo_cards.items():
+            card.configure(fg_color="#FFF59D" if rid == id_reserva else "white")
+        self._reserva_efectivo_sel = id_reserva
+        self.entry_monto_efectivo.configure(state="normal")
+        self.btn_aprobar_efectivo.configure(state="normal")
+
+    def _aprobar_pago_efectivo(self):
+        from tkinter import messagebox
+
+        rid = self._reserva_efectivo_sel
+        if not rid:
+            messagebox.showwarning("Aviso", "Seleccione una reserva")
+            return
+        monto = self.entry_monto_efectivo.get().strip()
+        if not monto:
+            messagebox.showwarning("Error", "Ingrese el monto recibido")
+            return
+        self._procesar_pago_efectivo(rid, monto)
+
+    def _procesar_pago_efectivo(self, id_reserva, monto):
+        from tkinter import messagebox
+
+        try:
+            monto_f = float(monto)
+        except ValueError:
+            messagebox.showerror("Error", "Monto inválido")
+            return
+        if monto_f <= 0:
+            messagebox.showerror("Error", "El monto debe ser mayor a 0")
+            return
+        placeholder = "%s" if not self.db_manager.offline else "?"
+        val_q = (
+            "SELECT ra.saldo_pendiente, a.id_sucursal "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE ra.id_reserva = {placeholder}"
+        )
+        row = self.db_manager.execute_query(val_q, (id_reserva,))
+        if not row:
+            messagebox.showerror("Error", "Reserva no encontrada")
+            return
+        saldo = float(row[0][0])
+        sucursal = row[0][1]
+        if sucursal != self.user_data.get("id_sucursal"):
+            messagebox.showerror(
+                "Error", "No puedes procesar reservas de otra sucursal"
+            )
+            return
+        if monto_f > saldo:
+            messagebox.showerror(
+                "Error", f"El monto excede el saldo (${saldo:,.0f})"
+            )
+            return
+
+        self._registrar_abono(id_reserva, monto_f, "Efectivo", None)
+        self.entry_monto_efectivo.delete(0, "end")
+        self._cargar_reservas_pendientes_efectivo()
 
     def _build_tab_caja_dia(self, parent):
         ctk.CTkLabel(parent, text="Caja del día").pack(pady=20)
