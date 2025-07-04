@@ -15,6 +15,20 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Connection logging setup
+# ---------------------------------------------------------------------------
+def setup_connection_logging():
+    """Configure logging for remote connection status changes."""
+    conn_logger = logging.getLogger("connection_changes")
+    conn_logger.setLevel(logging.INFO)
+    if not any(isinstance(h, logging.FileHandler) for h in conn_logger.handlers):
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        handler = logging.FileHandler("connection.log")
+        handler.setFormatter(formatter)
+        conn_logger.addHandler(handler)
+    return conn_logger
+
 # --- PRUEBA DE CONEXIÓN ANTES DE IMPORTAR PyQt5 ---
 try:
     import mysql.connector
@@ -71,6 +85,7 @@ class AlquilerApp:
             logger.error("Error running startup backup: %s", exc)
 
         # Inicializar gestores
+        setup_connection_logging()
         self.db_manager = TripleDBManager()
         if hasattr(self.db_manager, "start_worker"):
             # Iniciar hilo de sincronización en segundo plano si está disponible
