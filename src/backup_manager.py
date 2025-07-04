@@ -3,13 +3,14 @@ import shutil
 import sqlite3
 from datetime import datetime
 import logging
+import gzip
 from dotenv import load_dotenv
 
 
 class BackupManager:
     """Handle SQLite database backups with rotation and integrity checks."""
 
-    def __init__(self, db_path=None, backup_dir=None):
+    def __init__(self, db_path=None, backup_dir=None, max_backups=3):
         load_dotenv()
         if not logging.getLogger().handlers:
             logging.basicConfig(
@@ -24,6 +25,7 @@ class BackupManager:
             base_dir = os.path.dirname(self.db_path)
             backup_dir = os.path.join(base_dir, "backups")
         self.backup_dir = backup_dir
+        self.max_backups = max_backups
         self.logger.info("Initializing BackupManager: db=%s, dir=%s", self.db_path, self.backup_dir)
         self.ensure_backup_dir()
 
@@ -56,6 +58,15 @@ class BackupManager:
             self.logger.error("Failed to check disk space: %s", exc)
             return False
 
+    def _disk_space_low(self, ratio=0.1):
+        """Return True if free space is below the given ratio of total."""
+        try:
+            usage = shutil.disk_usage(self.backup_dir)
+            return usage.free < usage.total * ratio
+        except Exception as exc:
+            self.logger.error("Failed to check disk space: %s", exc)
+            return False
+
     def create_backup(self, backup_type):
         """Create a timestamped backup of the database."""
         self.logger.info("Starting %s backup", backup_type)
@@ -75,7 +86,7 @@ class BackupManager:
             return None
 
     def cleanup_old_backups(self, backup_type):
-        """Keep only the three most recent backups for the given type."""
+        """Remove excess backups and optionally compress older ones."""
         self.logger.info("Cleaning up old backups for type %s", backup_type)
         try:
             pattern = f"backup_{backup_type}_"
@@ -85,12 +96,26 @@ class BackupManager:
                 if f.startswith(pattern)
             ]
             files.sort(key=os.path.getmtime, reverse=True)
-            for old in files[3:]:
+
+            for old in files[self.max_backups:]:
                 try:
                     os.remove(old)
                     self.logger.info("Removed old backup: %s", old)
                 except Exception as exc:
                     self.logger.error("Failed to remove old backup %s: %s", old, exc)
+
+            if self._disk_space_low():
+                for path in files[3:]:
+                    if path.endswith(".gz"):
+                        continue
+                    gz_path = f"{path}.gz"
+                    try:
+                        with open(path, "rb") as src, gzip.open(gz_path, "wb") as dst:
+                            shutil.copyfileobj(src, dst)
+                        os.remove(path)
+                        self.logger.info("Compressed old backup: %s", gz_path)
+                    except Exception as exc:
+                        self.logger.error("Failed to compress backup %s: %s", path, exc)
         except Exception as exc:
             self.logger.error("Failed to cleanup old backups: %s", exc)
 

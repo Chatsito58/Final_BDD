@@ -65,3 +65,41 @@ def test_backup_on_startup_creates_new_db(monkeypatch, tmp_path):
     result = mgr.backup_on_startup()
     assert result == "bk"
     assert db_path.exists()
+
+
+def test_cleanup_respects_max_backups(tmp_path):
+    db_path = tmp_path / "db.sqlite"
+    db_path.write_text("x")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    mgr = BackupManager(db_path=db_path, backup_dir=backup_dir, max_backups=3)
+
+    for i in range(5):
+        f = backup_dir / f"backup_startup_{i}.db"
+        f.write_text(str(i))
+        os.utime(f, (i, i))
+
+    mgr.cleanup_old_backups("startup")
+    names = {p.name for p in backup_dir.iterdir()}
+    assert len(names) == 3
+    assert names == {f"backup_startup_{i}.db" for i in [4, 3, 2]}
+
+
+def test_cleanup_compresses_when_low_disk(monkeypatch, tmp_path):
+    db_path = tmp_path / "db.sqlite"
+    db_path.write_text("x")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    mgr = BackupManager(db_path=db_path, backup_dir=backup_dir, max_backups=4)
+
+    for i in range(4):
+        f = backup_dir / f"backup_startup_{i}.db"
+        f.write_text(str(i))
+        os.utime(f, (i, i))
+
+    monkeypatch.setattr(mgr, "_disk_space_low", lambda ratio=0.1: True)
+    mgr.cleanup_old_backups("startup")
+
+    assert (backup_dir / "backup_startup_0.db.gz").exists()
+    assert not (backup_dir / "backup_startup_0.db").exists()
+
