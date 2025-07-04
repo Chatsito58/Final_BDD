@@ -13,7 +13,12 @@ from .sqlite_manager import SQLiteManager
 
 
 class DualDBManager:
-    """Manage two remote MySQL databases with local SQLite fallback."""
+    """Manage two remote MySQL databases with local SQLite fallback.
+
+    The class includes a background worker that periodically checks
+    connectivity and retries pending operations every ``DB_WORKER_INTERVAL``
+    minutes (20 by default).
+    """
 
     def __init__(self):
         load_dotenv()
@@ -27,7 +32,10 @@ class DualDBManager:
         self.remote2_active = False
         self._thread = None
         self._stop_event = threading.Event()
-        self._interval = 20 * 60  # 20 minutes by default
+        # Interval between connection checks in seconds. Can be overridden with
+        # the ``DB_WORKER_INTERVAL`` environment variable (minutes).
+        minutes = int(os.getenv("DB_WORKER_INTERVAL", "20"))
+        self._interval = minutes * 60
 
     # ------------------------------------------------------------------
     # Connection helpers
@@ -321,7 +329,14 @@ class DualDBManager:
             self._stop_event.wait(self._interval)
 
     def start_worker(self, interval_minutes=20):
-        """Start the background synchronization thread."""
+        """Start the background synchronization thread.
+
+        Parameters
+        ----------
+        interval_minutes : int, optional
+            Frequency in minutes for connection checks and pending operation
+            retries. Defaults to 20 minutes.
+        """
         self._interval = interval_minutes * 60
         if self._thread and self._thread.is_alive():
             return
