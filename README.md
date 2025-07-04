@@ -182,6 +182,25 @@ Define en el archivo `.env` los datos de ambos servidores y la ruta local:
   `DB_REMOTE_PASSWORD2`, `DB_REMOTE_NAME2` – servidor secundario.
 - `LOCAL_DB_PATH` – ubicación de la base SQLite y de la cola de reintentos.
 
+### TripleDBManager
+`TripleDBManager` mantiene sincronizadas las dos bases remotas y la local en
+SQLite. Utiliza las mismas variables de entorno (`DB_REMOTE_HOST`,
+`DB_REMOTE_HOST2`, `DB_REMOTE_USER`, `DB_REMOTE_USER2`, `DB_REMOTE_PASSWORD`,
+`DB_REMOTE_PASSWORD2`, `DB_REMOTE_NAME`, `DB_REMOTE_NAME2`, `LOCAL_DB_PATH`) y
+permite definir `DB_WORKER_INTERVAL` para ajustar la frecuencia de reintentos.
+
+```python
+from src.triple_db_manager import TripleDBManager
+
+db = TripleDBManager()
+db.insert("INSERT INTO Cliente (nombre) VALUES (%s)", ("Ana",))
+db.update(
+    "UPDATE Cliente SET nombre=%s WHERE id_cliente=%s",
+    ("Ana Ruiz", 1)
+)
+db.delete("DELETE FROM Cliente WHERE id_cliente=%s", (1,))
+```
+
 ### Cola de reintentos y trabajador
 Cuando una escritura falla en **cualquiera** de las bases remotas, la consulta
 quedará registrada en la tabla `retry_queue` del SQLite local. Esta cola se
