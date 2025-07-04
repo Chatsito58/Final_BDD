@@ -32,35 +32,35 @@ class RegistroCTk(ctk.CTk):
         self.focus_force()
 
     def _load_options(self):
-        """Cargar listas de tipos de documento y códigos postales."""
+        """Load dropdown option lists from the active database."""
         self.tipo_doc_opts = []
         self.cod_post_opts = []
         self.licencia_opts = []
         self.cuenta_opts = []
 
-        rows = self.db.execute_query(
-            "SELECT id_tipo_documento, descripcion FROM Tipo_documento"
-        )
-        if rows:
-            self.tipo_doc_opts = [(r[0], r[1]) for r in rows]
+        queries = {
+            "tipo_doc_opts": (
+                "SELECT id_tipo_documento, descripcion FROM Tipo_documento",
+                lambda r: (r[0], r[1]),
+            ),
+            "cod_post_opts": (
+                "SELECT id_codigo_postal, ciudad FROM Codigo_postal",
+                lambda r: (r[0], f"{r[1]} ({r[0]})"),
+            ),
+            "licencia_opts": (
+                "SELECT id_licencia FROM Licencia_conduccion",
+                lambda r: r[0],
+            ),
+            "cuenta_opts": (
+                "SELECT id_cuenta FROM Cuenta",
+                lambda r: r[0],
+            ),
+        }
 
-        rows = self.db.execute_query(
-            "SELECT id_codigo_postal, ciudad FROM Codigo_postal"
-        )
-        if rows:
-            self.cod_post_opts = [(r[0], f"{r[1]} ({r[0]})") for r in rows]
-
-        rows = self.db.execute_query(
-            "SELECT id_licencia FROM Licencia_conduccion"
-        )
-        if rows:
-            self.licencia_opts = [r[0] for r in rows]
-
-        rows = self.db.execute_query(
-            "SELECT id_cuenta FROM Cuenta"
-        )
-        if rows:
-            self.cuenta_opts = [r[0] for r in rows]
+        for attr, (query, transform) in queries.items():
+            rows = self.db.execute_query(query)
+            if rows:
+                setattr(self, attr, [transform(r) for r in rows])
 
     def _build_form(self):
         pad = {"padx": 10, "pady": 5}
