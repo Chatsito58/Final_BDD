@@ -2739,9 +2739,72 @@ class ClienteView(BaseCTKView):
                 messagebox.showerror("Error", "El vehículo seleccionado no está disponible")
                 return False
 
-            # Calcular nuevo valor
+            # Validaciones de fechas
             fecha_salida_dt = datetime.strptime(fecha_salida, "%Y-%m-%d %H:%M")
             fecha_entrada_dt = datetime.strptime(fecha_entrada, "%Y-%m-%d %H:%M")
+
+            if fecha_salida_dt < datetime.now():
+                messagebox.showerror(
+                    "Error", "La fecha de salida no puede ser en el pasado"
+                )
+                return False
+
+            if fecha_entrada_dt <= fecha_salida_dt:
+                messagebox.showerror(
+                    "Error", "La fecha de entrada debe ser posterior a la de salida"
+                )
+                return False
+
+            # Verificar solapamiento con otras reservas
+            overlap_q = (
+                "SELECT 1 FROM Reserva_alquiler ra "
+                "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+                "WHERE a.id_vehiculo = %s AND ra.id_reserva <> %s "
+                "AND ra.id_estado_reserva NOT IN (3,4) "
+                "AND a.fecha_hora_salida < %s AND a.fecha_hora_entrada > %s"
+            )
+            if self.db_manager.execute_query(
+                overlap_q,
+                (id_vehiculo, id_reserva, fecha_entrada, fecha_salida),
+            ):
+                messagebox.showerror(
+                    "Error", "El vehículo ya tiene otra reserva en esas fechas"
+                )
+                return False
+
+            # Verificar solapamiento con mantenimiento
+            maint_q = (
+                "SELECT 1 FROM Mantenimiento "
+                "WHERE placa = %s AND fecha <= %s AND fecha_fin >= %s"
+            )
+            if self.db_manager.execute_query(
+                maint_q, (id_vehiculo, fecha_entrada, fecha_salida)
+            ):
+                messagebox.showerror(
+                    "Error", "El vehículo está en mantenimiento en ese periodo"
+                )
+                return False
+
+            # Verificar que el usuario no tenga otra reserva activa para el mismo vehículo
+            user_id = getattr(self, "user_data", {}).get("id_cliente")
+            if user_id:
+                user_overlap_q = (
+                    "SELECT 1 FROM Reserva_alquiler ra "
+                    "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+                    "WHERE a.id_vehiculo = %s AND a.id_cliente = %s "
+                    "AND ra.id_reserva <> %s AND ra.id_estado_reserva NOT IN (3,4) "
+                    "AND a.fecha_hora_salida < %s AND a.fecha_hora_entrada > %s"
+                )
+                if self.db_manager.execute_query(
+                    user_overlap_q,
+                    (id_vehiculo, user_id, id_reserva, fecha_entrada, fecha_salida),
+                ):
+                    messagebox.showerror(
+                        "Error",
+                        "Ya tiene otra reserva activa para este vehículo en esas fechas",
+                    )
+                    return False
+
             dias = (fecha_entrada_dt - fecha_salida_dt).days
 
             # Obtener tarifa del vehículo
