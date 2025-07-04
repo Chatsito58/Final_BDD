@@ -12,12 +12,6 @@ class BackupManager:
 
     def __init__(self, db_path=None, backup_dir=None, max_backups=3):
         load_dotenv()
-        if not logging.getLogger().handlers:
-            logging.basicConfig(
-                level=logging.INFO,
-                format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                handlers=[logging.FileHandler("app.log"), logging.StreamHandler()],
-            )
 
         self.logger = logging.getLogger(__name__)
         self.db_path = db_path or os.getenv("LOCAL_DB_PATH", "data/local.sqlite")
