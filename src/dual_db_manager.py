@@ -180,11 +180,14 @@ class DualDBManager:
     # ------------------------------------------------------------------
     def _write(self, query, params, last):
         result = None
+
         conn1 = self.connect_remote1()
         if conn1:
             try:
+                # Execute on primary remote
                 result = self._exec_mysql(conn1, query, params, fetch=False, last=last)
-                # replicate to remote2
+
+                # Replicate to secondary remote if available
                 conn2 = self.connect_remote2()
                 if conn2:
                     try:
@@ -193,26 +196,43 @@ class DualDBManager:
                         self.logger.error("Replicate to remote2 failed: %s", exc)
                         self.remote2_active = False
                         self._enqueue('remote2', query, params)
+                else:
+                    # queue if remote2 could not connect
+                    self._enqueue('remote2', query, params)
+
+                # Always replicate locally when remote1 succeeds
+                self._exec_sqlite(query, params, fetch=False, last=False)
                 return result
+
             except Exception as exc:  # pragma: no cover - network errors
                 self.logger.error("Write remote1 failed: %s", exc)
                 self.remote1_active = False
-                # Try remote2
+                # Fall through to try remote2
+
         conn2 = self.connect_remote2()
         if conn2:
             try:
+                # Execute on secondary remote
                 result = self._exec_mysql(conn2, query, params, fetch=False, last=last)
+
+                # Queue operation for remote1 recovery
                 self._enqueue('remote1', query, params)
+
+                # Replicate locally as this write succeeded
+                self._exec_sqlite(query, params, fetch=False, last=False)
                 return result
+
             except Exception as exc:  # pragma: no cover - network errors
                 self.logger.error("Write remote2 failed: %s", exc)
                 self.remote2_active = False
-        # both remotes failed -> local
+
+        # both remotes failed -> write locally and queue for later
         local_result = self._exec_sqlite(query, params, fetch=False, last=last)
         self._enqueue('remote1', query, params)
         self._enqueue('remote2', query, params)
         if last:
             result = local_result
+
         return result
 
     # ------------------------------------------------------------------
