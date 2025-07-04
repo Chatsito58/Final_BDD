@@ -205,9 +205,15 @@ class LoginView(QDialog):
             self._registro_window = RegistroCTk(
                 self.auth_manager.db,
                 on_back=volver_a_login,
-                correo_inicial=correo_pendiente
+                correo_inicial=correo_pendiente,
             )
+            # Ensure the login window reappears even if the registration
+            # window is closed directly via the window manager
+            self._registro_window.protocol("WM_DELETE_WINDOW", volver_a_login)
             self._registro_window.mainloop()
+            # mainloop only returns when the registration window is closed;
+            # call volver_a_login to guarantee focus returns to the login
+            volver_a_login()
         except Exception as e:
             logger.error(f"Error abriendo registro: {e}")
             QMessageBox.critical(self, "Error", f"Error al abrir registro: {e}")
