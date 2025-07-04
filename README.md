@@ -38,8 +38,7 @@ Este proyecto implementa una aplicación de alquiler de vehículos con una inter
 - **PyQt5** y **CustomTkinter** para la interfaz.
 - **mysql-connector-python** y **sqlite3** para la capa de datos.
 - **python-dotenv** para la configuración.
-- **tkcalendar** y **ttkbootstrap** como componentes adicionales de la UI.
-- **pytest** para las pruebas unitarias.
+- **tkcalendar** como componente adicional de la UI.
 
 ## Requisitos
 - Python 3.8 o superior.
@@ -120,12 +119,11 @@ Final_BDD/
 │   ├── views/           # Interfaces y ventanas
 │   ├── auth.py          # Manejo de autenticación
 │   ├── config.py        # Configuración global
-│   ├── dual_db_manager.py# Nuevo gestor de doble escritura
+│   ├── triple_db_manager.py # Gestor de triple escritura
 │   ├── db_manager.py    # Gestor anterior (obsoleto)
 │   └── sqlite_manager.py# Gestor de la base local SQLite
 ├── data/                # Esquemas y datos de ejemplo
 ├── ui/                  # Archivos .ui para PyQt5
-├── tests/               # Pruebas unitarias
 ├── main.py              # Punto de entrada de la aplicación
 └── requirements.txt     # Dependencias
 ```
@@ -168,12 +166,12 @@ Toda la actividad relevante se almacena en el archivo `app.log`:
 - Sincronización entre la base remota y local.
 - Registro de pagos y cambios de contraseña.
 
-## Gestor de Doble Escritura
-El módulo `src/dual_db_manager.py` reemplaza al antiguo `DBManager` y permite
-replicar todas las escrituras en **dos** servidores MySQL/MariaDB manteniendo
+## Gestor de Bases de Datos Redundantes
+El módulo `src/triple_db_manager.py` reemplaza al antiguo `DBManager` y replica
+todas las escrituras en **dos** servidores MySQL/MariaDB manteniendo
 un respaldo local en SQLite. Su objetivo principal es asegurar que ambas
 bases de datos remotas se mantengan sincronizadas y que la aplicación pueda
-seguir operando cuando no haya conexión.
+seguir operando aun cuando alguna conexión falle.
 
 ### Variables de entorno
 Define en el archivo `.env` los datos de ambos servidores y la ruta local:
@@ -217,14 +215,6 @@ manual o dejar que el método `start_worker()` inicie un hilo en segundo plano
 que la ejecute periódicamente. De este modo las escrituras pendientes se
 reenvían tan pronto como alguno de los remotos vuelva a estar disponible.
 
-## Ejecutar Pruebas
-Las pruebas unitarias se encuentran en el directorio `tests` y utilizan `pytest`.
-Para ejecutarlas desde el entorno virtual:
-```bash
-pytest
-```
-Estas pruebas validan los cálculos de los reportes de ventas usando una base SQLite temporal.
-
 ## Verificación manual
 Los siguientes pasos se emplearon para verificar la integridad del proyecto:
 
@@ -236,9 +226,7 @@ Los siguientes pasos se emplearon para verificar la integridad del proyecto:
      `src/views` mediante rutas relativas (por ejemplo, `login_view.py` carga `ui/login.ui`).
 3. **Verificación de sintaxis**
    - Se ejecutó `python -m py_compile $(git ls-files '*.py')` sin reportar errores.
-4. **Ejecución de pruebas unitarias**
-   - Todas las pruebas en `pytest` finalizaron exitosamente.
-5. **Prueba de ejecución**
+4. **Prueba de ejecución**
    - Al ejecutar `python main.py` se produjo el error `ModuleNotFoundError: No module named 'dotenv'`
      debido a la falta de dependencias instaladas.
    - No se generó el archivo `app.log` porque la aplicación no inició correctamente.
