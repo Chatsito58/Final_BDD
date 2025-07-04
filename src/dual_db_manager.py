@@ -19,7 +19,10 @@ class DualDBManager:
         load_dotenv()
         self.logger = logging.getLogger(__name__)
         self.sqlite = SQLiteManager()
-        self.pending = []  # [(target, query, params)]
+        # Queue of operations pending to be sent to the remotes.
+        # Each item is (row_id, target, query, params) where row_id references
+        # the entry persisted in the SQLite retry_queue table.
+        self.pending = []  # [(id, target, query, params)]
         self.remote1_active = False
         self.remote2_active = False
         self._thread = None
@@ -104,7 +107,16 @@ class DualDBManager:
         )
 
     def _enqueue(self, target, query, params):
-        self.pending.append((target, query, params))
+        """Add a failed operation to the in-memory and persistent queues."""
+        payload = json.dumps(params)
+        insert_q = (
+            "INSERT INTO retry_queue (operation, table_name, payload, target, created_at) "
+            "VALUES (?, ?, ?, ?, datetime('now'))"
+        )
+        row_id = self.sqlite.execute_query(
+            insert_q, (query, "", payload, target), fetch=False, return_lastrowid=True
+        )
+        self.pending.append((row_id, target, query, params))
 
     # ------------------------------------------------------------------
     # Retry queue helpers
@@ -180,11 +192,14 @@ class DualDBManager:
     # ------------------------------------------------------------------
     def _write(self, query, params, last):
         result = None
+
         conn1 = self.connect_remote1()
         if conn1:
             try:
+                # Execute on primary remote
                 result = self._exec_mysql(conn1, query, params, fetch=False, last=last)
-                # replicate to remote2
+
+                # Replicate to secondary remote if available
                 conn2 = self.connect_remote2()
                 if conn2:
                     try:
@@ -193,55 +208,90 @@ class DualDBManager:
                         self.logger.error("Replicate to remote2 failed: %s", exc)
                         self.remote2_active = False
                         self._enqueue('remote2', query, params)
+                else:
+                    # queue if remote2 could not connect
+                    self._enqueue('remote2', query, params)
+
+                # Always replicate locally when remote1 succeeds
+                self._exec_sqlite(query, params, fetch=False, last=False)
                 return result
+
             except Exception as exc:  # pragma: no cover - network errors
                 self.logger.error("Write remote1 failed: %s", exc)
                 self.remote1_active = False
-                # Try remote2
+                # Fall through to try remote2
+
         conn2 = self.connect_remote2()
         if conn2:
             try:
+                # Execute on secondary remote
                 result = self._exec_mysql(conn2, query, params, fetch=False, last=last)
+
+                # Queue operation for remote1 recovery
                 self._enqueue('remote1', query, params)
+
+                # Replicate locally as this write succeeded
+                self._exec_sqlite(query, params, fetch=False, last=False)
                 return result
+
             except Exception as exc:  # pragma: no cover - network errors
                 self.logger.error("Write remote2 failed: %s", exc)
                 self.remote2_active = False
-        # both remotes failed -> local
+
+        # both remotes failed -> write locally and queue for later
         local_result = self._exec_sqlite(query, params, fetch=False, last=last)
         self._enqueue('remote1', query, params)
         self._enqueue('remote2', query, params)
         if last:
             result = local_result
+
         return result
 
     # ------------------------------------------------------------------
     # Retry pending operations
     # ------------------------------------------------------------------
     def retry_pending(self):
+        """Attempt to replay queued operations on the remote servers."""
+        rows = self.sqlite.execute_query(
+            "SELECT id, operation, payload, target FROM retry_queue ORDER BY id"
+        ) or []
+
+        existing = {item[0] for item in self.pending if item[0] is not None}
+        entries = [
+            (row[0], row[3], row[1], json.loads(row[2]) if row[2] else None)
+            for row in rows
+            if row[0] not in existing
+        ]
+        entries.extend(self.pending)
+
         remaining = []
-        for target, query, params in self.pending:
-            if target == 'remote1':
-                conn = self.connect_remote1()
-            else:
-                conn = self.connect_remote2()
+        for row_id, target, query, params in entries:
+            conn = self.connect_remote1() if target == "remote1" else self.connect_remote2()
             if conn:
                 try:
                     # Skip operations without updated_at when another server
                     # stayed online to avoid overwriting newer data.
                     has_updated = False
                     if isinstance(params, dict):
-                        has_updated = 'updated_at' in params
+                        has_updated = "updated_at" in params
                     other_online = (
-                        self.remote2_active if target == 'remote1' else self.remote1_active
+                        self.remote2_active if target == "remote1" else self.remote1_active
                     )
-                    if not has_updated and other_online and 'updated_at' not in query.lower():
+                    if (
+                        not has_updated
+                        and other_online
+                        and "updated_at" not in query.lower()
+                    ):
+                        if row_id:
+                            self.delete_retry_entry(row_id)
                         continue
                     self._exec_mysql(conn, query, params, fetch=False)
+                    if row_id:
+                        self.delete_retry_entry(row_id)
                     continue
                 except Exception as exc:  # pragma: no cover - network errors
                     self.logger.error("Retry %s failed: %s", target, exc)
-            remaining.append((target, query, params))
+            remaining.append((row_id, target, query, params))
         self.pending = remaining
 
     # ------------------------------------------------------------------
