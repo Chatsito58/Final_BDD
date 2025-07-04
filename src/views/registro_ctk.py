@@ -148,7 +148,7 @@ class RegistroCTk(ctk.CTk):
     def volver(self):
         if self.on_back:
             self._stop_status = True
-            self.withdraw()
+            self.destroy()
             correo_registrado = self.correo_entry.get().strip()
             self.on_back(correo_registrado)
         else:
@@ -337,7 +337,7 @@ class RegistroCTk(ctk.CTk):
             )
             if self.on_back:
                 self._stop_status = True
-                self.withdraw()
+                self.destroy()
                 self.on_back(correo)
             else:
                 self.volver()
