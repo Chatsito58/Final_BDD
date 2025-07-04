@@ -10,23 +10,10 @@ python-dotenv>=1.0.0
 
 # Componentes de interfaz
 tkcalendar>=1.6.0
-ttkbootstrap>=1.10.0
 
-# Procesamiento de imágenes
-Pillow>=9.0.0
-
-# Utilidades del sistema
-packaging>=21.0
-
-# Pruebas (opcional)
+# Herramientas de desarrollo (opcionales)
 pytest>=7.0.0
-
-# Compatibilidad con versiones antiguas de Python
-pathlib2>=2.3.0; python_version<"3.4"
-
 black>=24.3.0
-
-# funciona menos el registrar cliente desde el login
 
 # Nota: Los siguientes módulos son parte de la biblioteca estándar de Python
 # y no necesitan instalación: threading, time, datetime, re, os, sys, logging
