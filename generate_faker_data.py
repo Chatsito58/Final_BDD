@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+#& "C:/Users/William Diaz/Final_BDD/venv/Scripts/pip.exe" install faker
+
+
 """Generate sample data for the Alquiler_vehiculos database using Faker."""
 
 from __future__ import annotations
