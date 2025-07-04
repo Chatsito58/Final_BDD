@@ -183,11 +183,18 @@ Define en el archivo `.env` los datos de ambos servidores y la ruta local:
 - `LOCAL_DB_PATH` – ubicación de la base SQLite y de la cola de reintentos.
 
 ### Cola de reintentos y trabajador
-Cuando una escritura falla en alguna conexión remota, la consulta se almacena
-en memoria y en la tabla `retry_queue` de SQLite. La función `retry_pending()`
-reenvía estas operaciones una vez se restablece la comunicación.
-El método `start_worker()` inicia un hilo que cada ciertos minutos comprueba el
-estado de las conexiones y ejecuta `retry_pending()` automáticamente.
+Cuando una escritura falla en **cualquiera** de las bases remotas, la consulta
+quedará registrada en la tabla `retry_queue` del SQLite local. Esta cola se
+crea automáticamente en el archivo definido por `LOCAL_DB_PATH` y almacena la
+operación SQL, la tabla afectada, los parámetros en formato JSON, el destino al
+que debe reintentarse (`remote1` o `remote2`) y la fecha de creación.
+
+La función `retry_pending()` lee todas las entradas de `retry_queue` y vuelve a
+intentarlas en el servidor correspondiente. Si la operación se ejecuta con
+éxito, la fila se elimina de la tabla. Puedes invocar esta función de manera
+manual o dejar que el método `start_worker()` inicie un hilo en segundo plano
+que la ejecute periódicamente. De este modo las escrituras pendientes se
+reenvían tan pronto como alguno de los remotos vuelva a estar disponible.
 
 ## Ejecutar Pruebas
 Las pruebas unitarias se encuentran en el directorio `tests` y utilizan `pytest`.
