@@ -5,13 +5,13 @@ from tkinter import messagebox
 import threading
 import time
 
-from ..dual_db_manager import DualDBManager
+from ..triple_db_manager import TripleDBManager
 
 
 class RegistroCTk(ctk.CTk):
     """Formulario de registro de clientes usando CustomTkinter."""
 
-    def __init__(self, db_manager: DualDBManager, on_back=None, correo_inicial=None):
+    def __init__(self, db_manager: TripleDBManager, on_back=None, correo_inicial=None):
         super().__init__()
         self.db = db_manager
         self.on_back = on_back

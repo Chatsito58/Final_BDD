@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import threading
+import datetime
 from dotenv import load_dotenv
 
 try:
@@ -48,6 +49,16 @@ class TripleDBManager:
         minutes = int(os.getenv("DB_WORKER_INTERVAL", "20"))
         self._interval = minutes * 60
 
+    def update_maintenance_states(self):
+        """Release vehicles from maintenance whose end date has passed."""
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        query = (
+            "UPDATE Vehiculo SET id_estado_vehiculo = 1 "
+            "WHERE id_estado_vehiculo = 3 AND placa IN "
+            "(SELECT placa FROM Mantenimiento WHERE fecha_fin <= %s)"
+        )
+        self.execute_query(query, (now,), fetch=False)
+
     # ------------------------------------------------------------------
     # Public helpers
     # ------------------------------------------------------------------
@@ -69,7 +80,7 @@ class TripleDBManager:
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
             'port': os.getenv('DB_REMOTE_PORT', 3306),
-            'connection_timeout': 10,
+            'connection_timeout': 3,
         }
 
     def _config_remote2(self):
@@ -79,7 +90,7 @@ class TripleDBManager:
             'password': os.getenv('DB_REMOTE_PASSWORD2'),
             'database': os.getenv('DB_REMOTE_NAME2'),
             'port': os.getenv('DB_REMOTE_PORT2', 3306),
-            'connection_timeout': 10,
+            'connection_timeout': 3,
         }
 
     def connect_remote1(self):
@@ -109,6 +120,15 @@ class TripleDBManager:
             self.logger.error("Remote2 connection failed: %s", exc)
             self.remote2_active = False
             return None
+
+    def ping_remotes(self):
+        """Check connectivity to both remote databases."""
+        conn1 = self.connect_remote1()
+        if conn1:
+            conn1.close()
+        conn2 = self.connect_remote2()
+        if conn2:
+            conn2.close()
 
     # ------------------------------------------------------------------
     # Internal execution

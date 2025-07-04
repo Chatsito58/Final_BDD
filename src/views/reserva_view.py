@@ -2,7 +2,7 @@ from pathlib import Path
 from PyQt5 import QtWidgets, uic
 from mysql.connector import Error
 
-from ..dual_db_manager import DualDBManager
+from ..triple_db_manager import TripleDBManager
 
 
 class ReservaView(QtWidgets.QWidget):
@@ -14,7 +14,7 @@ class ReservaView(QtWidgets.QWidget):
         uic.loadUi(ui_path, self)
 
         self.client_id = client_id
-        self.db_manager = DualDBManager()
+        self.db_manager = TripleDBManager()
 
         # Widgets
         self.vehicle_combo = self.findChild(QtWidgets.QComboBox, 'vehicleComboBox')
