@@ -1344,6 +1344,7 @@ class ClienteView(BaseCTKView):
                 # Recargar lista de reservas
                 print(f"Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
+                self._cargar_reservas_pendientes(id_cliente)
 
                 # Limpiar formulario
                 entry_abono.delete(0, "end")
@@ -1443,6 +1444,7 @@ class ClienteView(BaseCTKView):
 
             # Recargar la lista de reservas
             self._cargar_reservas_pendientes(self.user_data.get("id_cliente"))
+            self._cargar_reservas_cliente(self.user_data.get("id_cliente"))
 
             # Limpiar campos y HABILITAR para nuevo abono
             self.input_abono.delete(0, "end")
@@ -2259,6 +2261,7 @@ class ClienteView(BaseCTKView):
                 # Recargar lista de reservas
                 print(f"Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
+                self._cargar_reservas_pendientes(id_cliente)
 
                 # Limpiar formulario
                 entry_abono.delete(0, "end")
@@ -2861,6 +2864,7 @@ class ClienteView(BaseCTKView):
                 # Recargar lista de reservas
                 print(f"Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
+                self._cargar_reservas_pendientes(id_cliente)
 
                 # Limpiar formulario
                 entry_abono.delete(0, "end")
@@ -3939,6 +3943,7 @@ class EmpleadoVentasView(BaseCTKView):
                 # Recargar lista de reservas
                 print(f"Recargando lista de reservas...")
                 self._cargar_reservas_cliente(id_cliente)
+                self._cargar_reservas_pendientes(id_cliente)
 
                 # Limpiar formulario
                 entry_abono.delete(0, "end")
