@@ -46,6 +46,7 @@ except Exception as e:
 from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 from src.triple_db_manager import TripleDBManager
+from src.backup_manager import BackupManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.ctk_views import (
@@ -62,6 +63,13 @@ from src.styles import MODERN_QSS
 class AlquilerApp:
     def __init__(self):
         logger.info("Inicializando AlquilerApp...")
+        # Setup backup manager and create startup backup
+        self.backup_manager = BackupManager(os.getenv("LOCAL_DB_PATH", "local.db"))
+        try:
+            self.backup_manager.backup_on_startup()
+        except Exception as exc:
+            logger.error("Error running startup backup: %s", exc)
+
         # Inicializar gestores
         self.db_manager = TripleDBManager()
         if hasattr(self.db_manager, "start_worker"):
@@ -77,6 +85,11 @@ class AlquilerApp:
 
     def _cleanup(self):
         """Stop background services before exiting."""
+        if hasattr(self, "backup_manager"):
+            try:
+                self.backup_manager.backup_on_shutdown()
+            except Exception as exc:  # pragma: no cover - cleanup errors
+                logger.error("Error during shutdown backup: %s", exc)
         if hasattr(self.db_manager, "stop_worker"):
             try:
                 self.db_manager.stop_worker()
