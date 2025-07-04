@@ -35,6 +35,7 @@ class TripleDBManager:
     def __init__(self):
         load_dotenv()
         self.logger = logging.getLogger(__name__)
+        self.connection_logger = logging.getLogger('connection_changes')
         self.sqlite = SQLiteManager()
         # Queue of operations pending to be sent to the remotes.
         # Each item is (row_id, target, query, params) where row_id references
@@ -44,10 +45,16 @@ class TripleDBManager:
         self.remote2_active = False
         self._thread = None
         self._stop_event = threading.Event()
+        self.stop_monitoring = threading.Event()
+        self.connection_monitor_thread = None
+        self.previous_remote1_state = None
+        self.previous_remote2_state = None
         # Interval between connection checks in seconds. Can be overridden with
         # the ``DB_WORKER_INTERVAL`` environment variable (minutes).
         minutes = int(os.getenv("DB_WORKER_INTERVAL", "20"))
         self._interval = minutes * 60
+
+        self._start_connection_monitoring()
 
     def update_maintenance_states(self):
         """Release vehicles from maintenance whose end date has passed."""
@@ -125,14 +132,79 @@ class TripleDBManager:
             self.remote2_active = False
             return None
 
+    def ping_remote1(self):
+        """Attempt a quick connection to remote1 to update its status."""
+        if mysql is None:
+            self.remote1_active = False
+            return False
+        config = self._config_remote1().copy()
+        config["connection_timeout"] = 2
+        try:
+            conn = mysql.connector.connect(**config)
+            conn.close()
+            self.remote1_active = True
+            return True
+        except Exception as exc:
+            self.remote1_active = False
+            self.logger.error("Remote1 ping failed: %s", exc)
+            return False
+
+    def ping_remote2(self):
+        """Attempt a quick connection to remote2 to update its status."""
+        if mysql is None:
+            self.remote2_active = False
+            return False
+        config = self._config_remote2().copy()
+        config["connection_timeout"] = 2
+        try:
+            conn = mysql.connector.connect(**config)
+            conn.close()
+            self.remote2_active = True
+            return True
+        except Exception as exc:
+            self.remote2_active = False
+            self.logger.error("Remote2 ping failed: %s", exc)
+            return False
+
     def ping_remotes(self):
         """Check connectivity to both remote databases."""
-        conn1 = self.connect_remote1()
-        if conn1:
-            conn1.close()
-        conn2 = self.connect_remote2()
-        if conn2:
-            conn2.close()
+        self.ping_remote1()
+        self.ping_remote2()
+
+    # ------------------------------------------------------------------
+    # Connection monitoring helpers
+    # ------------------------------------------------------------------
+    def _start_connection_monitoring(self):
+        """Launch the background thread that checks connection changes."""
+        if self.connection_monitor_thread and self.connection_monitor_thread.is_alive():
+            return
+        self.stop_monitoring.clear()
+        self.connection_monitor_thread = threading.Thread(
+            target=self._connection_monitor_loop,
+            daemon=True,
+        )
+        self.connection_monitor_thread.start()
+
+    def _connection_monitor_loop(self):
+        while not self.stop_monitoring.is_set():
+            try:
+                self.ping_remote1()
+                self.ping_remote2()
+                self._check_connection_changes()
+            except Exception as exc:  # pragma: no cover - just log
+                self.connection_logger.error("Monitor error: %s", exc)
+            self.stop_monitoring.wait(5)
+
+    def _check_connection_changes(self):
+        """Log whenever the connection state of a remote changes."""
+        if self.remote1_active != self.previous_remote1_state:
+            state = "online" if self.remote1_active else "offline"
+            self.connection_logger.info("Remote1 is %s", state)
+            self.previous_remote1_state = self.remote1_active
+        if self.remote2_active != self.previous_remote2_state:
+            state = "online" if self.remote2_active else "offline"
+            self.connection_logger.info("Remote2 is %s", state)
+            self.previous_remote2_state = self.remote2_active
 
     # ------------------------------------------------------------------
     # Internal execution
@@ -392,6 +464,10 @@ class TripleDBManager:
 
     def stop_worker(self):
         """Stop the background synchronization thread."""
+        if self.connection_monitor_thread:
+            self.stop_monitoring.set()
+            self.connection_monitor_thread.join()
+            self.connection_monitor_thread = None
         if not self._thread:
             return
         self._stop_event.set()
