@@ -111,12 +111,35 @@ class BackupManager:
         return latest
 
     def backup_on_startup(self):
-        """Create a backup if integrity check succeeds."""
+        """Verify database integrity and create a startup backup.
+
+        If the integrity check fails, attempt to recover the database using the
+        most recent backup (either from a previous startup or shutdown). When
+        no backups are found, an empty database file is created. A new startup
+        backup is created at the end of the process regardless of whether a
+        restoration was needed.
+        """
+
         self.logger.info("Running startup backup")
-        if self.verify_database_integrity():
-            return self.create_backup("startup")
-        self.logger.error("Startup backup skipped due to integrity error")
-        return None
+
+        if not self.verify_database_integrity():
+            self.logger.warning("Database corrupted, attempting recovery")
+            latest_startup = self.get_latest_backup("startup")
+            latest_shutdown = self.get_latest_backup("shutdown")
+            candidates = [p for p in [latest_startup, latest_shutdown] if p]
+
+            if candidates:
+                latest = max(candidates, key=os.path.getmtime)
+                self.logger.info("Restoring database from %s", latest)
+                self.restore_from_backup(latest)
+            else:
+                open(self.db_path, "w").close()
+                self.logger.warning(
+                    "No valid backups found. Created new empty database: %s",
+                    self.db_path,
+                )
+
+        return self.create_backup("startup")
 
     def backup_on_shutdown(self):
         """Create a backup when application shuts down."""
