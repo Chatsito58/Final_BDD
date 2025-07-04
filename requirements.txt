@@ -11,6 +11,9 @@ python-dotenv>=1.0.0
 # Componentes de interfaz
 tkcalendar>=1.6.0
 
+# Generación de datos ficticios
+Faker>=20.0.0
+
 # Herramientas de desarrollo (opcionales)
 pytest>=7.0.0
 black>=24.3.0

@@ -92,6 +92,28 @@ Si no dispones de MySQL/MariaDB la aplicación funcionará automáticamente en m
 
 Los esquemas se encuentran en `data/sql_bases.sql` (MySQL) y `data/sqlite_schema.sql` (SQLite). El archivo `data/inserts_prueba.sql` contiene datos de ejemplo para pruebas.
 
+### Generación de Datos Ficticios
+Para poblar la base de datos con datos de prueba masivos, puedes usar la librería Faker incluida en las dependencias. Esto es útil para:
+
+- **Pruebas de rendimiento** con miles de registros
+- **Demostraciones** con datos realistas
+- **Desarrollo** sin necesidad de datos reales
+
+**Instalación de Faker:**
+```bash
+pip install Faker>=20.0.0
+```
+
+**Uso recomendado:**
+1. Usar el prompt proporcionado para Codex que genera datos colombianos realistas
+2. Ejecutar el script generado para crear `data_inserts_faker.sql`
+3. Importar los datos en tu base de datos MySQL/MariaDB
+
+Los datos generados incluyen:
+- **Tablas catálogo**: tipos, estados, marcas, colores (pocos registros)
+- **Tablas transaccionales**: clientes, empleados, vehículos, alquileres (miles de registros)
+- **Datos colombianos**: nombres, direcciones, teléfonos, códigos postales realistas
+
 ## Ejecución de la Aplicación
 Una vez instaladas las dependencias y configuradas las variables de entorno, ejecuta:
 ```bash
