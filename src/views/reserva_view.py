@@ -36,6 +36,8 @@ class ReservaView(QtWidgets.QWidget):
     def load_vehicles(self):
         """Load available vehicles into the combo box."""
         try:
+            if hasattr(self.db_manager, "update_maintenance_states"):
+                self.db_manager.update_maintenance_states()
             conn = self.db_manager.connect()
             cursor = conn.cursor()
             cursor.execute(

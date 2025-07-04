@@ -67,6 +67,11 @@ class AlquilerApp:
         if hasattr(self.db_manager, "start_worker"):
             # Iniciar hilo de sincronización en segundo plano si está disponible
             self.db_manager.start_worker()
+        if hasattr(self.db_manager, "update_maintenance_states"):
+            try:
+                self.db_manager.update_maintenance_states()
+            except Exception as exc:
+                logger.error("Error updating maintenance states: %s", exc)
         self.auth_manager = AuthManager(self.db_manager)
         logger.info("Gestores inicializados correctamente")
 
