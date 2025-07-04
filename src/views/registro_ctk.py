@@ -163,6 +163,28 @@ class RegistroCTk(ctk.CTk):
         telefono = self.tel_entry.get().strip()
         direccion = self.dir_entry.get().strip()
         correo = self.correo_entry.get().strip()
+        infracciones_str = self.infra_entry.get().strip()
+        try:
+            infracciones = int(infracciones_str or 0)
+        except ValueError:
+            messagebox.showwarning("Error", "Infracciones debe ser un número entero")
+            return
+
+        licencia_sel = None
+        if self.licencia_var:
+            try:
+                licencia_sel = int(self.licencia_var.get())
+            except ValueError:
+                messagebox.showwarning("Error", "Licencia seleccionada inválida")
+                return
+
+        cuenta_sel = None
+        if self.cuenta_var:
+            try:
+                cuenta_sel = int(self.cuenta_var.get())
+            except ValueError:
+                messagebox.showwarning("Error", "Cuenta seleccionada inválida")
+                return
 
         if not documento or not nombre or not correo:
             messagebox.showwarning("Error", "Complete los campos obligatorios")
@@ -200,21 +222,52 @@ class RegistroCTk(ctk.CTk):
         licencia_params = ('Vigente', fecha_emision, fecha_vencimiento, 3)  # Categoría B1 por defecto
         
         try:
-            # Insertar licencia
-            self.db.execute_query(licencia_query, licencia_params, fetch=False)
-            
-            # Obtener ID de la licencia insertada
-            licencia_id_query = "SELECT last_insert_rowid()" if self.is_sqlite else "SELECT LAST_INSERT_ID()"
-            licencia_result = self.db.execute_query(licencia_id_query)
-            licencia_id = licencia_result[0][0] if licencia_result else None
-            
+            # Insertar licencia si no se seleccionó una existente
+            if licencia_sel is None:
+                self.db.execute_query(licencia_query, licencia_params, fetch=False)
+
+                # Obtener ID de la licencia insertada
+                licencia_id_query = "SELECT last_insert_rowid()" if self.is_sqlite else "SELECT LAST_INSERT_ID()"
+                licencia_result = self.db.execute_query(licencia_id_query)
+                licencia_sel = licencia_result[0][0] if licencia_result else None
+
             # Insertar cliente con la nueva estructura
             if self.is_sqlite:
-                insert_q = "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                params = (documento, nombre, telefono, direccion, correo, licencia_id, id_tipo_doc, id_codigo)
+                insert_q = (
+                    "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, "
+                    "infracciones, id_licencia, id_tipo_documento, id_codigo_postal, id_cuenta) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                params = (
+                    documento,
+                    nombre,
+                    telefono,
+                    direccion,
+                    correo,
+                    infracciones,
+                    licencia_sel,
+                    id_tipo_doc,
+                    id_codigo,
+                    cuenta_sel,
+                )
             else:
-                insert_q = "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, id_licencia, id_tipo_documento, id_codigo_postal) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                params = (documento, nombre, telefono, direccion, correo, licencia_id, id_tipo_doc, id_codigo)
+                insert_q = (
+                    "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo, "
+                    "infracciones, id_licencia, id_tipo_documento, id_codigo_postal, id_cuenta) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                )
+                params = (
+                    documento,
+                    nombre,
+                    telefono,
+                    direccion,
+                    correo,
+                    infracciones,
+                    licencia_sel,
+                    id_tipo_doc,
+                    id_codigo,
+                    cuenta_sel,
+                )
 
             cliente_id = self.db.execute_query(
                 insert_q,
