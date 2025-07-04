@@ -362,3 +362,79 @@ class DualDBManager:
         self._stop_event.set()
         self._thread.join()
         self._thread = None
+
+    # ------------------------------------------------------------------
+    # Compatibility helpers
+    # ------------------------------------------------------------------
+    @property
+    def offline(self):
+        """Return True when no remote database is reachable."""
+        return not (self.remote1_active or self.remote2_active)
+
+    def is_sqlite(self):
+        """Compatibility wrapper mirroring DBManager.is_sqlite."""
+        return self.offline
+
+    def connect(self):
+        """Return a connection to either remote server or the local SQLite."""
+        conn = self.connect_remote1()
+        if conn:
+            return conn
+        conn = self.connect_remote2()
+        if conn:
+            return conn
+        return self.sqlite.connect()
+
+    def execute_query(self, query, params=None, fetch=True, return_lastrowid=False):
+        """Execute a query using the high level CRUD API for compatibility."""
+        if fetch:
+            return self.select(query, params)
+        lowered = query.strip().lower()
+        if return_lastrowid or lowered.startswith("insert"):
+            return self.insert(query, params)
+        if lowered.startswith("update"):
+            return self.update(query, params)
+        if lowered.startswith("delete"):
+            return self.delete(query, params)
+        # Fallback for other statements
+        return self.update(query, params)
+
+    def execute_query_with_headers(self, query, params=None):
+        """Execute a query and also return column headers."""
+        conn = self.connect_remote1()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(query, params or ())
+                rows = cursor.fetchall()
+                headers = [d[0] for d in cursor.description]
+                cursor.close()
+                conn.close()
+                return rows, headers
+            except Exception as exc:
+                self.logger.error("Headers remote1 failed: %s", exc)
+                self.remote1_active = False
+        conn = self.connect_remote2()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(query, params or ())
+                rows = cursor.fetchall()
+                headers = [d[0] for d in cursor.description]
+                cursor.close()
+                conn.close()
+                return rows, headers
+            except Exception as exc:
+                self.logger.error("Headers remote2 failed: %s", exc)
+                self.remote2_active = False
+        q = query.replace('%s', '?')
+        conn = self.sqlite.connect()
+        if not conn:
+            return None, []
+        cursor = conn.cursor()
+        cursor.execute(q, params or ())
+        rows = cursor.fetchall()
+        headers = [d[0] for d in cursor.description]
+        cursor.close()
+        conn.close()
+        return rows, headers

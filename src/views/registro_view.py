@@ -1,12 +1,12 @@
 from pathlib import Path
 from PyQt5 import QtWidgets, uic
-from ..db_manager import DBManager
+from ..dual_db_manager import DualDBManager
 
 
 class RegistroView(QtWidgets.QDialog):
     """Formulario simple para registrar clientes."""
 
-    def __init__(self, db_manager: DBManager, parent=None):
+    def __init__(self, db_manager: DualDBManager, parent=None):
         super().__init__(parent)
         ui_path = Path(__file__).resolve().parents[2] / 'ui' / 'registro.ui'
         uic.loadUi(ui_path, self)

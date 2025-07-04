@@ -5,11 +5,11 @@ try:  # Skip tests if customtkinter is not available
 except Exception:  # pragma: no cover - dependency missing
     pytest.skip("customtkinter not installed", allow_module_level=True)
 
-from src.db_manager import DBManager
+from src.dual_db_manager import DualDBManager
 from src.views.registro_ctk import RegistroCTk
 
 def test_load_options_offline():
-    db = DBManager()
+    db = DualDBManager()
     db.offline = True
     reg = RegistroCTk.__new__(RegistroCTk)
     reg.db = db
