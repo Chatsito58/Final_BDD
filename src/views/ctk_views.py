@@ -2024,11 +2024,6 @@ class EmpleadoVentasView(BaseCTKView):
         ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
-        self.tab_principal = self.tabview.add("Principal")
-        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
-        frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR, font=("Arial", 20)).pack(pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=180, height=38).pack(side="bottom", pady=(30, 20))
         # Pestaña: Clientes
         self.tab_clientes = self.tabview.add("Clientes")
         self._build_tab_clientes(self.tabview.tab("Clientes"))
@@ -2041,6 +2036,8 @@ class EmpleadoVentasView(BaseCTKView):
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+        # Abrir directamente la pestaña de reservas
+        self.tabview.set("Reservas")
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
@@ -2194,14 +2191,18 @@ class EmpleadoVentasView(BaseCTKView):
         self.lb_reservas.delete(0, 'end')
         placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
-            "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo "
-            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
-            f"WHERE a.id_sucursal = {placeholder}"
+            "SELECT ra.id_reserva, a.id_cliente, c.nombre, a.id_vehiculo "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
+            f"WHERE a.id_sucursal = {placeholder} "
+            "ORDER BY c.nombre"
         )
         reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         if reservas:
             for r in reservas:
-                self.lb_reservas.insert('end', f"{r[0]} | Cliente {r[1]} | Vehículo {r[2]}")
+                res_id, cid, cname, veh = r
+                self.lb_reservas.insert('end', f"{res_id} | {cname} ({cid}) | {veh}")
 
     def _seleccionar_reserva(self):
         sel = self.lb_reservas.curselection()
@@ -2210,7 +2211,7 @@ class EmpleadoVentasView(BaseCTKView):
         else:
             self._reserva_sel = None
 
-    def _abrir_form_reserva(self, id_reserva=None):
+    def _abrir_form_reserva(self, id_reserva=None, vehiculo=None):
         from tkinter import messagebox
         from tkcalendar import DateEntry
         import tkinter as tk
@@ -2223,13 +2224,29 @@ class EmpleadoVentasView(BaseCTKView):
         win.transient(self)
         win.grab_set()
 
-        ctk.CTkLabel(win, text="Cliente ID:").pack(pady=4)
-        entry_cliente = ctk.CTkEntry(win)
-        entry_cliente.pack(pady=4)
+        # Clientes disponibles
+        clientes = self.db_manager.execute_query(
+            "SELECT id_cliente, nombre FROM Cliente ORDER BY nombre"
+        ) or []
+        cliente_map = {nombre: cid for cid, nombre in clientes}
+        cliente_var = ctk.StringVar(value=next(iter(cliente_map), ""))
+        ctk.CTkLabel(win, text="Cliente:").pack(pady=4)
+        opt_cliente = ctk.CTkOptionMenu(win, variable=cliente_var, values=list(cliente_map.keys()))
+        opt_cliente.pack(pady=4)
 
-        ctk.CTkLabel(win, text="Vehículo placa:").pack(pady=4)
-        entry_veh = ctk.CTkEntry(win)
-        entry_veh.pack(pady=4)
+        # Vehículos disponibles
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        vehiculos = self.db_manager.execute_query(
+            f"SELECT placa FROM Vehiculo WHERE id_estado_vehiculo = 1 AND id_sucursal = {placeholder}",
+            (self.user_data.get('id_sucursal'),),
+        ) or []
+        veh_map = {v[0]: v[0] for v in vehiculos}
+        vehiculo_var = ctk.StringVar(value=next(iter(veh_map), ""))
+        if vehiculo and vehiculo in veh_map:
+            vehiculo_var.set(vehiculo)
+        ctk.CTkLabel(win, text="Vehículo:").pack(pady=4)
+        opt_veh = ctk.CTkOptionMenu(win, variable=vehiculo_var, values=list(veh_map.keys()))
+        opt_veh.pack(pady=4)
 
         ctk.CTkLabel(win, text="Fecha salida:").pack(pady=4)
         salida = DateEntry(win, date_pattern='yyyy-mm-dd')
@@ -2246,14 +2263,18 @@ class EmpleadoVentasView(BaseCTKView):
             )
             row = self.db_manager.execute_query(q.replace('%s', placeholder), (id_reserva,))
             if row:
-                entry_cliente.insert(0, row[0][0])
-                entry_veh.insert(0, row[0][1])
-                salida.set_date(row[0][2])
-                entrada.set_date(row[0][3])
+                cid, veh, fs, fe = row[0]
+                name = cliente_map.get(cid) or next((n for n, i in cliente_map.items() if i == cid), "")
+                if name:
+                    cliente_var.set(name)
+                if veh in veh_map:
+                    vehiculo_var.set(veh)
+                salida.set_date(fs)
+                entrada.set_date(fe)
 
         def guardar():
-            cid = entry_cliente.get().strip()
-            veh = entry_veh.get().strip()
+            cid = cliente_map.get(cliente_var.get())
+            veh = vehiculo_var.get().strip()
             fs = salida.get_date().strftime('%Y-%m-%d')
             fe = entrada.get_date().strftime('%Y-%m-%d')
             if not cid or not veh:
@@ -2403,7 +2424,7 @@ class EmpleadoVentasView(BaseCTKView):
                 ctk.CTkButton(
                     btn_frame,
                     text="🚗 Reservar este vehículo",
-                    command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                    command=lambda p=placa: self._abrir_form_reserva(None, p),
                     fg_color="#4CAF50",
                     hover_color="#388E3C",
                     font=("Arial", 12, "bold"),
