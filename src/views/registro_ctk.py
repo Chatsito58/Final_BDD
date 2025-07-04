@@ -35,17 +35,32 @@ class RegistroCTk(ctk.CTk):
         """Cargar listas de tipos de documento y códigos postales."""
         self.tipo_doc_opts = []
         self.cod_post_opts = []
-        if not self.is_sqlite:
-            rows = self.db.execute_query(
-                "SELECT id_tipo_documento, descripcion FROM Tipo_documento"
-            )
-            if rows:
-                self.tipo_doc_opts = [(r[0], r[1]) for r in rows]
-            rows = self.db.execute_query(
-                "SELECT id_codigo_postal, ciudad FROM Codigo_postal"
-            )
-            if rows:
-                self.cod_post_opts = [(r[0], f"{r[1]} ({r[0]})") for r in rows]
+        self.licencia_opts = []
+        self.cuenta_opts = []
+
+        rows = self.db.execute_query(
+            "SELECT id_tipo_documento, descripcion FROM Tipo_documento"
+        )
+        if rows:
+            self.tipo_doc_opts = [(r[0], r[1]) for r in rows]
+
+        rows = self.db.execute_query(
+            "SELECT id_codigo_postal, ciudad FROM Codigo_postal"
+        )
+        if rows:
+            self.cod_post_opts = [(r[0], f"{r[1]} ({r[0]})") for r in rows]
+
+        rows = self.db.execute_query(
+            "SELECT id_licencia FROM Licencia_conduccion"
+        )
+        if rows:
+            self.licencia_opts = [r[0] for r in rows]
+
+        rows = self.db.execute_query(
+            "SELECT id_cuenta FROM Cuenta"
+        )
+        if rows:
+            self.cuenta_opts = [r[0] for r in rows]
 
     def _build_form(self):
         pad = {"padx": 10, "pady": 5}
@@ -72,6 +87,29 @@ class RegistroCTk(ctk.CTk):
         self.correo_entry.pack(**pad)
         if self.correo_inicial:
             self.correo_entry.insert(0, self.correo_inicial)
+
+        ctk.CTkLabel(self, text="Infracciones").pack(**pad)
+        self.infra_entry = ctk.CTkEntry(self)
+        self.infra_entry.insert(0, "0")
+        self.infra_entry.pack(**pad)
+
+        if self.licencia_opts:
+            ctk.CTkLabel(self, text="Licencia").pack(**pad)
+            values = [str(l) for l in self.licencia_opts]
+            self.licencia_var = ctk.StringVar(value=values[0])
+            self.licencia_menu = ctk.CTkOptionMenu(self, variable=self.licencia_var, values=values)
+            self.licencia_menu.pack(**pad)
+        else:
+            self.licencia_var = None
+
+        if self.cuenta_opts:
+            ctk.CTkLabel(self, text="Cuenta").pack(**pad)
+            values = [str(c) for c in self.cuenta_opts]
+            self.cuenta_var = ctk.StringVar(value=values[0])
+            self.cuenta_menu = ctk.CTkOptionMenu(self, variable=self.cuenta_var, values=values)
+            self.cuenta_menu.pack(**pad)
+        else:
+            self.cuenta_var = None
 
         if self.tipo_doc_opts:
             ctk.CTkLabel(self, text="Tipo documento").pack(**pad)
