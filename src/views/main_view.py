@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QTimer
 import logging
 
-from ..db_manager import DBManager
+from ..dual_db_manager import DualDBManager
 from ..auth import AuthManager
 from ..styles import MODERN_QSS
 
@@ -23,7 +23,7 @@ class MainView(QtWidgets.QMainWindow):
 
         self._username = username
         self._role = role
-        self._db_manager = db_manager if db_manager is not None else DBManager()
+        self._db_manager = db_manager if db_manager is not None else DualDBManager()
         self._auth_manager = auth_manager if auth_manager is not None else AuthManager(self._db_manager)
 
         self._sync_timer = QTimer(self)

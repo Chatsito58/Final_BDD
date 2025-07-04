@@ -45,7 +45,7 @@ except Exception as e:
 # --- IMPORTS PyQt5 y módulos dependientes ---
 from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
-from src.db_manager import DBManager
+from src.dual_db_manager import DualDBManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
 from src.views.ctk_views import (
@@ -63,7 +63,7 @@ class AlquilerApp:
     def __init__(self):
         logger.info("Inicializando AlquilerApp...")
         # Inicializar gestores
-        self.db_manager = DBManager()
+        self.db_manager = DualDBManager()
         if hasattr(self.db_manager, "start_worker"):
             # Iniciar hilo de sincronización en segundo plano si está disponible
             self.db_manager.start_worker()

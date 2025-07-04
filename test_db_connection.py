@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 if 'dotenv' not in sys.modules:
     sys.modules['dotenv'] = types.SimpleNamespace(load_dotenv=lambda *a, **k: None)
 
-from src.db_manager import DBManager
+from src.dual_db_manager import DualDBManager
 from src.auth import AuthManager
 
 def test_database_connection():
@@ -23,7 +23,7 @@ def test_database_connection():
     
     try:
         # Crear instancia del gestor de base de datos
-        db_manager = DBManager()
+        db_manager = DualDBManager()
         
         # Verificar si está en modo offline
         is_offline = db_manager.is_sqlite()
@@ -122,7 +122,7 @@ def test_schema_compatibility():
     print("\n=== PRUEBA DE COMPATIBILIDAD DE ESQUEMA ===")
     
     try:
-        db_manager = DBManager()
+        db_manager = DualDBManager()
         
         # Consultas principales que deben funcionar
         consultas_prueba = [
