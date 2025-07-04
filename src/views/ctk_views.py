@@ -1621,8 +1621,33 @@ class ClienteView(BaseCTKView):
             text="• Seleccione una reserva y complete los campos para abonar",
             font=("Arial", 11),
         ).pack(pady=2)
-        # Contenedor de tarjetas de reservas pendientes
-        self.cards_abonos = ctk.CTkFrame(frame, fg_color="#FFF8E1")  # Amarillo pastel
+        # Contenedor de tarjetas de reservas pendientes con scroll
+        canvas = tk.Canvas(
+            frame,
+            borderwidth=0,
+            background="#FFF8E1",
+            highlightthickness=0,
+        )
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scroll_y.pack(side="right", fill="y", pady=10)
+
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#FFF8E1")
+        scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def _resize_inner(event):
+            canvas_width = event.width
+            canvas.itemconfig(scrollable_frame_id, width=canvas_width)
+
+        canvas.bind("<Configure>", _resize_inner)
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        scrollable_frame.bind("<Configure>", _on_frame_configure)
+        canvas.configure(yscrollcommand=scroll_y.set)
+
+        self.cards_abonos = ctk.CTkFrame(scrollable_frame, fg_color="#FFF8E1")  # Amarillo pastel
         self.cards_abonos.pack(fill="both", expand=True, padx=10, pady=10)
         # Frame para entrada de monto y método de pago
         input_frame = ctk.CTkFrame(frame)
