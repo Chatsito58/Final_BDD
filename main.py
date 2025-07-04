@@ -64,8 +64,19 @@ class AlquilerApp:
         logger.info("Inicializando AlquilerApp...")
         # Inicializar gestores
         self.db_manager = DBManager()
+        if hasattr(self.db_manager, "start_worker"):
+            # Iniciar hilo de sincronización en segundo plano si está disponible
+            self.db_manager.start_worker()
         self.auth_manager = AuthManager(self.db_manager)
         logger.info("Gestores inicializados correctamente")
+
+    def _cleanup(self):
+        """Stop background services before exiting."""
+        if hasattr(self.db_manager, "stop_worker"):
+            try:
+                self.db_manager.stop_worker()
+            except Exception as exc:  # pragma: no cover - cleanup errors
+                logger.error("Error stopping worker: %s", exc)
 
     def run(self):
         logger.info("Iniciando aplicación...")
@@ -84,9 +95,13 @@ class AlquilerApp:
             else:
                 logger.info("Login cancelado por el usuario - cerrando aplicación")
                 # Cerrar completamente la aplicación cuando se rechaza el login
+                self._cleanup()
                 app.quit()
                 sys.exit(0)
-        show_login()
+        try:
+            show_login()
+        finally:
+            self._cleanup()
 
     def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
         rol = (user_data.get('rol') or '').lower()
