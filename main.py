@@ -30,6 +30,7 @@ def setup_connection_logging():
     return conn_logger
 
 # --- PRUEBA DE CONEXIÓN ANTES DE IMPORTAR PyQt5 ---
+offline_mode = False
 try:
     import mysql.connector
     load_dotenv()
@@ -52,9 +53,10 @@ try:
     conn.close()
     print("[TEST-CONN-MAIN] Conexión cerrada correctamente.")
 except Exception as e:
+    offline_mode = True
     print(f"[TEST-CONN-MAIN] Error de conexión directa: {e}")
     logger.error(f"[TEST-CONN-MAIN] Error de conexión directa: {e}")
-    sys.exit(1)
+    print("[TEST-CONN-MAIN] Se continuará en modo offline")
 
 # --- IMPORTS PyQt5 y módulos dependientes ---
 from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
@@ -87,6 +89,9 @@ class AlquilerApp:
         # Inicializar gestores
         setup_connection_logging()
         self.db_manager = TripleDBManager()
+        self.offline = offline_mode or self.db_manager.offline
+        if self.offline:
+            logger.warning("Trabajando en modo offline")
         if hasattr(self.db_manager, "start_worker"):
             # Iniciar hilo de sincronización en segundo plano si está disponible
             self.db_manager.start_worker()
@@ -115,6 +120,12 @@ class AlquilerApp:
         logger.info("Iniciando aplicación...")
         app = QApplication(sys.argv)
         app.setStyleSheet(MODERN_QSS)
+        if self.offline:
+            QMessageBox.warning(
+                None,
+                "Modo offline",
+                "No se pudo conectar con el servidor. La aplicación funcionará en modo offline.",
+            )
         # Crear y mostrar vista de login
         def show_login():
             login_view = LoginView(self.auth_manager)
