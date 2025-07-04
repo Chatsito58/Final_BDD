@@ -181,9 +181,14 @@ class LoginView(QDialog):
             self.hide()
 
             def volver_a_login(correo_registrado=None):
-                if getattr(self, "_registro_window", None) and self._registro_window.winfo_exists():
-                    self._registro_window.destroy()
-                    self._registro_window._stop_status = True
+                reg = getattr(self, "_registro_window", None)
+                if reg:
+                    try:
+                        if reg.winfo_exists():
+                            reg.destroy()
+                    except Exception:
+                        pass  # window already destroyed
+                    reg._stop_status = True
                 self.show()
                 self.raise_()
                 self.activateWindow()
