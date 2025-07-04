@@ -1,4 +1,5 @@
 import types
+import logging
 import pytest
 
 from src.triple_db_manager import TripleDBManager
@@ -102,3 +103,58 @@ def test_retry_flushes_pending(monkeypatch):
     assert db.sqlite.queue == []
     # Should have executed on remote1
     assert any(o[0] == "r1" for o in ops)
+
+
+def test_check_connection_changes_logs(monkeypatch, caplog):
+    called = []
+
+    def fake_start(self):
+        called.append(True)
+
+    monkeypatch.setattr(TripleDBManager, "_start_connection_monitoring", fake_start)
+    db = TripleDBManager()
+    assert called
+
+    db.connection_logger = logging.getLogger("test_conn")
+    caplog.set_level(logging.INFO, logger="test_conn")
+
+    db.remote1_active = False
+    db.remote2_active = False
+    db._check_connection_changes()
+    assert any("remote1" in r.message.lower() for r in caplog.records)
+    assert any("remote2" in r.message.lower() for r in caplog.records)
+
+    caplog.clear()
+    db.remote1_active = True
+    db.remote2_active = False
+    db._check_connection_changes()
+    assert len(caplog.records) == 1  # only remote1 changed
+
+
+class DummyThread:
+    def __init__(self):
+        self.joined = False
+
+    def join(self):
+        self.joined = True
+
+    def is_alive(self):
+        return True
+
+    def start(self):
+        pass
+
+
+def test_stop_worker_joins_threads(monkeypatch):
+    monkeypatch.setattr(TripleDBManager, "_start_connection_monitoring", lambda self: None)
+    db = TripleDBManager()
+    t_monitor = DummyThread()
+    t_worker = DummyThread()
+    db.connection_monitor_thread = t_monitor
+    db._thread = t_worker
+    db.stop_monitoring.clear()
+    db._stop_event.clear()
+    db.stop_worker()
+    assert t_monitor.joined
+    assert t_worker.joined
+    assert db.stop_monitoring.is_set()
