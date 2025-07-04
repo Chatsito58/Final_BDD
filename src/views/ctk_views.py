@@ -2728,6 +2728,13 @@ class ClienteView(BaseCTKView):
             from datetime import datetime
             from tkinter import messagebox
 
+            # Verificar disponibilidad actual del vehículo
+            estado_q = "SELECT id_estado_vehiculo FROM Vehiculo WHERE placa = %s"
+            estado = self.db_manager.execute_query(estado_q, (id_vehiculo,)) or []
+            if not estado or int(estado[0][0]) != 1:
+                messagebox.showerror("Error", "El vehículo seleccionado no está disponible")
+                return False
+
             # Calcular nuevo valor
             fecha_salida_dt = datetime.strptime(fecha_salida, "%Y-%m-%d %H:%M")
             fecha_entrada_dt = datetime.strptime(fecha_entrada, "%Y-%m-%d %H:%M")
@@ -3182,6 +3189,12 @@ class EmpleadoVentasView(BaseCTKView):
                 messagebox.showwarning("Aviso", "Complete todos los campos")
                 return
             placeholder = "%s" if not self.db_manager.offline else "?"
+            # Validar estado actual del vehículo
+            estado_q = f"SELECT id_estado_vehiculo FROM Vehiculo WHERE placa = {placeholder}"
+            estado = self.db_manager.execute_query(estado_q, (veh,)) or []
+            if not estado or int(estado[0][0]) != 1:
+                messagebox.showerror("Error", "El vehículo seleccionado no está disponible")
+                return
             try:
                 if id_reserva:
                     q = f"UPDATE Alquiler a JOIN Reserva_alquiler ra ON a.id_alquiler=ra.id_alquiler SET a.id_cliente={placeholder}, a.id_vehiculo={placeholder}, a.fecha_hora_salida={placeholder}, a.fecha_hora_entrada={placeholder} WHERE ra.id_reserva={placeholder}"

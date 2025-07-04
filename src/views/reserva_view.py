@@ -82,6 +82,12 @@ class ReservaView(QtWidgets.QWidget):
         end = self.end_date.date().toPyDate()
         seguro = 1 if self.insurance_checkbox.isChecked() else None
         placeholder = "%s" if not self.db_manager.offline else "?"
+        # Validar estado del vehículo antes de crear la reserva
+        state_q = "SELECT id_estado_vehiculo FROM Vehiculo WHERE placa = %s"
+        estado = self.db_manager.execute_query(state_q, (vehicle,)) or []
+        if not estado or int(estado[0][0]) != 1:
+            QtWidgets.QMessageBox.warning(self, 'Aviso', 'El veh\u00edculo seleccionado no est\u00e1 disponible')
+            return
         query = (
             "INSERT INTO Alquiler "
             "(fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) "
