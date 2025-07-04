@@ -18,6 +18,8 @@ class RegistroCTk(ctk.CTk):
         self.correo_inicial = correo_inicial
         self.title("Registro de cliente")
         self.geometry("400x500")
+        if self.on_back:
+            self.protocol("WM_DELETE_WINDOW", self.volver)
         self._status_label = None
         self._stop_status = False
         self.is_sqlite = getattr(self.db, "offline", False)
