@@ -5224,10 +5224,11 @@ class GerenteView(BaseCTKView):
         query = (
             f"INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, "
             f"id_marca, id_color, id_tipo_vehiculo, id_transmision, "
-            f"id_blindaje, id_seguro_vehiculo, id_proveedor, id_sucursal) "
+            f"id_blindaje, id_seguro_vehiculo, id_estado_vehiculo, "
+            f"id_proveedor, id_sucursal) "
             f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, "
             f"{placeholder}, {placeholder}, {placeholder}, {placeholder}, "
-            f"{placeholder}, {placeholder}, {placeholder}, {placeholder})"
+            f"{placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
         params = (
             placa,
@@ -5240,6 +5241,7 @@ class GerenteView(BaseCTKView):
             trans,
             blindaje,
             seguro,
+            1,
             prov,
             sucursal,
         )

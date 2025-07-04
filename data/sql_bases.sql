@@ -194,7 +194,7 @@ CREATE TABLE Vehiculo (
   id_transmision     INT UNSIGNED,
   id_cilindraje      INT UNSIGNED,
   id_seguro_vehiculo INT UNSIGNED,
-  id_estado_vehiculo INT UNSIGNED,
+  id_estado_vehiculo INT UNSIGNED DEFAULT 1,
   id_proveedor       INT UNSIGNED,
   id_sucursal        INT UNSIGNED,
   FOREIGN KEY (id_marca)           REFERENCES Marca_vehiculo(id_marca),
