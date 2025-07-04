@@ -90,7 +90,7 @@ class TripleDBManager:
             'user': os.getenv('DB_REMOTE_USER'),
             'password': os.getenv('DB_REMOTE_PASSWORD'),
             'database': os.getenv('DB_REMOTE_NAME'),
-            'port': os.getenv('DB_REMOTE_PORT', 3306),
+            'port': os.getenv('DB_REMOTE_PORT'),
             'connection_timeout': 3,
         }
 
@@ -100,7 +100,7 @@ class TripleDBManager:
             'user': os.getenv('DB_REMOTE_USER2'),
             'password': os.getenv('DB_REMOTE_PASSWORD2'),
             'database': os.getenv('DB_REMOTE_NAME2'),
-            'port': os.getenv('DB_REMOTE_PORT2', 3306),
+            'port': os.getenv('DB_REMOTE_PORT2'),
             'connection_timeout': 3,
         }
 

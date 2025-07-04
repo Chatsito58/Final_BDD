@@ -6,15 +6,15 @@ load_dotenv()
 
 class Config:
     # Configuración de base de datos
-    DB_REMOTE_HOST = os.getenv('DB_REMOTE_HOST', 'localhost')
-    DB_REMOTE_USER = os.getenv('DB_REMOTE_USER', 'root')
-    DB_REMOTE_PASSWORD = os.getenv('DB_REMOTE_PASSWORD', '')
-    DB_REMOTE_NAME = os.getenv('DB_REMOTE_NAME', 'alquiler_vehiculos')
-    DB_REMOTE_HOST2 = os.getenv('DB_REMOTE_HOST2', 'localhost')
-    DB_REMOTE_PORT2 = os.getenv('DB_REMOTE_PORT2', '3306')
-    DB_REMOTE_USER2 = os.getenv('DB_REMOTE_USER2', 'root')
-    DB_REMOTE_PASSWORD2 = os.getenv('DB_REMOTE_PASSWORD2', '')
-    DB_REMOTE_NAME2 = os.getenv('DB_REMOTE_NAME2', 'alquiler_vehiculos_2')
+    DB_REMOTE_HOST = os.getenv('DB_REMOTE_HOST')
+    DB_REMOTE_USER = os.getenv('DB_REMOTE_USER')
+    DB_REMOTE_PASSWORD = os.getenv('DB_REMOTE_PASSWORD')
+    DB_REMOTE_NAME = os.getenv('DB_REMOTE_NAME')
+    DB_REMOTE_HOST2 = os.getenv('DB_REMOTE_HOST2')
+    DB_REMOTE_PORT2 = os.getenv('DB_REMOTE_PORT2')
+    DB_REMOTE_USER2 = os.getenv('DB_REMOTE_USER2')
+    DB_REMOTE_PASSWORD2 = os.getenv('DB_REMOTE_PASSWORD2')
+    DB_REMOTE_NAME2 = os.getenv('DB_REMOTE_NAME2')
 
     # Configuración de seguridad
     MAX_LOGIN_ATTEMPTS = 3
