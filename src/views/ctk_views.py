@@ -144,7 +144,7 @@ class BaseCTKView(ctk.CTk):
                     self._update_status_labels()
                     time.sleep(1)
                 except Exception:
-                    time.sleep(5)
+                    time.sleep(1)
 
         t = threading.Thread(target=updater, daemon=True)
         t.start()
