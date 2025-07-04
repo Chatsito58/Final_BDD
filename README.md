@@ -86,7 +86,9 @@ El archivo `.env` permite definir los parámetros de conexión:
 | `DB_REMOTE_PASSWORD2`| Contraseña del usuario secundario     | (vacío)                 |
 | `DB_REMOTE_NAME2`   | Nombre de la base de datos secundario | `alquiler_vehiculos_2`  |
 | `LOCAL_DB_PATH`     | Ruta al archivo SQLite local          | `data/local.sqlite`     |
+| `DB_WORKER_INTERVAL`| Intervalo de reintento del trabajador de sincronización (minutos) | `20` |
 
+`DB_WORKER_INTERVAL` define cada cuántos minutos el worker de sincronización volverá a intentar enviar las operaciones pendientes.
 Si no dispones de MySQL/MariaDB la aplicación funcionará automáticamente en modo offline usando solo SQLite.
 
 Los esquemas se encuentran en `data/sql_bases.sql` (MySQL) y `data/sqlite_schema.sql` (SQLite). El archivo `data/inserts_prueba.sql` contiene datos de ejemplo para pruebas.
