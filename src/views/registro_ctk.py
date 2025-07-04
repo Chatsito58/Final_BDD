@@ -92,6 +92,17 @@ class RegistroCTk(ctk.CTk):
         self.infra_entry = ctk.CTkEntry(self)
         self.infra_entry.insert(0, "0")
         self.infra_entry.pack(**pad)
+        # Advertencia sobre la validación de infracciones
+        self.infra_info_lbl = ctk.CTkLabel(
+            self,
+            text=(
+                "Las infracciones registradas se validar\u00e1n con su documento; "
+                "ingr\u00e9selas de forma precisa."
+            ),
+            wraplength=350,
+            justify="center",
+        )
+        self.infra_info_lbl.pack(**pad)
 
         if self.licencia_opts:
             ctk.CTkLabel(self, text="Licencia").pack(**pad)
