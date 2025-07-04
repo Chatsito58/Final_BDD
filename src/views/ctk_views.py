@@ -4243,6 +4243,7 @@ class EmpleadoCajaView(BaseCTKView):
         self._procesar_pago_efectivo(rid, monto)
 
     def _procesar_pago_efectivo(self, id_reserva, monto):
+        """Registrar un pago en efectivo para la reserva indicada."""
         from tkinter import messagebox
 
         try:
@@ -4250,9 +4251,11 @@ class EmpleadoCajaView(BaseCTKView):
         except ValueError:
             messagebox.showerror("Error", "Monto inválido")
             return
+
         if monto_f <= 0:
             messagebox.showerror("Error", "El monto debe ser mayor a 0")
             return
+
         placeholder = "%s" if not self.db_manager.offline else "?"
         val_q = (
             "SELECT ra.saldo_pendiente, a.id_sucursal "
@@ -4264,25 +4267,74 @@ class EmpleadoCajaView(BaseCTKView):
         if not row:
             messagebox.showerror("Error", "Reserva no encontrada")
             return
+
         saldo = float(row[0][0])
-        sucursal = row[0][1]
-        if sucursal != self.user_data.get("id_sucursal"):
+        sucursal_reserva = row[0][1]
+
+        if sucursal_reserva != self.user_data.get("id_sucursal"):
             messagebox.showerror(
                 "Error", "No puedes procesar reservas de otra sucursal"
             )
             return
-        if monto_f > saldo:
+
+        if monto_f < saldo:
             messagebox.showerror(
-                "Error", f"El monto excede el saldo (${saldo:,.0f})"
+                "Error",
+                f"El monto no cubre el saldo pendiente (${saldo:,.0f})",
             )
             return
 
-        self._registrar_abono(id_reserva, monto_f, "Efectivo", None)
+        # Registrar el abono en efectivo
+        insert_q = f"""
+            INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago)
+            VALUES ({placeholder}, CURRENT_TIMESTAMP, {placeholder}, 1)
+        """
+        self.db_manager.execute_query(insert_q, (monto_f, id_reserva), fetch=False)
+
+        # Actualizar saldo pendiente de la reserva
+        nuevo_saldo = max(0, saldo - monto_f)
+        update_q = f"UPDATE Reserva_alquiler SET saldo_pendiente = {placeholder}"
+        params = [nuevo_saldo]
+        if nuevo_saldo <= 0:
+            update_q += ", id_estado_reserva = 2"
+        update_q += f" WHERE id_reserva = {placeholder}"
+        params.append(id_reserva)
+        self.db_manager.execute_query(update_q, tuple(params), fetch=False)
+
+        messagebox.showinfo("Pago registrado", f"Pago de ${monto_f:,.0f} registrado")
+
         self.entry_monto_efectivo.delete(0, "end")
+        self._actualizar_caja_dia()
         self._refresh_reservas_pendientes_efectivo()
 
     def _build_tab_caja_dia(self, parent):
-        ctk.CTkLabel(parent, text="Caja del día").pack(pady=20)
+        """Construir pestaña que muestra el total de caja del día."""
+        self.lbl_caja_total = ctk.CTkLabel(parent, text="Caja del día: $0")
+        self.lbl_caja_total.pack(pady=20)
+        self._actualizar_caja_dia()
+
+    def _actualizar_caja_dia(self):
+        """Actualizar el total de efectivo recibido en el día."""
+        placeholder = "%s" if not self.db_manager.offline else "?"
+        date_clause = (
+            "DATE(ar.fecha_hora) = CURDATE()"
+            if not self.db_manager.offline
+            else "DATE(ar.fecha_hora) = date('now')"
+        )
+        query = (
+            "SELECT COALESCE(SUM(ar.valor), 0) "
+            "FROM Abono_reserva ar "
+            "JOIN Reserva_alquiler ra ON ar.id_reserva = ra.id_reserva "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE {date_clause} AND a.id_sucursal = {placeholder} "
+            "AND ar.id_medio_pago = 1"
+        )
+        res = self.db_manager.execute_query(
+            query, (self.user_data.get("id_sucursal"),)
+        )
+        total = float(res[0][0]) if res else 0.0
+        if hasattr(self, "lbl_caja_total"):
+            self.lbl_caja_total.configure(text=f"Caja del día: ${total:,.0f}")
 
     def _build_tab_clientes(self, parent):
         ctk.CTkLabel(parent, text="Clientes").pack(pady=20)
