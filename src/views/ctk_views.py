@@ -4422,7 +4422,114 @@ class EmpleadoCajaView(BaseCTKView):
         self._actualizar_caja_dia()
 
     def _build_tab_clientes(self, parent):
-        ctk.CTkLabel(parent, text="Clientes").pack(pady=20)
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(
+            frame, text="Abonos por cliente", font=("Arial", 18, "bold")
+        ).pack(pady=10)
+
+        # --- Dropdown con los clientes disponibles ---
+        rows = (
+            self.db_manager.execute_query(
+                "SELECT id_cliente, nombre FROM Cliente ORDER BY nombre"
+            )
+            or []
+        )
+        self._cliente_map = {f"{cid} - {nom}": cid for cid, nom in rows}
+        self._cliente_var = ctk.StringVar(
+            value=next(iter(self._cliente_map), "")
+        )
+
+        opt = ctk.CTkOptionMenu(
+            frame,
+            variable=self._cliente_var,
+            values=list(self._cliente_map.keys()),
+            command=lambda _: _cargar_reservas(),
+        )
+        opt.pack(pady=5)
+
+        # --- Listado de reservas activas del cliente seleccionado ---
+        list_frame = ctk.CTkFrame(frame, fg_color="#FFF8E1")
+        list_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar = tk.Scrollbar(list_frame, orient="vertical")
+        self.lb_res_cli = tk.Listbox(
+            list_frame, height=8, width=60, yscrollcommand=scrollbar.set
+        )
+        scrollbar.config(command=self.lb_res_cli.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.lb_res_cli.pack(side="left", fill="both", expand=True)
+
+        self.lb_res_cli.bind("<<ListboxSelect>>", lambda e: _seleccionar())
+
+        # --- Entrada de monto y botón para registrar abono ---
+        input_frame = ctk.CTkFrame(frame)
+        input_frame.pack(pady=10)
+        ctk.CTkLabel(input_frame, text="Monto ($):").grid(
+            row=0, column=0, padx=5, pady=5
+        )
+        self.ent_abono_cli = ctk.CTkEntry(input_frame, width=120)
+        self.ent_abono_cli.grid(row=0, column=1, padx=5, pady=5)
+        ctk.CTkButton(
+            input_frame,
+            text="Registrar abono",
+            command=lambda: _registrar_abono(),
+            width=140,
+            fg_color="#00AA00",
+            hover_color="#008800",
+        ).grid(row=0, column=2, padx=5, pady=5)
+
+        self._reserva_cli_sel = None
+
+        def _cargar_reservas():
+            self.lb_res_cli.delete(0, "end")
+            self._reserva_cli_sel = None
+            cli = self._cliente_var.get()
+            cid = self._cliente_map.get(cli)
+            if not cid:
+                return
+            placeholder = "%s" if not self.db_manager.offline else "?"
+            query = (
+                "SELECT ra.id_reserva, v.placa, ra.saldo_pendiente "
+                "FROM Reserva_alquiler ra "
+                "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+                "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
+                f"WHERE a.id_cliente = {placeholder} "
+                "AND ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2)"
+            )
+            rows = self.db_manager.execute_query(query, (cid,)) or []
+            for rid, placa, saldo in rows:
+                self.lb_res_cli.insert(
+                    "end", f"{rid} | {placa} | ${float(saldo):,.0f}"
+                )
+
+        def _seleccionar():
+            sel = self.lb_res_cli.curselection()
+            if sel:
+                self._reserva_cli_sel = int(
+                    self.lb_res_cli.get(sel[0]).split("|")[0].strip()
+                )
+            else:
+                self._reserva_cli_sel = None
+
+        def _registrar_abono():
+            rid = self._reserva_cli_sel
+            if not rid:
+                messagebox.showwarning("Aviso", "Seleccione una reserva")
+                return
+            monto = self.ent_abono_cli.get().strip()
+            if not monto:
+                messagebox.showwarning("Error", "Ingrese un monto")
+                return
+            self._procesar_pago_efectivo(rid, monto)
+            self.ent_abono_cli.delete(0, "end")
+            _cargar_reservas()
+
+        _cargar_reservas()
 
 
 class EmpleadoMantenimientoView(BaseCTKView):
