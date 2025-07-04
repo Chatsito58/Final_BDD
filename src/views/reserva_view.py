@@ -38,7 +38,10 @@ class ReservaView(QtWidgets.QWidget):
         try:
             conn = self.db_manager.connect()
             cursor = conn.cursor()
-            cursor.execute("SELECT placa FROM Vehiculo")
+            cursor.execute(
+                "SELECT placa FROM Vehiculo WHERE id_estado_vehiculo = 1 AND id_sucursal = %s",
+                (self.sucursal_id,)
+            )
             vehicles = cursor.fetchall()
             self.vehicle_combo.clear()
             for placa, in vehicles:

@@ -163,14 +163,30 @@ class ClienteView(BaseCTKView):
         import tkinter as tk
         from tkinter import messagebox
         id_cliente = self.user_data.get('id_cliente')
-        # Frame principal centrado
+        # Frame principal
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both")
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-        inner = ctk.CTkFrame(frame)
-        inner.place(relx=0.5, rely=0.5, anchor="center")
-        # Usar grid para todo en inner
+        # Canvas para scroll vertical
+        canvas = tk.Canvas(frame, borderwidth=0, background="#2A2D35", highlightthickness=0, width=1100, height=600)
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scroll_y.pack(side="right", fill="y")
+        # Frame interno con ancho máximo y centrado
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#2A2D35")
+        scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        # Limitar el ancho máximo del frame interno
+        def _resize_inner(event):
+            canvas_width = min(event.width, 1100)
+            canvas.itemconfig(scrollable_frame_id, width=canvas_width)
+        canvas.bind('<Configure>', _resize_inner)
+        # Actualizar scrollregion
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        scrollable_frame.bind("<Configure>", _on_frame_configure)
+        canvas.configure(yscrollcommand=scroll_y.set)
+        # Frame de contenido (tarjetas)
+        inner = ctk.CTkFrame(scrollable_frame)
+        inner.pack(pady=20, padx=10)
         inner.grid_columnconfigure((0, 1, 2), weight=1)
         # Título usando grid
         ctk.CTkLabel(inner, text="Mis reservas", font=("Arial", 20, "bold")).grid(row=0, column=0, columnspan=3, pady=10)
@@ -197,7 +213,6 @@ class ClienteView(BaseCTKView):
             LEFT JOIN Seguro_alquiler s ON a.id_seguro = s.id_seguro
             LEFT JOIN Descuento_alquiler d ON a.id_descuento = d.id_descuento
             WHERE a.id_cliente = %s
-              AND a.fecha_hora_salida >= CURRENT_TIMESTAMP
             ORDER BY a.fecha_hora_salida DESC
         '''
         params = (id_cliente,)
@@ -1409,140 +1424,168 @@ class ClienteView(BaseCTKView):
         entrada_date.bind('<<DateEntrySelected>>', calcular_total)
         calcular_total()
         # Botón para crear reserva
-        def crear_reserva():
-            import tkinter as tk
-            from tkinter import messagebox
-            from datetime import datetime
-            try:
-                # Validaciones básicas
-                if not vehiculos or not vehiculo_var.get():
-                    messagebox.showwarning("Error", "Seleccione un vehículo")
-                    return
-                if not entry_abono.get().strip():
-                    messagebox.showwarning("Error", "Ingrese el abono inicial")
-                    return
-                # Obtener datos del vehículo
-                placa = vehiculo_var.get().split(" - ")[0]
-                # Obtener fechas y horas
-                fecha_salida = salida_date.get_date().strftime("%Y-%m-%d")
-                hora_salida = salida_hora_cb.get()
-                min_salida = salida_min_cb.get()
-                ampm_salida = salida_ampm_cb.get()
-                if ampm_salida == "PM" and hora_salida != "12":
-                    hora_salida_24 = str(int(hora_salida) + 12)
-                elif ampm_salida == "AM" and hora_salida == "12":
-                    hora_salida_24 = "00"
-                else:
-                    hora_salida_24 = hora_salida
-                fecha_hora_salida = f"{fecha_salida} {hora_salida_24}:{min_salida}:00"
-                fecha_entrada = entrada_date.get_date().strftime("%Y-%m-%d")
-                hora_entrada = entrada_hora_cb.get()
-                min_entrada = entrada_min_cb.get()
-                ampm_entrada = entrada_ampm_cb.get()
-                if ampm_entrada == "PM" and hora_entrada != "12":
-                    hora_entrada_24 = str(int(hora_entrada) + 12)
-                elif ampm_entrada == "AM" and hora_entrada == "12":
-                    hora_entrada_24 = "00"
-                else:
-                    hora_entrada_24 = hora_entrada
-                fecha_hora_entrada = f"{fecha_entrada} {hora_entrada_24}:{min_entrada}:00"
-                # Obtener seguro
-                id_seguro = None
-                if seguros and seguro_var.get():
-                    seguro_seleccionado = seguro_var.get()
-                    for s in seguros:
-                        if f"{s[1]} (${s[2]})" == seguro_seleccionado:
-                            id_seguro = s[0]
-                            break
-                id_descuento = id_descuento_act
-                # Calcular total real
-                vehiculo_query = """
-                    SELECT t.tarifa_dia 
-                    FROM Vehiculo v 
-                    JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
-                    WHERE v.placa = %s
-                """
-                vehiculo_result = self.db_manager.execute_query(vehiculo_query, (placa,))
-                if not vehiculo_result:
-                    messagebox.showerror("Error", "No se pudo obtener la tarifa del vehículo")
-                    return
-                tarifa = float(vehiculo_result[0][0]) if vehiculo_result[0][0] else 0
-                fecha_salida_obj = salida_date.get_date()
-                fecha_entrada_obj = entrada_date.get_date()
-                dias = (fecha_entrada_obj - fecha_salida_obj).days
-                if dias < 1:
-                    dias = 1
-                seguro_costo = 0
-                if id_seguro and seguros:
-                    for s in seguros:
-                        if s[0] == id_seguro:
-                            seguro_costo = float(s[2])
-                            break
-                descuento_val = float(desc_val) if id_descuento else 0
-                total = dias * tarifa + seguro_costo - descuento_val
-                if total < 0:
-                    total = 0
-                abono_min = int(total * 0.3)
-                abono = int(entry_abono.get().strip())
-                if abono < abono_min:
-                    messagebox.showwarning("Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:,.0f}")
-                    return
-                metodo = metodo_var.get()
-                id_cliente = self.user_data.get('id_cliente')
-                # Insertar en Alquiler
-                placeholder = '%s' if not self.db_manager.offline else '?'
-                alquiler_query = f"""
-                    INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
-                    id_seguro, id_descuento, valor)
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                """
-                id_alquiler = self.db_manager.execute_query(alquiler_query, (
-                    fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
-                    id_seguro, id_descuento, total
-                ), fetch=False, return_lastrowid=True)
-                if not id_alquiler:
-                    messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
-                    return
-                saldo_pendiente = total - abono
-                reserva_query = f"""
-                    INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
-                    VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
-                """
-                id_reserva = self.db_manager.execute_query(
-                    reserva_query,
-                    (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
-                    fetch=False,
-                    return_lastrowid=True
-                )
-                if not id_reserva:
-                    raise Exception("No se pudo obtener el ID de la reserva")
-                id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
-                abono_query = f"""
-                    INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
-                    VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
-                """
-                self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
-                
-                print(f"Reserva creada exitosamente. ID: {id_reserva}")
-                
-                # Mostrar mensaje según método de pago
-                if metodo in ("Tarjeta", "Transferencia"):
-                    self._simular_pasarela_pago(id_reserva, abono, metodo)
-                else:
-                    messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
-                
-                # Recargar lista de reservas
-                print(f"Recargando lista de reservas...")
-                self._cargar_reservas_cliente(id_cliente)
-                
-                # Limpiar formulario
-                entry_abono.delete(0, 'end')
-                
-            except Exception as exc:
-                messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
-                print(f"Error detallado: {exc}")
-        
-        ctk.CTkButton(frame, text="Guardar reserva", command=crear_reserva, fg_color="#3A86FF", hover_color="#265DAB", font=("Arial", 13, "bold")).pack(pady=18)
+    def crear_reserva():
+        import tkinter as tk
+        from tkinter import messagebox
+        from datetime import datetime
+
+        try:
+            # Validaciones básicas
+            if not vehiculos or not vehiculo_var.get():
+                messagebox.showwarning("Error", "Seleccione un vehículo")
+                return
+
+            if not entry_abono.get().strip():
+                messagebox.showwarning("Error", "Ingrese el abono inicial")
+                return
+
+            # Obtener datos del vehículo
+            placa = vehiculo_var.get().split(" - ")[0]
+
+            # Obtener fechas y horas
+            fecha_salida = salida_date.get_date().strftime("%Y-%m-%d")
+            hora_salida = salida_hora_cb.get()
+            min_salida = salida_min_cb.get()
+            ampm_salida = salida_ampm_cb.get()
+
+            if ampm_salida == "PM" and hora_salida != "12":
+                hora_salida_24 = str(int(hora_salida) + 12)
+            elif ampm_salida == "AM" and hora_salida == "12":
+                hora_salida_24 = "00"
+            else:
+                hora_salida_24 = hora_salida
+
+            fecha_hora_salida = f"{fecha_salida} {hora_salida_24}:{min_salida}:00"
+
+            fecha_entrada = entrada_date.get_date().strftime("%Y-%m-%d")
+            hora_entrada = entrada_hora_cb.get()
+            min_entrada = entrada_min_cb.get()
+            ampm_entrada = entrada_ampm_cb.get()
+
+            if ampm_entrada == "PM" and hora_entrada != "12":
+                hora_entrada_24 = str(int(hora_entrada) + 12)
+            elif ampm_entrada == "AM" and hora_entrada == "12":
+                hora_entrada_24 = "00"
+            else:
+                hora_entrada_24 = hora_entrada
+
+            fecha_hora_entrada = f"{fecha_entrada} {hora_entrada_24}:{min_entrada}:00"
+
+            # Obtener seguro
+            id_seguro = None
+            if seguros and seguro_var.get():
+                seguro_seleccionado = seguro_var.get()
+                for s in seguros:
+                    if f"{s[1]} (${s[2]})" == seguro_seleccionado:
+                        id_seguro = s[0]
+                        break
+
+            id_descuento = id_descuento_act
+
+            # Calcular total real
+            vehiculo_query = """
+                SELECT t.tarifa_dia 
+                FROM Vehiculo v 
+                JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo 
+                WHERE v.placa = %s
+            """
+            vehiculo_result = self.db_manager.execute_query(vehiculo_query, (placa,))
+            if not vehiculo_result:
+                messagebox.showerror("Error", "No se pudo obtener la tarifa del vehículo")
+                return
+
+            tarifa = float(vehiculo_result[0][0]) if vehiculo_result[0][0] else 0
+            fecha_salida_obj = salida_date.get_date()
+            fecha_entrada_obj = entrada_date.get_date()
+            dias = (fecha_entrada_obj - fecha_salida_obj).days
+            dias = max(1, dias)
+
+            seguro_costo = 0
+            if id_seguro and seguros:
+                for s in seguros:
+                    if s[0] == id_seguro:
+                        seguro_costo = float(s[2])
+                        break
+
+            descuento_val = float(desc_val) if id_descuento else 0
+            total = dias * tarifa + seguro_costo - descuento_val
+            total = max(0, total)
+
+            abono_min = int(total * 0.3)
+            abono = int(entry_abono.get().strip())
+            if abono < abono_min:
+                messagebox.showwarning("Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:,.0f}")
+                return
+
+            metodo = metodo_var.get()
+            id_cliente = self.user_data.get('id_cliente')
+
+            # Insertar en Alquiler
+            placeholder = '%s' if not self.db_manager.offline else '?'
+            alquiler_query = f"""
+                INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_empleado,
+                id_seguro, id_descuento, valor)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """
+            id_alquiler = self.db_manager.execute_query(alquiler_query, (
+                fecha_hora_salida, fecha_hora_entrada, placa, id_cliente, self.user_data.get('id_empleado'),
+                id_seguro, id_descuento, total
+            ), fetch=False, return_lastrowid=True)
+
+            if not id_alquiler:
+                messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
+                return
+
+            saldo_pendiente = total - abono
+            reserva_query = f"""
+                INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, saldo_pendiente, abono, id_empleado)
+                VALUES ({placeholder}, 1, {placeholder}, {placeholder}, {placeholder})
+            """
+            id_reserva = self.db_manager.execute_query(
+                reserva_query,
+                (id_alquiler, saldo_pendiente, abono, self.user_data.get('id_empleado')),
+                fetch=False,
+                return_lastrowid=True
+            )
+
+            if not id_reserva:
+                raise Exception("No se pudo obtener el ID de la reserva")
+
+            id_medio_pago = 1 if metodo == "Efectivo" else (2 if metodo == "Tarjeta" else 3)
+            abono_query = f"""
+                INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) 
+                VALUES ({placeholder}, NOW(), {placeholder}, {placeholder})
+            """
+            self.db_manager.execute_query(abono_query, (abono, id_reserva, id_medio_pago), fetch=False)
+
+            print(f"Reserva creada exitosamente. ID: {id_reserva}")
+
+            # Mostrar mensaje según método de pago
+            if metodo in ("Tarjeta", "Transferencia"):
+                self._simular_pasarela_pago(id_reserva, abono, metodo)
+            else:
+                messagebox.showinfo("Reserva registrada", "Debes acercarte a la sede para validar y abonar el pago.")
+
+            # Recargar lista de reservas
+            print(f"Recargando lista de reservas...")
+            self._cargar_reservas_cliente(id_cliente)
+
+            # Limpiar formulario
+            entry_abono.delete(0, 'end')
+
+        except Exception as exc:
+            messagebox.showerror("Error", f"No se pudo crear la reserva: {exc}")
+            print(f"Error detallado: {exc}")
+
+
+    ctk.CTkButton(
+        frame,
+        text="Guardar reserva",
+        command=crear_reserva,
+        fg_color="#3A86FF",
+        hover_color="#265DAB",
+        font=("Arial", 13, "bold")
+    ).pack(pady=18)
 
     def _build_tab_reservas(self, parent):
         import tkinter as tk
@@ -1878,8 +1921,8 @@ class ClienteView(BaseCTKView):
                 
                 if not id_alquiler:
                     messagebox.showerror("Error", "No se pudo obtener el ID del alquiler")
-                    return
-                
+                return
+            
                 print(f"ID Alquiler obtenido: {id_alquiler}")
                 
                 # Insertar en Reserva_alquiler
@@ -2003,7 +2046,7 @@ Debe contactar a la empresa para solicitar el reembolso del exceso.
             # Actualizar saldo pendiente en reserva
             nuevo_saldo = max(0, nuevo_valor - total_abonos)
             reserva_query = """
-                UPDATE Reserva_alquiler 
+                    UPDATE Reserva_alquiler 
                 SET saldo_pendiente = %s
                 WHERE id_reserva = %s
             """
@@ -2730,10 +2773,16 @@ class EmpleadoCajaView(BaseCTKView):
 
         input_frame = ctk.CTkFrame(frame)
         input_frame.pack(pady=15)
-        ctk.CTkLabel(input_frame, text="Monto a abonar ($):", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        ctk.CTkLabel(input_frame, text="Monto a abonar ($):", font=("Arial", 12, "bold")).grid(
+            row=0, column=0, padx=5, pady=5, sticky="w"
+        )
         self.input_abono = ctk.CTkEntry(input_frame, width=120, state="disabled")
         self.input_abono.grid(row=0, column=1, padx=5, pady=5)
-        ctk.CTkLabel(input_frame, text="Método de pago:", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=5, pady=5, sticky="w")
+
+        ctk.CTkLabel(input_frame, text="Método de pago:", font=("Arial", 12, "bold")).grid(
+            row=0, column=2, padx=5, pady=5, sticky="w"
+        )
         self.metodos_pago = ["Efectivo", "Tarjeta", "Transferencia"]
         self.metodo_pago_var = tk.StringVar()
         self.metodo_pago_var.set(self.metodos_pago[0])
@@ -2741,11 +2790,20 @@ class EmpleadoCajaView(BaseCTKView):
         self.metodo_pago_menu.grid(row=0, column=3, padx=5, pady=5)
         self.metodo_pago_menu.configure(state="disabled")
 
-        self.btn_abonar = ctk.CTkButton(frame, text="💳 Registrar Abono", command=self._realizar_abono_global, fg_color="#00AA00", hover_color="#008800", font=("Arial", 13, "bold"), state="disabled")
+        self.btn_abonar = ctk.CTkButton(
+            frame,
+            text="💳 Registrar Abono",
+            command=self._realizar_abono_global,
+            fg_color="#00AA00",
+            hover_color="#008800",
+            font=("Arial", 13, "bold"),
+            state="disabled"
+        )
         self.btn_abonar.pack(pady=10)
 
         self._abono_seleccionado = None
         self._cargar_reservas_pendientes_global()
+
 
     def _build_tab_pagos_manuales(self, parent):
         import tkinter as tk
@@ -4535,7 +4593,7 @@ class AdminView(BaseCTKView):
 
     def _build_tab_sql_libre(self, parent):
         import tkinter as tk
-        from tkinter import messagebox
+        from tkinter import messagebox, ttk
 
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
@@ -4545,8 +4603,8 @@ class AdminView(BaseCTKView):
         query_entry.pack(fill="x", padx=5)
 
         ctk.CTkLabel(frame, text="Resultado:").pack(pady=(10, 5))
-        result_box = ctk.CTkTextbox(frame)
-        result_box.pack(expand=True, fill="both", padx=5, pady=(0, 10))
+        tree = ttk.Treeview(frame, show="headings")
+        tree.pack(expand=True, fill="both", padx=5, pady=(0, 10))
 
         def ejecutar():
             query = query_entry.get("1.0", "end").strip()
@@ -4556,18 +4614,25 @@ class AdminView(BaseCTKView):
             if not puede_ejecutar_sql_libre(self.user_data.get('rol')):
                 messagebox.showwarning("Error", "No autorizado")
                 return
-            result_box.delete("1.0", "end")
+            for row in tree.get_children():
+                tree.delete(row)
             try:
-                rows = self.db_manager.execute_query(query)
+                rows, headers = self.db_manager.execute_query_with_headers(query)
                 if rows is None:
-                    result_box.insert("end", "Error al ejecutar la consulta")
-                elif len(rows) == 0:
-                    result_box.insert("end", "Consulta ejecutada correctamente")
+                    messagebox.showerror("Error", "Error al ejecutar la consulta")
+                    return
+                tree.configure(columns=[f"c{i}" for i in range(len(headers))])
+                for i, h in enumerate(headers):
+                    cid = f"c{i}"
+                    tree.heading(cid, text=h)
+                    tree.column(cid, width=120, anchor="center")
+                if not rows:
+                    tree.insert("", "end", values=("Consulta ejecutada correctamente",))
                 else:
                     for r in rows:
-                        result_box.insert("end", f"{r}\n")
+                        tree.insert("", "end", values=r)
             except Exception as exc:
-                result_box.insert("end", str(exc))
+                messagebox.showerror("Error", str(exc))
 
         ctk.CTkButton(
             frame,
