@@ -540,7 +540,7 @@ class ClienteView(BaseCTKView):
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
-                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel, su.gerente as sucursal_mgr
             FROM Vehiculo v
             JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
             JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
@@ -568,7 +568,7 @@ class ClienteView(BaseCTKView):
         for i, vehiculo in enumerate(vehiculos):
             (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
              capacidad, combustible, color, transmision, cilindraje, blindaje,
-             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel, sucursal_mgr) = vehiculo
 
             # Crear tarjeta con información completa
             card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
@@ -631,7 +631,16 @@ class ClienteView(BaseCTKView):
                     ctk.CTkLabel(row4, text=f"📍 {sucursal_dir}", 
                                 font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
                 if sucursal_tel:
-                    ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}", 
+                    ctk.CTkLabel(row4, text=f"📞 {sucursal_tel}",
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_mgr:
+                    ctk.CTkLabel(row4, text=f"👨‍💼 {sucursal_mgr}",
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_mgr:
+                    ctk.CTkLabel(row4, text=f"👨‍💼 {sucursal_mgr}",
+                                font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
+                if sucursal_mgr:
+                    ctk.CTkLabel(row4, text=f"👨‍💼 {sucursal_mgr}",
                                 font=("Arial", 10), text_color="#666666").pack(anchor="w", padx=5)
             
             # Botón de reservar
@@ -1572,7 +1581,7 @@ class ClienteView(BaseCTKView):
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
-                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel, su.gerente as sucursal_mgr
             FROM Vehiculo v
             JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
             JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
@@ -1600,7 +1609,7 @@ class ClienteView(BaseCTKView):
         for i, vehiculo in enumerate(vehiculos):
             (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
              capacidad, combustible, color, transmision, cilindraje, blindaje,
-             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel, sucursal_mgr) = vehiculo
 
             # Crear tarjeta con información completa
             card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
@@ -2033,6 +2042,9 @@ class EmpleadoVentasView(BaseCTKView):
         # Pestaña: Vehículos
         self.tab_vehiculos = self.tabview.add("Vehículos")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
+
+        self.tab_vehiculos_reg = self.tabview.add("Vehículos registrados")
+        self._build_tab_vehiculos_registrados(self.tabview.tab("Vehículos registrados"))
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
@@ -2322,7 +2334,7 @@ class EmpleadoVentasView(BaseCTKView):
                    m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible,
                    c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje,
                    b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc,
-                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel
+                   su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel, su.gerente as sucursal_mgr
             FROM Vehiculo v
             JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
             JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
@@ -2350,7 +2362,7 @@ class EmpleadoVentasView(BaseCTKView):
         for i, vehiculo in enumerate(vehiculos):
             (placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia,
              capacidad, combustible, color, transmision, cilindraje, blindaje,
-             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel) = vehiculo
+             seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel, sucursal_mgr) = vehiculo
 
             # Crear tarjeta con información completa
             card = ctk.CTkFrame(self.cards_vehiculos, fg_color="#FFFFFF", corner_radius=15)
@@ -3381,17 +3393,14 @@ class GerenteView(BaseCTKView):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
 
-        self.tab_principal = self.tabview.add("Principal")
-        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
-        frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR,
-                     font=("Arial", 20)).pack(pady=30)
 
         self.tab_empleados = self.tabview.add("Empleados")
         self._build_tab_empleados(self.tabview.tab("Empleados"))
 
         self.tab_vehiculos = self.tabview.add("Vehículos")
         self._build_tab_vehiculos(self.tabview.tab("Vehículos"))
+        self.tab_vehiculos_reg = self.tabview.add("Vehículos registrados")
+        self._build_tab_vehiculos_registrados(self.tabview.tab("Vehículos registrados"))
 
         self.tab_clientes = self.tabview.add("Clientes")
         self._build_tab_clientes(self.tabview.tab("Clientes"))
@@ -3405,6 +3414,9 @@ class GerenteView(BaseCTKView):
         if puede_ejecutar_sql_libre(self.user_data.get('rol')):
             self.tab_sql_libre = self.tabview.add("SQL Libre")
             self._build_tab_sql_libre(self.tabview.tab("SQL Libre"))
+
+        # Abrir inicialmente en la pestaña de Reportes
+        self.tabview.set("Reportes")
 
     def _build_tab_empleados(self, parent):
         import tkinter as tk
@@ -3542,7 +3554,7 @@ class GerenteView(BaseCTKView):
         labels = [
             "Placa:", "Chasis:", "Modelo:", "Kilometraje:",
             "Marca:", "Color:", "Tipo:", "Transmisión:",
-            "Proveedor:", "Taller:"
+            "Blindaje:", "Seguro:", "Proveedor:", "Taller:"
         ]
         for i, lbl in enumerate(labels):
             ctk.CTkLabel(form, text=lbl).grid(row=i, column=0, padx=5, pady=5, sticky="e")
@@ -3570,11 +3582,19 @@ class GerenteView(BaseCTKView):
         trans = self.db_manager.execute_query(
             "SELECT id_transmision, descripcion FROM Transmision_vehiculo"
         ) or []
+        blindajes = self.db_manager.execute_query(
+            "SELECT id_blindaje, descripcion FROM Blindaje_vehiculo"
+        ) or []
+        seguros = self.db_manager.execute_query(
+            "SELECT id_seguro, descripcion FROM Seguro_vehiculo WHERE estado = 'Activo'"
+        ) or []
 
         self.marca_map = {m[1]: m[0] for m in marcas}
         self.color_map = {c[1]: c[0] for c in colores}
         self.tipo_map = {t[1]: t[0] for t in tipos}
         self.trans_map = {tr[1]: tr[0] for tr in trans}
+        self.blindaje_map = {b[1]: b[0] for b in blindajes}
+        self.seguro_map = {s[1]: s[0] for s in seguros}
 
         self.var_marca = ctk.StringVar(
             value=list(self.marca_map.keys())[0] if self.marca_map else ""
@@ -3587,6 +3607,12 @@ class GerenteView(BaseCTKView):
         )
         self.var_trans = ctk.StringVar(
             value=list(self.trans_map.keys())[0] if self.trans_map else ""
+        )
+        self.var_blindaje = ctk.StringVar(
+            value=list(self.blindaje_map.keys())[0] if self.blindaje_map else ""
+        )
+        self.var_seguro = ctk.StringVar(
+            value=list(self.seguro_map.keys())[0] if self.seguro_map else ""
         )
         self.var_prov = ctk.StringVar()
         self.var_taller = ctk.StringVar()
@@ -3603,6 +3629,12 @@ class GerenteView(BaseCTKView):
         self.opt_trans = ctk.CTkOptionMenu(
             form, variable=self.var_trans, values=list(self.trans_map.keys())
         )
+        self.opt_blindaje = ctk.CTkOptionMenu(
+            form, variable=self.var_blindaje, values=list(self.blindaje_map.keys())
+        )
+        self.opt_seguro = ctk.CTkOptionMenu(
+            form, variable=self.var_seguro, values=list(self.seguro_map.keys())
+        )
         self.opt_prov = ctk.CTkOptionMenu(form, variable=self.var_prov, values=[])
         self.opt_taller = ctk.CTkOptionMenu(form, variable=self.var_taller, values=[])
 
@@ -3610,11 +3642,13 @@ class GerenteView(BaseCTKView):
         self.opt_color.grid(row=5, column=1, padx=5, pady=5)
         self.opt_tipo.grid(row=6, column=1, padx=5, pady=5)
         self.opt_trans.grid(row=7, column=1, padx=5, pady=5)
-        self.opt_prov.grid(row=8, column=1, padx=5, pady=5)
-        self.opt_taller.grid(row=9, column=1, padx=5, pady=5)
+        self.opt_blindaje.grid(row=8, column=1, padx=5, pady=5)
+        self.opt_seguro.grid(row=9, column=1, padx=5, pady=5)
+        self.opt_prov.grid(row=10, column=1, padx=5, pady=5)
+        self.opt_taller.grid(row=11, column=1, padx=5, pady=5)
 
-        # Cargar opciones de proveedores y talleres
-        self._load_proveedores_talleres()
+        # Cargar opciones de catálogo
+        self._load_catalogos()
 
         btn_frame = ctk.CTkFrame(frame)
         btn_frame.pack(pady=5)
@@ -3624,22 +3658,32 @@ class GerenteView(BaseCTKView):
     def _nuevo_vehiculo(self):
         for ent in [self.ent_placa, self.ent_chasis, self.ent_modelo, self.ent_km]:
             ent.delete(0, 'end')
-        self._load_proveedores_talleres()
+        self._load_catalogos()
 
-    def _load_proveedores_talleres(self):
-        """Recargar opciones de proveedores y talleres."""
+    def _load_catalogos(self):
+        """Recargar opciones de proveedores, talleres, blindaje y seguros."""
         proveedores = self.db_manager.execute_query(
             "SELECT id_proveedor, nombre FROM Proveedor_vehiculo"
         ) or []
         talleres = self.db_manager.execute_query(
             "SELECT id_taller, nombre FROM Taller_mantenimiento"
         ) or []
+        blindajes = self.db_manager.execute_query(
+            "SELECT id_blindaje, descripcion FROM Blindaje_vehiculo"
+        ) or []
+        seguros = self.db_manager.execute_query(
+            "SELECT id_seguro, descripcion FROM Seguro_vehiculo WHERE estado = 'Activo'"
+        ) or []
 
         self.prov_map = {p[1]: p[0] for p in proveedores}
         self.taller_map = {t[1]: t[0] for t in talleres}
+        self.blindaje_map = {b[1]: b[0] for b in blindajes}
+        self.seguro_map = {s[1]: s[0] for s in seguros}
 
         self.opt_prov.configure(values=list(self.prov_map.keys()))
         self.opt_taller.configure(values=list(self.taller_map.keys()))
+        self.opt_blindaje.configure(values=list(self.blindaje_map.keys()))
+        self.opt_seguro.configure(values=list(self.seguro_map.keys()))
 
         if self.prov_map:
             self.var_prov.set(list(self.prov_map.keys())[0])
@@ -3649,6 +3693,14 @@ class GerenteView(BaseCTKView):
             self.var_taller.set(list(self.taller_map.keys())[0])
         else:
             self.var_taller.set("")
+        if self.blindaje_map:
+            self.var_blindaje.set(list(self.blindaje_map.keys())[0])
+        else:
+            self.var_blindaje.set("")
+        if self.seguro_map:
+            self.var_seguro.set(list(self.seguro_map.keys())[0])
+        else:
+            self.var_seguro.set("")
 
     def _guardar_vehiculo(self):
         from tkinter import messagebox
@@ -3673,21 +3725,61 @@ class GerenteView(BaseCTKView):
         tipo = self.tipo_map.get(self.var_tipo.get()) if self.var_tipo.get() else None
         trans = self.trans_map.get(self.var_trans.get()) if self.var_trans.get() else None
         prov = self.prov_map.get(self.var_prov.get()) if self.var_prov.get() else None
+        blindaje = self.blindaje_map.get(self.var_blindaje.get()) if self.var_blindaje.get() else None
+        seguro = self.seguro_map.get(self.var_seguro.get()) if self.var_seguro.get() else None
+        sucursal = self.user_data.get('id_sucursal')
 
         placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
             f"INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, "
-            f"id_marca, id_color, id_tipo_vehiculo, id_transmision, id_proveedor) "
+            f"id_marca, id_color, id_tipo_vehiculo, id_transmision, "
+            f"id_blindaje, id_seguro_vehiculo, id_proveedor, id_sucursal) "
             f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, "
-            f"{placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+            f"{placeholder}, {placeholder}, {placeholder}, {placeholder}, "
+            f"{placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
-        params = (placa, chasis, modelo, km_val, marca, color, tipo, trans, prov)
+        params = (
+            placa, chasis, modelo, km_val, marca, color, tipo, trans,
+            blindaje, seguro, prov, sucursal
+        )
         try:
             self.db_manager.execute_query(query, params, fetch=False)
             messagebox.showinfo("Éxito", "Vehículo guardado correctamente")
             self._nuevo_vehiculo()
         except Exception as exc:
             messagebox.showerror("Error", str(exc))
+
+    def _build_tab_vehiculos_registrados(self, parent):
+        import tkinter as tk
+        from tkinter import ttk
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+        ctk.CTkLabel(frame, text="Vehículos registrados", font=("Arial", 18, "bold")).pack(pady=10)
+
+        query = (
+            "SELECT v.placa, v.modelo, su.nombre, su.direccion, su.telefono, su.gerente "
+            "FROM Vehiculo v LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal"
+        )
+        rows = self.db_manager.execute_query(query) or []
+
+        cols = ("c1", "c2", "c3", "c4", "c5", "c6")
+        tree = ttk.Treeview(frame, columns=cols, show="headings", height=15)
+        headers = [
+            ("c1", "Placa"),
+            ("c2", "Modelo"),
+            ("c3", "Sucursal"),
+            ("c4", "Dirección"),
+            ("c5", "Teléfono"),
+            ("c6", "Gerente"),
+        ]
+        for cid, text in headers:
+            tree.heading(cid, text=text)
+            tree.column(cid, width=120, anchor="center")
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        for r in rows:
+            tree.insert("", "end", values=r)
 
     def _build_tab_clientes(self, parent):
         import tkinter as tk
@@ -3903,7 +3995,7 @@ class GerenteView(BaseCTKView):
 
     def _build_tab_sql_libre(self, parent):
         import tkinter as tk
-        from tkinter import messagebox
+        from tkinter import messagebox, ttk
 
         frame = ctk.CTkFrame(parent)
         frame.pack(expand=True, fill="both", padx=10, pady=10)
@@ -3913,8 +4005,8 @@ class GerenteView(BaseCTKView):
         query_entry.pack(fill="x", padx=5)
 
         ctk.CTkLabel(frame, text="Resultado:").pack(pady=(10, 5))
-        result_box = ctk.CTkTextbox(frame)
-        result_box.pack(expand=True, fill="both", padx=5, pady=(0, 10))
+        tree = ttk.Treeview(frame, show="headings")
+        tree.pack(expand=True, fill="both", padx=5, pady=(0, 10))
 
         def ejecutar():
             query = query_entry.get("1.0", "end").strip()
@@ -3924,18 +4016,25 @@ class GerenteView(BaseCTKView):
             if not puede_ejecutar_sql_libre(self.user_data.get('rol')):
                 messagebox.showwarning("Error", "No autorizado")
                 return
-            result_box.delete("1.0", "end")
+            for row in tree.get_children():
+                tree.delete(row)
             try:
-                rows = self.db_manager.execute_query(query)
+                rows, headers = self.db_manager.execute_query_with_headers(query)
                 if rows is None:
-                    result_box.insert("end", "Error al ejecutar la consulta")
-                elif len(rows) == 0:
-                    result_box.insert("end", "Consulta ejecutada correctamente")
+                    messagebox.showerror("Error", "Error al ejecutar la consulta")
+                    return
+                tree.configure(columns=[f"c{i}" for i in range(len(headers))])
+                for i, h in enumerate(headers):
+                    cid = f"c{i}"
+                    tree.heading(cid, text=h)
+                    tree.column(cid, width=120, anchor="center")
+                if not rows:
+                    tree.insert("", "end", values=("Consulta ejecutada correctamente",))
                 else:
                     for r in rows:
-                        result_box.insert("end", f"{r}\n")
+                        tree.insert("", "end", values=r)
             except Exception as exc:
-                result_box.insert("end", str(exc))
+                messagebox.showerror("Error", str(exc))
 
         ctk.CTkButton(
             frame,
