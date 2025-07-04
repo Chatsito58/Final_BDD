@@ -4160,34 +4160,40 @@ class EmpleadoCajaView(BaseCTKView):
         self.btn_aprobar_efectivo.pack(pady=10)
 
         self._reserva_efectivo_sel = None
-        self._cargar_reservas_pendientes_efectivo()
+        self._refresh_reservas_pendientes_efectivo()
 
     def _cargar_reservas_pendientes_efectivo(self):
-        for w in self.cards_efectivo.winfo_children():
-            w.destroy()
+        """Return pending reservations for cash payments."""
         placeholder = "%s" if not self.db_manager.offline else "?"
         query = (
-            "SELECT ra.id_reserva, a.id_cliente, v.modelo, v.placa, "
-            "ra.saldo_pendiente, a.fecha_hora_salida "
+            "SELECT ra.id_reserva, c.nombre, v.placa, ra.saldo_pendiente, a.fecha_hora_salida "
             "FROM Reserva_alquiler ra "
-            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler AND a.id_sucursal = {placeholder} "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
             "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
-            "WHERE ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2) "
-            "ORDER BY a.fecha_hora_salida"
+            f"WHERE ra.saldo_pendiente > 0 AND a.id_sucursal = {placeholder}"
         )
-        reservas = self.db_manager.execute_query(
-            query, (self.user_data.get("id_sucursal"),)
-        ) or []
+        return (
+            self.db_manager.execute_query(
+                query, (self.user_data.get("id_sucursal"),)
+            )
+            or []
+        )
+
+    def _refresh_reservas_pendientes_efectivo(self):
+        for w in self.cards_efectivo.winfo_children():
+            w.destroy()
+        reservas = self._cargar_reservas_pendientes_efectivo()
         self._efectivo_cards = {}
-        for rid, cid, modelo, placa, saldo, fecha in reservas:
+        for rid, nombre, placa, saldo, fecha in reservas:
             card = ctk.CTkFrame(self.cards_efectivo, fg_color="white", corner_radius=12)
             card.pack(fill="x", padx=10, pady=5)
             ctk.CTkLabel(
-                card, text=f"Reserva {rid} - Cliente {cid}", font=("Arial", 13, "bold")
+                card, text=f"Reserva {rid} - Cliente {nombre}", font=("Arial", 13, "bold")
             ).pack(anchor="w", padx=10, pady=(4, 0))
-            ctk.CTkLabel(
-                card, text=f"{modelo} ({placa})", font=("Arial", 12)
-            ).pack(anchor="w", padx=10)
+            ctk.CTkLabel(card, text=f"Vehículo: {placa}", font=("Arial", 12)).pack(
+                anchor="w", padx=10
+            )
             ctk.CTkLabel(
                 card,
                 text=f"Saldo pendiente: ${saldo:,.0f}",
@@ -4273,7 +4279,7 @@ class EmpleadoCajaView(BaseCTKView):
 
         self._registrar_abono(id_reserva, monto_f, "Efectivo", None)
         self.entry_monto_efectivo.delete(0, "end")
-        self._cargar_reservas_pendientes_efectivo()
+        self._refresh_reservas_pendientes_efectivo()
 
     def _build_tab_caja_dia(self, parent):
         ctk.CTkLabel(parent, text="Caja del día").pack(pady=20)
