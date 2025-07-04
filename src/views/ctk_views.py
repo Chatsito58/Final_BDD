@@ -4304,17 +4304,99 @@ class EmpleadoCajaView(BaseCTKView):
         messagebox.showinfo("Pago registrado", f"Pago de ${monto_f:,.0f} registrado")
 
         self.entry_monto_efectivo.delete(0, "end")
+        # Recalcular transacciones del día y actualizar los totales
+        self._transacciones_dia = self._cargar_transacciones_dia()
         self._actualizar_caja_dia()
         self._refresh_reservas_pendientes_efectivo()
 
     def _build_tab_caja_dia(self, parent):
         """Construir pestaña que muestra el total de caja del día."""
-        self.lbl_caja_total = ctk.CTkLabel(parent, text="Caja del día: $0")
-        self.lbl_caja_total.pack(pady=20)
+        import tkinter as tk
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        self.lbl_caja_total = ctk.CTkLabel(
+            frame, text="Total efectivo del día: $0", font=("Arial", 16, "bold")
+        )
+        self.lbl_caja_total.pack(pady=(10, 0))
+
+        self.lbl_caja_count = ctk.CTkLabel(frame, text="Transacciones: 0")
+        self.lbl_caja_count.pack()
+
+        self.lbl_caja_avg = ctk.CTkLabel(frame, text="Promedio: $0")
+        self.lbl_caja_avg.pack(pady=(0, 10))
+
+        canvas = tk.Canvas(
+            frame, borderwidth=0, highlightthickness=0, background="#E3F2FD"
+        )
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scroll_y.pack(side="right", fill="y", pady=10)
+
+        self.transaccion_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
+        inner_id = canvas.create_window((0, 0), window=self.transaccion_frame, anchor="nw")
+
+        def _resize_inner(event):
+            canvas.itemconfig(inner_id, width=event.width)
+
+        canvas.bind("<Configure>", _resize_inner)
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        self.transaccion_frame.bind("<Configure>", _on_frame_configure)
+        canvas.configure(yscrollcommand=scroll_y.set)
+
+        ctk.CTkButton(
+            frame,
+            text="Cerrar Caja",
+            command=self._cerrar_caja,
+            fg_color=PRIMARY_COLOR,
+            hover_color=PRIMARY_COLOR_DARK,
+        ).pack(pady=5)
+
+        # Inicializar lista de transacciones y mostrar totales
+        self._transacciones_dia = self._cargar_transacciones_dia()
         self._actualizar_caja_dia()
 
     def _actualizar_caja_dia(self):
-        """Actualizar el total de efectivo recibido en el día."""
+        """Actualizar el resumen de caja del día y la lista de transacciones."""
+        transacciones = getattr(self, "_transacciones_dia", [])
+        total = sum(float(t[1]) for t in transacciones)
+        count = len(transacciones)
+        promedio = total / count if count else 0
+
+        if hasattr(self, "lbl_caja_total"):
+            self.lbl_caja_total.configure(
+                text=f"Total efectivo del día: ${total:,.0f}"
+            )
+        if hasattr(self, "lbl_caja_count"):
+            self.lbl_caja_count.configure(text=f"Transacciones: {count}")
+        if hasattr(self, "lbl_caja_avg"):
+            self.lbl_caja_avg.configure(text=f"Promedio: ${promedio:,.0f}")
+
+        if hasattr(self, "transaccion_frame"):
+            for w in self.transaccion_frame.winfo_children():
+                w.destroy()
+            for cliente, valor, fecha in transacciones:
+                hora = str(fecha)[11:16] if fecha else ""
+                row = ctk.CTkFrame(
+                    self.transaccion_frame, fg_color="white", corner_radius=8
+                )
+                row.pack(fill="x", padx=5, pady=2)
+                ctk.CTkLabel(row, text=cliente, width=200, anchor="w").pack(
+                    side="left", padx=5
+                )
+                ctk.CTkLabel(
+                    row, text=f"${float(valor):,.0f}", width=80, anchor="e"
+                ).pack(side="left", padx=5)
+                ctk.CTkLabel(row, text=hora, anchor="e").pack(
+                    side="right", padx=5
+                )
+
+    def _cargar_transacciones_dia(self):
+        """Obtener transacciones de efectivo del día desde la base de datos."""
         placeholder = "%s" if not self.db_manager.offline else "?"
         date_clause = (
             "DATE(ar.fecha_hora) = CURDATE()"
@@ -4322,19 +4404,26 @@ class EmpleadoCajaView(BaseCTKView):
             else "DATE(ar.fecha_hora) = date('now')"
         )
         query = (
-            "SELECT COALESCE(SUM(ar.valor), 0) "
+            "SELECT c.nombre, ar.valor, ar.fecha_hora "
             "FROM Abono_reserva ar "
             "JOIN Reserva_alquiler ra ON ar.id_reserva = ra.id_reserva "
             "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
             f"WHERE {date_clause} AND a.id_sucursal = {placeholder} "
-            "AND ar.id_medio_pago = 1"
+            "AND ar.id_medio_pago = 1 "
+            "ORDER BY ar.fecha_hora DESC"
         )
-        res = self.db_manager.execute_query(
-            query, (self.user_data.get("id_sucursal"),)
+        return (
+            self.db_manager.execute_query(
+                query, (self.user_data.get("id_sucursal"),)
+            )
+            or []
         )
-        total = float(res[0][0]) if res else 0.0
-        if hasattr(self, "lbl_caja_total"):
-            self.lbl_caja_total.configure(text=f"Caja del día: ${total:,.0f}")
+
+    def _cerrar_caja(self):
+        """Limpiar el contador local de caja y refrescar la vista."""
+        self._transacciones_dia = []
+        self._actualizar_caja_dia()
 
     def _build_tab_clientes(self, parent):
         ctk.CTkLabel(parent, text="Clientes").pack(pady=20)
