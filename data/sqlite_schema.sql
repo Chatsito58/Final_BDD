@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS Vehiculo (
   id_transmision INTEGER,
   id_cilindraje INTEGER,
   id_seguro_vehiculo INTEGER,
-  id_estado_vehiculo INTEGER,
+  id_estado_vehiculo INTEGER DEFAULT 1,
   id_proveedor INTEGER,
   id_sucursal INTEGER,
   FOREIGN KEY (id_marca) REFERENCES Marca_vehiculo(id_marca),
