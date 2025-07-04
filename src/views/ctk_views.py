@@ -4396,22 +4396,18 @@ class EmpleadoCajaView(BaseCTKView):
                 )
 
     def _cargar_transacciones_dia(self):
-        """Obtener transacciones de efectivo del día desde la base de datos."""
+        """Obtener transacciones de efectivo del día."""
         placeholder = "%s" if not self.db_manager.offline else "?"
-        date_clause = (
-            "DATE(ar.fecha_hora) = CURDATE()"
-            if not self.db_manager.offline
-            else "DATE(ar.fecha_hora) = date('now')"
-        )
+        date_fn = "CURDATE()" if not self.db_manager.offline else "date('now')"
         query = (
-            "SELECT c.nombre, ar.valor, ar.fecha_hora "
-            "FROM Abono_reserva ar "
-            "JOIN Reserva_alquiler ra ON ar.id_reserva = ra.id_reserva "
+            "SELECT ab.valor, c.nombre, ab.fecha_hora "
+            "FROM Abono_reserva ab "
+            "JOIN Reserva_alquiler ra ON ab.id_reserva = ra.id_reserva "
             "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
             "JOIN Cliente c ON a.id_cliente = c.id_cliente "
-            f"WHERE {date_clause} AND a.id_sucursal = {placeholder} "
-            "AND ar.id_medio_pago = 1 "
-            "ORDER BY ar.fecha_hora DESC"
+            f"WHERE DATE(ab.fecha_hora) = {date_fn} "
+            "AND ab.id_medio_pago = 1 "
+            f"AND a.id_sucursal = {placeholder}"
         )
         return (
             self.db_manager.execute_query(
