@@ -2687,15 +2687,12 @@ class EmpleadoCajaView(BaseCTKView):
         ctk.CTkButton(topbar, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=140, height=32).pack(side="right", padx=10, pady=8)
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(expand=True, fill="both")
-        # Pestaña principal: Bienvenida y cerrar sesión
-        self.tab_principal = self.tabview.add("Principal")
-        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
-        frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(frame, text=self._welcome_message(), text_color=TEXT_COLOR, font=("Arial", 20)).pack(pady=30)
-        ctk.CTkButton(frame, text="Cerrar sesión", command=self.logout, fg_color=PRIMARY_COLOR, hover_color=PRIMARY_COLOR_DARK, width=180, height=38).pack(side="bottom", pady=(30, 20))
-        # Pestaña: Pagos
+        # Tab: Pagos
         self.tab_pagos = self.tabview.add("Pagos")
         self._build_tab_pagos(self.tabview.tab("Pagos"))
+        # Tab: Pagos manuales
+        self.tab_manuales = self.tabview.add("Pagos manuales")
+        self._build_tab_pagos_manuales(self.tabview.tab("Pagos manuales"))
         # Pestaña: Reservas
         self.tab_reservas = self.tabview.add("Reservas")
         self._build_tab_reservas(self.tabview.tab("Reservas"))
@@ -2705,6 +2702,7 @@ class EmpleadoCajaView(BaseCTKView):
         # Pestaña: Cambiar contraseña
         self.tab_cambiar = self.tabview.add("Cambiar contraseña")
         self._build_cambiar_contrasena_tab(self.tabview.tab("Cambiar contraseña"))
+        self.tabview.set("Pagos")
 
     def _build_tab_pagos(self, parent):
         import tkinter as tk
@@ -2737,6 +2735,83 @@ class EmpleadoCajaView(BaseCTKView):
         self._abono_seleccionado = None
         self._cargar_reservas_pendientes_global()
 
+    def _build_tab_pagos_manuales(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        frame = ctk.CTkFrame(parent)
+        frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Pago manual en efectivo", font=("Arial", 16, "bold")).pack(pady=10)
+
+        form = ctk.CTkFrame(frame)
+        form.pack(pady=15)
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        query = (
+            "SELECT DISTINCT c.id_cliente, c.nombre "
+            "FROM Cliente c "
+            "JOIN Alquiler a ON c.id_cliente = a.id_cliente "
+            "JOIN Reserva_alquiler ra ON a.id_alquiler = ra.id_alquiler "
+            f"WHERE a.id_sucursal = {placeholder} "
+            "ORDER BY c.nombre"
+        )
+        clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),)) or []
+
+        self._pm_cliente_var = tk.StringVar(value=f"{clientes[0][0]} - {clientes[0][1]}" if clientes else "")
+
+        tk.Label(form, text="Cliente:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        tk.OptionMenu(form, self._pm_cliente_var, *[f"{c[0]} - {c[1]}" for c in clientes]).grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(form, text="Monto efectivo:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        self._pm_monto = ctk.CTkEntry(form, width=120)
+        self._pm_monto.grid(row=1, column=1, padx=5, pady=5)
+
+        ctk.CTkButton(frame, text="Registrar pago", command=self._registrar_pago_manual, fg_color="#00AA00", hover_color="#008800").pack(pady=10)
+
+    def _registrar_pago_manual(self):
+        from tkinter import messagebox
+
+        cliente_raw = self._pm_cliente_var.get()
+        if not cliente_raw:
+            messagebox.showwarning("Aviso", "Seleccione un cliente")
+            return
+        try:
+            id_cliente = int(cliente_raw.split('-')[0].strip())
+        except ValueError:
+            messagebox.showerror("Error", "Cliente inválido")
+            return
+
+        monto_str = self._pm_monto.get().strip()
+        if not monto_str:
+            messagebox.showwarning("Error", "Ingrese un monto")
+            return
+        try:
+            monto = float(monto_str)
+        except ValueError:
+            messagebox.showwarning("Error", "Monto inválido")
+            return
+        if monto <= 0:
+            messagebox.showwarning("Error", "El monto debe ser mayor a 0")
+            return
+
+        placeholder = '%s' if not self.db_manager.offline else '?'
+        res = self.db_manager.execute_query(
+            "SELECT ra.id_reserva FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            f"WHERE a.id_cliente = {placeholder} AND ra.saldo_pendiente > 0 "
+            "ORDER BY ra.id_reserva LIMIT 1",
+            (id_cliente,)
+        )
+        if not res:
+            messagebox.showinfo("Aviso", "El cliente no tiene reservas pendientes")
+            return
+
+        id_reserva = res[0][0]
+        self._registrar_abono(id_reserva, monto, "Efectivo", None)
+        self._pm_monto.delete(0, 'end')
+        self._cargar_reservas_pendientes_global()
+
     def _build_tab_reservas(self, parent):
         import tkinter as tk
         from tkinter import ttk
@@ -2746,14 +2821,17 @@ class EmpleadoCajaView(BaseCTKView):
         ctk.CTkLabel(frame, text="Reservas", font=("Arial", 16)).pack(pady=10)
 
         # Listar reservas en tabla
+        placeholder = '%s' if not self.db_manager.offline else '?'
         query = (
             "SELECT ra.id_reserva, a.id_cliente, a.id_vehiculo, "
             "a.fecha_hora_salida, a.fecha_hora_entrada, es.descripcion "
             "FROM Reserva_alquiler ra "
             "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
-            "LEFT JOIN Estado_reserva es ON ra.id_estado_reserva = es.id_estado"
+            "LEFT JOIN Estado_reserva es ON ra.id_estado_reserva = es.id_estado "
+            f"WHERE a.id_sucursal = {placeholder} "
+            "ORDER BY a.fecha_hora_salida DESC"
         )
-        reservas = self.db_manager.execute_query(query)
+        reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
 
         cols = ("c1", "c2", "c3", "c4", "c5", "c6")
         tree = ttk.Treeview(frame, columns=cols, show="headings", height=18)
@@ -2765,13 +2843,16 @@ class EmpleadoCajaView(BaseCTKView):
             ("c5", "Entrada"),
             ("c6", "Estado"),
         ]
-        for cid, text in headers:
+        widths = [60, 80, 80, 140, 140, 100]
+        for (cid, text), w in zip(headers, widths):
             tree.heading(cid, text=text)
+            tree.column(cid, width=w, anchor="center")
         tree.pack(fill="both", expand=True, pady=10)
 
         if reservas:
             for r in reservas:
-                tree.insert("", "end", values=r)
+                rid, cid_, veh, sal, ent, est = r
+                tree.insert("", "end", values=(rid, cid_, veh, str(sal), str(ent), est))
         else:
             tree.insert("", "end", values=("No hay reservas registradas",))
 
@@ -2782,7 +2863,10 @@ class EmpleadoCajaView(BaseCTKView):
         ctk.CTkLabel(frame, text="Clientes", font=("Arial", 16)).pack(pady=10)
         # Listar clientes
         placeholder = '%s' if not self.db_manager.offline else '?'
-        query = f"SELECT id_cliente, nombre, correo FROM Cliente WHERE id_sucursal = {placeholder}"
+        query = (
+            f"SELECT id_cliente, nombre, correo FROM Cliente "
+            f"WHERE id_sucursal = {placeholder} ORDER BY nombre"
+        )
         clientes = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         listbox = tk.Listbox(frame, height=10, width=60)
         listbox.pack(pady=10)
@@ -2799,12 +2883,11 @@ class EmpleadoCajaView(BaseCTKView):
         query = (
             "SELECT ra.id_reserva, a.id_cliente, v.modelo, v.placa, ra.saldo_pendiente "
             "FROM Reserva_alquiler ra "
-            "JOIN Alquiler a ON ra.id_alquiler=a.id_alquiler "
-            "JOIN Vehiculo v ON a.id_vehiculo=v.placa "
-            "WHERE ra.saldo_pendiente>0 AND ra.id_estado_reserva IN (1,2) AND a.id_sucursal = ?"
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler AND a.id_sucursal = {placeholder} "
+            "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
+            "WHERE ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2) "
+            "ORDER BY ra.id_reserva"
         )
-        placeholder = '%s' if not self.db_manager.offline else '?'
-        query = query.replace('?', placeholder)
         reservas = self.db_manager.execute_query(query, (self.user_data.get('id_sucursal'),))
         self._abono_cards = {}
         if reservas:
