@@ -741,8 +741,34 @@ class ClienteView(BaseCTKView):
         ctk.CTkLabel(
             frame, text="Vehículos disponibles", font=("Arial", 18, "bold")
         ).pack(pady=10)
-        # Contenedor de tarjetas
-        self.cards_vehiculos = ctk.CTkFrame(frame, fg_color="#E3F2FD")  # Azul pastel
+
+        # Canvas con scrollbar para las tarjetas
+        canvas = tk.Canvas(
+            frame,
+            borderwidth=0,
+            background="#E3F2FD",
+            highlightthickness=0,
+        )
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll_y = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scroll_y.pack(side="right", fill="y")
+
+        scrollable_frame = ctk.CTkFrame(canvas, fg_color="#E3F2FD")
+        scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def _resize_inner(event):
+            canvas_width = event.width
+            canvas.itemconfig(scrollable_frame_id, width=canvas_width)
+
+        canvas.bind("<Configure>", _resize_inner)
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        scrollable_frame.bind("<Configure>", _on_frame_configure)
+        canvas.configure(yscrollcommand=scroll_y.set)
+
+        self.cards_vehiculos = ctk.CTkFrame(scrollable_frame, fg_color="#E3F2FD")
         self.cards_vehiculos.pack(fill="both", expand=True, padx=10, pady=10)
         # Listar vehículos disponibles con TODA la información relevante
         placeholder = "%s" if not self.db_manager.offline else "?"
@@ -777,9 +803,7 @@ class ClienteView(BaseCTKView):
             ).pack(pady=20)
             return
 
-        # Limitar la cantidad de tarjetas para evitar barras de desplazamiento
-        max_cards = 5
-        vehiculos = vehiculos[:max_cards]
+
 
         for i, vehiculo in enumerate(vehiculos):
             (
@@ -954,11 +978,20 @@ class ClienteView(BaseCTKView):
             ctk.CTkButton(
                 btn_frame,
                 text="🚗 Reservar este vehículo",
-                command=lambda p=placa: self._abrir_nueva_reserva_vehiculo(p),
+                command=lambda p=placa: self._ir_a_crear_reserva(p),
                 fg_color="#4CAF50",
                 hover_color="#388E3C",
                 font=("Arial", 12, "bold"),
-            ).pack(pady=5)
+            ).pack(pady=(5, 10))
+
+    def _ir_a_crear_reserva(self, placa: str):
+        """Ir a la pestaña 'Crear reserva' y preseleccionar el vehículo."""
+        try:
+            self.tabview.set("Crear reserva")
+        except Exception:
+            return
+        if hasattr(self, "crear_vehiculo_map") and placa in self.crear_vehiculo_map:
+            self.vehiculo_var.set(self.crear_vehiculo_map[placa])
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk
@@ -1870,13 +1903,18 @@ class ClienteView(BaseCTKView):
             query += f" AND v.id_sucursal = {placeholder}"
             params = (id_sucursal,)
         vehiculos = self.db_manager.execute_query(query, params)
-        vehiculo_var = tk.StringVar()
+        self.vehiculo_var = tk.StringVar()
+        vehiculo_var = self.vehiculo_var
+        self.crear_vehiculo_map = {
+            v[0]: f"{v[0]} - {v[1]} {v[2]}" for v in (vehiculos or [])
+        }
         if vehiculos:
-            vehiculo_menu = tk.OptionMenu(
-                card, vehiculo_var, *[f"{v[0]} - {v[1]} {v[2]}" for v in vehiculos]
+            self.vehiculo_menu = tk.OptionMenu(
+                card, vehiculo_var, *list(self.crear_vehiculo_map.values())
             )
-            vehiculo_menu.pack(fill="x", pady=4, padx=12)
-            vehiculo_var.set(f"{vehiculos[0][0]} - {vehiculos[0][1]} {vehiculos[0][2]}")
+            self.vehiculo_menu.pack(fill="x", pady=4, padx=12)
+            first = next(iter(self.crear_vehiculo_map.values()))
+            vehiculo_var.set(first)
         else:
             ctk.CTkLabel(
                 card, text="No hay vehículos disponibles", text_color="#FF5555"
