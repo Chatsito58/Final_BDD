@@ -218,6 +218,7 @@ CREATE TABLE Mantenimiento (
   placa            VARCHAR(20),
   descripcion      VARCHAR(255),
   fecha            DATETIME DEFAULT CURRENT_TIMESTAMP,
+  fecha_fin        DATETIME,
   FOREIGN KEY (placa) REFERENCES Vehiculo(placa)
 ) ENGINE=InnoDB;
 

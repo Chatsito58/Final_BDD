@@ -4588,6 +4588,8 @@ class EmpleadoMantenimientoView(BaseCTKView):
 
     def _programar_mantenimiento(self):
         from tkinter import messagebox
+        import tkinter as tk
+        from tkcalendar import DateEntry
 
         selection = self.predictivo_listbox.curselection()
         if not selection:
@@ -4596,15 +4598,59 @@ class EmpleadoMantenimientoView(BaseCTKView):
         item = self.predictivo_listbox.get(selection[0])
         placa = item.split("|")[0].strip()
         placeholder = "%s" if not self.db_manager.offline else "?"
-        query = f"INSERT INTO Mantenimiento (placa, descripcion) VALUES ({placeholder}, {placeholder})"
-        try:
-            self.db_manager.execute_query(
-                query, (placa, "Programado mantenimiento"), fetch=False
+
+        estado_q = f"SELECT id_estado_vehiculo FROM Vehiculo WHERE placa = {placeholder}"
+        estado = self.db_manager.execute_query(estado_q, (placa,)) or []
+        if estado and int(estado[0][0]) in (2, 3):
+            messagebox.showerror(
+                "Error", "El vehículo seleccionado no se puede programar"
             )
-            messagebox.showinfo("Éxito", "Mantenimiento programado")
-            self._cargar_predictivo_list()
-        except Exception as exc:
-            messagebox.showerror("Error", str(exc))
+            return
+
+        win = ctk.CTkToplevel(self)
+        win.title("Programar mantenimiento")
+        win.geometry("300x180")
+        win.configure(fg_color="#222831")
+        win.transient(self)
+        win.grab_set()
+        win.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() // 2) - (300 // 2)
+        y = self.winfo_y() + (self.winfo_height() // 2) - (180 // 2)
+        win.geometry(f"300x180+{x}+{y}")
+
+        ctk.CTkLabel(win, text="Fecha fin:").pack(pady=10)
+        fecha_entry = DateEntry(win, date_pattern="yyyy-mm-dd")
+        fecha_entry.pack(pady=5)
+
+        def guardar():
+            fecha_fin = fecha_entry.get_date().strftime("%Y-%m-%d")
+            query = (
+                f"INSERT INTO Mantenimiento (placa, descripcion, fecha_fin) "
+                f"VALUES ({placeholder}, {placeholder}, {placeholder})"
+            )
+            try:
+                self.db_manager.execute_query(
+                    query,
+                    (placa, "Programado mantenimiento", fecha_fin),
+                    fetch=False,
+                )
+                upd = (
+                    f"UPDATE Vehiculo SET id_estado_vehiculo = 3 WHERE placa = {placeholder}"
+                )
+                self.db_manager.execute_query(upd, (placa,), fetch=False)
+                messagebox.showinfo("Éxito", "Mantenimiento programado")
+                win.destroy()
+                self._cargar_predictivo_list()
+            except Exception as exc:
+                messagebox.showerror("Error", str(exc))
+
+        ctk.CTkButton(
+            win,
+            text="Guardar",
+            command=guardar,
+            fg_color="#3A86FF",
+            hover_color="#265DAB",
+        ).pack(pady=15)
 
     def _marcar_revisado(self):
         from tkinter import messagebox
