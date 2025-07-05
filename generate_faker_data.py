@@ -294,14 +294,119 @@ def generar_cuentas(num: int) -> tuple[list[str], list[str], list[str]]:
 
 # Write SQL file ---------------------------------------------------------------
 
+COLUMNAS = {
+    "Licencia_conduccion": [
+        "estado",
+        "fecha_emision",
+        "fecha_vencimiento",
+        "id_categoria",
+    ],
+    "Cliente": [
+        "documento",
+        "nombre",
+        "telefono",
+        "direccion",
+        "correo",
+        "infracciones",
+        "id_licencia",
+        "id_tipo_documento",
+        "id_codigo_postal",
+        "id_cuenta",
+    ],
+    "Empleado": [
+        "documento",
+        "nombre",
+        "salario",
+        "cargo",
+        "telefono",
+        "direccion",
+        "correo",
+        "id_sucursal",
+        "id_tipo_documento",
+        "id_tipo_empleado",
+    ],
+    "Taller_mantenimiento": ["nombre", "direccion", "telefono"],
+    "Vehiculo": [
+        "placa",
+        "n_chasis",
+        "modelo",
+        "kilometraje",
+        "id_marca",
+        "id_color",
+        "id_tipo_vehiculo",
+        "id_blindaje",
+        "id_transmision",
+        "id_cilindraje",
+        "id_seguro_vehiculo",
+        "id_estado_vehiculo",
+        "id_proveedor",
+        "id_sucursal",
+    ],
+    "Mantenimiento_vehiculo": [
+        "descripcion",
+        "fecha_hora",
+        "valor",
+        "id_tipo",
+        "id_taller",
+        "id_vehiculo",
+    ],
+    "Alquiler": [
+        "fecha_hora_salida",
+        "valor",
+        "fecha_hora_entrada",
+        "id_vehiculo",
+        "id_cliente",
+        "id_empleado",
+        "id_sucursal",
+        "id_medio_pago",
+        "id_estado",
+        "id_seguro",
+        "id_descuento",
+    ],
+    "Reserva_alquiler": [
+        "fecha_hora",
+        "abono",
+        "saldo_pendiente",
+        "id_estado_reserva",
+        "id_alquiler",
+        "id_empleado",
+    ],
+    "Abono_reserva": ["valor", "fecha_hora", "id_reserva", "id_medio_pago"],
+    "Det_factura": ["id_servicio", "valor", "impuestos"],
+    "Factura": [
+        "valor",
+        "id_alquiler",
+        "id_cliente",
+        "id_vehiculo",
+        "id_det_factura",
+    ],
+    "Cuenta_pagar": [
+        "fecha_hora",
+        "valor",
+        "descripcion",
+        "id_medio_pago",
+        "id_tipo_entidad",
+        "id_entidad",
+    ],
+    "Cuenta_cobrar": [
+        "fecha_hora",
+        "valor",
+        "descripcion",
+        "id_medio_pago",
+        "id_tipo_entidad",
+        "id_entidad",
+    ],
+    "Cuenta": ["id_cuenta_pagar", "id_cuenta_cobrar"],
+}
+
+
 def escribir_inserts(tabla: str, filas: list[str], file):
     file.write(f"-- Tabla: {tabla}\n")
-    file.write("BEGIN;\n")
+    columnas = ", ".join(COLUMNAS[tabla])
     if filas:
-        file.write(f"INSERT INTO {tabla} VALUES\n    ")
+        file.write(f"INSERT INTO {tabla} ({columnas}) VALUES\n    ")
         file.write(",\n    ".join(filas))
-        file.write(";\n")
-    file.write("COMMIT;\n\n")
+        file.write(";\n\n")
 
 
 def main() -> None:
