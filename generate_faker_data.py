@@ -98,6 +98,24 @@ def unique_plate() -> str:
 
 # Data generators --------------------------------------------------------------
 
+def generar_sucursales(num: int) -> list[str]:
+    """Return ``num`` rows for la tabla ``Sucursal``."""
+    rows = []
+    used_names: set[str] = set()
+    for _ in range(num):
+        while True:
+            nombre = f"Sucursal {fake.city()}"
+            if nombre not in used_names:
+                used_names.add(nombre)
+                break
+        direccion = fake.address().replace("\n", ", ")
+        telefono = unique_phone()
+        gerente = fake.name()
+        codigo = random.choice(CODIGOS_POSTALES)
+        rows.append(f"('{nombre}', '{direccion}', '{telefono}', '{gerente}', '{codigo}')")
+    return rows
+
+
 def generar_licencias(num: int) -> list[str]:
     rows = []
     for _ in range(num):
@@ -340,6 +358,13 @@ COLUMNAS = {
         "id_tipo_documento",
         "id_tipo_empleado",
     ],
+    "Sucursal": [
+        "nombre",
+        "direccion",
+        "telefono",
+        "gerente",
+        "id_codigo_postal",
+    ],
     "Taller_mantenimiento": ["nombre", "direccion", "telefono"],
     "Vehiculo": [
         "placa",
@@ -427,6 +452,7 @@ def escribir_inserts(tabla: str, filas: list[str], file):
 def main() -> None:
     licencias = generar_licencias(5000)
     clientes = generar_clientes(5000, licencia_offset=2)
+    sucursales = generar_sucursales(2)
     empleados = generar_empleados(1000)
     talleres = generar_talleres(100)
     vehiculos, disponibles = generar_vehiculos(500)
@@ -443,6 +469,7 @@ def main() -> None:
     with OUTPUT_FILE.open("w", encoding="utf-8") as f:
         escribir_inserts("Licencia_conduccion", licencias, f)
         escribir_inserts("Cliente", clientes, f)
+        escribir_inserts("Sucursal", sucursales, f)
         escribir_inserts("Empleado", empleados, f)
         escribir_inserts("Taller_mantenimiento", talleres, f)
         escribir_inserts("Vehiculo", vehiculos, f)
