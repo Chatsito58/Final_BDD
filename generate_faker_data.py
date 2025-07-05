@@ -232,7 +232,7 @@ def generar_reservas(alquiler_info: list[dict], empleados: int, extra: int) -> t
         saldo = data["valor"] - abono
         empleado = random.randint(1, empleados)
         rows.append(
-            f"('{fecha}', {abono}, {saldo}, 2, {reserva_id}, {empleado}, {reserva_id})"
+            f"('{fecha}', {abono}, {saldo}, 2, {reserva_id}, {empleado})"
         )
         fechas[reserva_id] = fecha
         reserva_id += 1
