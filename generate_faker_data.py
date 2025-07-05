@@ -98,11 +98,12 @@ def unique_plate() -> str:
 
 # Data generators --------------------------------------------------------------
 
-def generar_sucursales(num: int) -> list[str]:
-    """Return ``num`` rows for la tabla ``Sucursal``."""
+def generar_sucursales(num: int) -> tuple[list[str], list[tuple[str, int]]]:
+    """Return ``num`` rows for la tabla ``Sucursal`` and manager info."""
     rows = []
+    managers: list[tuple[str, int]] = []
     used_names: set[str] = set()
-    for _ in range(num):
+    for idx in range(1, num + 1):
         while True:
             nombre = f"Sucursal {fake.city()}"
             if nombre not in used_names:
@@ -112,8 +113,11 @@ def generar_sucursales(num: int) -> list[str]:
         telefono = unique_phone()
         gerente = fake.name()
         codigo = random.choice(CODIGOS_POSTALES)
-        rows.append(f"('{nombre}', '{direccion}', '{telefono}', '{gerente}', '{codigo}')")
-    return rows
+        rows.append(
+            f"('{nombre}', '{direccion}', '{telefono}', '{gerente}', '{codigo}')"
+        )
+        managers.append((gerente, idx))
+    return rows, managers
 
 
 def generar_licencias(num: int) -> list[str]:
@@ -143,7 +147,8 @@ def generar_clientes(num: int, licencia_offset: int) -> list[str]:
     return rows
 
 
-def generar_empleados(num: int) -> list[str]:
+def generar_empleados(total: int, managers: list[tuple[str, int]]) -> list[str]:
+    """Return rows for ``Empleado`` ensuring one gerente per sucursal."""
     cargos = {
         1: "Administrador",
         2: "Gerente",
@@ -151,22 +156,48 @@ def generar_empleados(num: int) -> list[str]:
         4: "Caja",
         5: "Mantenimiento",
     }
-    por_tipo = num // 5
-    rows = []
-    for tipo in range(1, 6):
-        for _ in range(por_tipo):
-            doc = unique_document()
-            nombre = fake.name()
-            salario = random.randint(1800000, 5000000)
-            cargo = cargos[tipo]
-            telefono = unique_phone()
-            direccion = fake.address().replace("\n", ", ")
-            correo = unique_email()
-            sucursal = random.choice([1, 2])
-            doc_type = random.randint(1, 2)
-            rows.append(
-                f"('{doc}', '{nombre}', {salario}, '{cargo}', '{telefono}', '{direccion}', '{correo}', {sucursal}, {doc_type}, {tipo})"
-            )
+
+    rows: list[str] = []
+
+    # Admin principal
+    doc = unique_document()
+    salario = random.randint(3000000, 6000000)
+    telefono = unique_phone()
+    direccion = fake.address().replace("\n", ", ")
+    correo = unique_email()
+    doc_type = random.randint(1, 2)
+    rows.append(
+        f"('{doc}', '{fake.name()}', {salario}, '{cargos[1]}', '{telefono}', '{direccion}', '{correo}', 1, {doc_type}, 1)"
+    )
+
+    # Gerentes asociados a cada sucursal
+    for nombre, sucursal in managers:
+        doc = unique_document()
+        salario = random.randint(2500000, 5000000)
+        telefono = unique_phone()
+        direccion = fake.address().replace("\n", ", ")
+        correo = unique_email()
+        doc_type = random.randint(1, 2)
+        rows.append(
+            f"('{doc}', '{nombre}', {salario}, '{cargos[2]}', '{telefono}', '{direccion}', '{correo}', {sucursal}, {doc_type}, 2)"
+        )
+
+    remaining = total - len(managers) - 1
+    tipos_restantes = [3, 4, 5]
+    for _ in range(remaining):
+        tipo = random.choice(tipos_restantes)
+        doc = unique_document()
+        nombre = fake.name()
+        salario = random.randint(1800000, 4000000)
+        telefono = unique_phone()
+        direccion = fake.address().replace("\n", ", ")
+        correo = unique_email()
+        sucursal = random.randint(1, len(managers))
+        doc_type = random.randint(1, 2)
+        rows.append(
+            f"('{doc}', '{nombre}', {salario}, '{cargos[tipo]}', '{telefono}', '{direccion}', '{correo}', {sucursal}, {doc_type}, {tipo})"
+        )
+
     return rows
 
 
@@ -180,7 +211,7 @@ def generar_talleres(num: int) -> list[str]:
     return rows
 
 
-def generar_vehiculos(num: int, mantenimiento_ratio: float = 0.1) -> tuple[list[str], list[str]]:
+def generar_vehiculos(num: int, total_sucursales: int, mantenimiento_ratio: float = 0.1) -> tuple[list[str], list[str]]:
     rows = []
     disponibles = []
     for _ in range(num):
@@ -197,7 +228,7 @@ def generar_vehiculos(num: int, mantenimiento_ratio: float = 0.1) -> tuple[list[
         seguro = random.randint(1, 10)
         estado = 2 if random.random() < mantenimiento_ratio else 1
         proveedor = 1
-        sucursal = random.choice([1, 2])
+        sucursal = random.randint(1, total_sucursales)
         rows.append(
             f"('{placa}', '{n_chasis}', '{modelo}', {km}, {marca}, {color}, {tipo}, {blindaje}, {transmision}, {cilindraje}, {seguro}, {estado}, {proveedor}, {sucursal})"
         )
@@ -221,7 +252,7 @@ def generar_mantenimientos(num: int, placas: list[str], total_talleres: int) -> 
     return rows
 
 
-def generar_alquileres(num: int, placas: list[str], clientes: int, empleados: int) -> tuple[list[str], list[dict]]:
+def generar_alquileres(num: int, placas: list[str], clientes: int, empleados: int, total_sucursales: int) -> tuple[list[str], list[dict]]:
     rows = []
     info = []
     for _ in range(num):
@@ -232,7 +263,7 @@ def generar_alquileres(num: int, placas: list[str], clientes: int, empleados: in
         placa = random.choice(placas)
         cliente = random.randint(1, clientes)
         empleado = random.randint(1, empleados)
-        sucursal = random.choice([1, 2])
+        sucursal = random.randint(1, total_sucursales)
         medio = random.randint(1, 3)
         estado = random.randint(1, 2)
         seguro = random.randint(1, 11)
@@ -452,12 +483,12 @@ def escribir_inserts(tabla: str, filas: list[str], file):
 def main() -> None:
     licencias = generar_licencias(5000)
     clientes = generar_clientes(5000, licencia_offset=2)
-    sucursales = generar_sucursales(2)
-    empleados = generar_empleados(1000)
+    sucursales, gerentes = generar_sucursales(20)
+    empleados = generar_empleados(1000, gerentes)
     talleres = generar_talleres(100)
-    vehiculos, disponibles = generar_vehiculos(500)
+    vehiculos, disponibles = generar_vehiculos(500, len(gerentes))
     mantenimientos = generar_mantenimientos(3000, disponibles, len(talleres))
-    alquileres, info = generar_alquileres(4000, disponibles, 5001, 1005)
+    alquileres, info = generar_alquileres(4000, disponibles, 5001, 1005, len(gerentes))
     reservas, fechas = generar_reservas(info, 1005, extra=1000)
     abonos = generar_abonos(12000, fechas)
     dets = generar_det_facturas(len(info))
