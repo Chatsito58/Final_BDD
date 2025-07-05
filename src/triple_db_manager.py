@@ -568,3 +568,29 @@ class TripleDBManager:
                 "Error actualizando contraseña en ambas bases: %s", exc
             )
             return False
+
+    def update_cliente_info_both(
+        self, id_cliente, nombre, telefono, direccion, correo
+    ):
+        """Actualizar la información del cliente en todas las bases."""
+        try:
+            if not self.offline:
+                self.update(
+                    "UPDATE Cliente SET nombre = %s, telefono = %s, direccion = %s, correo = %s "
+                    "WHERE id_cliente = %s",
+                    (nombre, telefono, direccion, correo, id_cliente),
+                )
+
+            pending_flag = 1 if self.offline else 0
+            self.sqlite.execute_query(
+                "UPDATE Cliente SET nombre = ?, telefono = ?, direccion = ?, correo = ?, pendiente = ? "
+                "WHERE id_cliente = ?",
+                (nombre, telefono, direccion, correo, pending_flag, id_cliente),
+                fetch=False,
+            )
+            return True
+        except Exception as exc:  # pragma: no cover - just log
+            self.logger.error(
+                "Error actualizando datos de cliente en ambas bases: %s", exc
+            )
+            return False
