@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
-    QWidget, QTabWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QHBoxLayout, QMessageBox, QGridLayout, QFrame, QSizePolicy
+    QWidget, QTabWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QHBoxLayout, QMessageBox, QGridLayout, QFrame, QSizePolicy, QDoubleSpinBox
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer, QLocale
 from datetime import datetime
 
 class ClienteViewQt(QWidget):
@@ -10,6 +10,7 @@ class ClienteViewQt(QWidget):
         self.user_data = user_data
         self.db_manager = db_manager
         self.on_logout = on_logout
+        self.descuento_labels = []  # Inicializar para evitar AttributeError
         self.setWindowTitle(f"Bienvenido cliente, {self.user_data.get('usuario', '')}")
         self.resize(1100, 700)
         self._build_ui()
@@ -18,10 +19,16 @@ class ClienteViewQt(QWidget):
         layout = QVBoxLayout(self)
         # Barra superior
         topbar = QHBoxLayout()
+        self.status_remota1 = QLabel("")
+        self.status_remota2 = QLabel("")
         self.status_label1 = QLabel("")
         self.status_label2 = QLabel("")
         btn_logout = QPushButton("Cerrar sesión")
         btn_logout.clicked.connect(self.logout)
+        # Orden: remotas, usuario, id, stretch, logout
+        topbar.addWidget(self.status_remota1)
+        topbar.addWidget(self.status_remota2)
+        topbar.addSpacing(10)
         topbar.addWidget(self.status_label1)
         topbar.addWidget(self.status_label2)
         topbar.addStretch()
@@ -55,6 +62,7 @@ class ClienteViewQt(QWidget):
         self.tabs.addTab(self.tab_perfil, "Editar perfil")
         self._build_tab_perfil()
         self._update_status_labels()
+        self._start_status_updater()
 
     def logout(self):
         self.close()
@@ -62,8 +70,28 @@ class ClienteViewQt(QWidget):
             self.on_logout()
 
     def _update_status_labels(self):
+        # Estado de remotas
+        online1 = getattr(self.db_manager, 'is_remote1_active', lambda: getattr(self.db_manager, 'remote1_active', False))()
+        online2 = getattr(self.db_manager, 'is_remote2_active', lambda: getattr(self.db_manager, 'remote2_active', False))()
+        emoji1 = "🟢" if online1 else "🔴"
+        emoji2 = "🟢" if online2 else "🔴"
+        estado1 = "ONLINE" if online1 else "OFFLINE"
+        estado2 = "ONLINE" if online2 else "OFFLINE"
+        self.status_remota1.setText(f"{emoji1} R1: {estado1}")
+        self.status_remota2.setText(f"{emoji2} R2: {estado2}")
+        # Usuario e ID
         self.status_label1.setText(f"Usuario: {self.user_data.get('usuario', '')}")
         self.status_label2.setText(f"ID Cliente: {self.user_data.get('id_cliente', '')}")
+
+    def _start_status_updater(self):
+        self.timer_status = QTimer(self)
+        self.timer_status.timeout.connect(self._update_status_labels)
+        self.timer_status.start(1000)
+
+    def closeEvent(self, event):
+        if hasattr(self, 'timer_status'):
+            self.timer_status.stop()
+        super().closeEvent(event)
 
     def _build_tab_mis_reservas(self):
         from datetime import datetime
@@ -247,100 +275,128 @@ class ClienteViewQt(QWidget):
             card_parent.addWidget(card)
 
     def _build_tab_crear_reserva(self):
-        from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QDateEdit, QHBoxLayout, QPushButton, QLineEdit, QMessageBox
+        from PyQt5.QtWidgets import QComboBox, QDateEdit, QSpinBox, QDoubleSpinBox, QGroupBox, QMessageBox, QHBoxLayout, QWidget
         from PyQt5.QtCore import QDate
-        from datetime import datetime
+        import datetime
         layout = QVBoxLayout(self.tab_crear)
         label = QLabel("Crear nueva reserva")
-        label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        label.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 10px;")
         layout.addWidget(label)
-        # Card principal
-        card = QVBoxLayout()
-        # Descuentos disponibles
-        lista_desc = self.db_manager.execute_query(
-            "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
-        )
-        self.descuento_id = None
-        self.descuento_valor = 0.0
-        self.descuento_labels = []
-        info = QVBoxLayout()
-        if lista_desc:
-            info.addWidget(QLabel("Descuentos disponibles"))
-        else:
-            info.addWidget(QLabel("No hay descuentos registrados"))
-        # Selección de vehículo
-        card.addWidget(QLabel("Vehículo"))
+        # Agrupar campos principales en un QGroupBox con QFormLayout
+        form_group = QGroupBox()
+        form_layout = QFormLayout(form_group)
+        # Vehículo
+        self.cb_vehiculo = QComboBox()
         vehiculos = self.db_manager.execute_query(
             "SELECT v.placa, v.modelo, m.nombre_marca FROM Vehiculo v JOIN Marca_vehiculo m ON v.id_marca = m.id_marca WHERE v.id_estado_vehiculo = 1"
         )
-        self.vehiculo_cb = QComboBox()
         self.vehiculo_map = {f"{v[0]} - {v[1]} {v[2]}": v[0] for v in (vehiculos or [])}
-        self.vehiculo_cb.addItems(list(self.vehiculo_map.keys()))
-        card.addWidget(self.vehiculo_cb)
-        # Fecha y hora salida
-        card.addWidget(QLabel("Fecha y hora salida"))
+        self.cb_vehiculo.addItems(list(self.vehiculo_map.keys()))
+        form_layout.addRow("Vehículo", self.cb_vehiculo)
+        # Fecha y hora salida (fecha a la izquierda, hora/min/ampm juntos a la derecha)
         salida_row = QHBoxLayout()
-        self.salida_date = QDateEdit(); self.salida_date.setCalendarPopup(True)
-        self.salida_date.setDate(QDate.currentDate())
-        salida_row.addWidget(self.salida_date)
-        horas_12 = [f"{h:02d}" for h in range(1, 13)]
-        minutos = ["00", "15", "30", "45"]
-        ampm = ["AM", "PM"]
-        self.salida_hora_cb = QComboBox(); self.salida_hora_cb.addItems(horas_12); self.salida_hora_cb.setCurrentText("08")
-        self.salida_min_cb = QComboBox(); self.salida_min_cb.addItems(minutos); self.salida_min_cb.setCurrentText("00")
-        self.salida_ampm_cb = QComboBox(); self.salida_ampm_cb.addItems(ampm); self.salida_ampm_cb.setCurrentText("AM")
-        salida_row.addWidget(self.salida_date)
-        salida_row.addWidget(self.salida_hora_cb)
-        salida_row.addWidget(QLabel(":"))
-        salida_row.addWidget(self.salida_min_cb)
-        salida_row.addWidget(self.salida_ampm_cb)
-        card.addLayout(salida_row)
-        # Fecha y hora entrada
-        card.addWidget(QLabel("Fecha y hora entrada"))
+        self.date_salida = QDateEdit(); self.date_salida.setCalendarPopup(True)
+        self.date_salida.setDate(QDate.currentDate())
+        salida_row.addWidget(self.date_salida)
+        hora_widget = QWidget(); hora_layout = QHBoxLayout(hora_widget); hora_layout.setContentsMargins(0,0,0,0)
+        self.cb_hora_salida = QComboBox(); self.cb_min_salida = QComboBox(); self.cb_ampm_salida = QComboBox()
+        self.cb_hora_salida.addItems([f"{h:02d}" for h in range(1, 13)])
+        self.cb_min_salida.addItems(["00", "15", "30", "45"])
+        self.cb_ampm_salida.addItems(["AM", "PM"])
+        self.cb_hora_salida.setCurrentText("08")
+        self.cb_min_salida.setCurrentText("00")
+        self.cb_ampm_salida.setCurrentText("AM")
+        for cb in [self.cb_hora_salida, self.cb_min_salida, self.cb_ampm_salida]:
+            cb.setFixedWidth(50)
+            cb.setStyleSheet("margin-right:0px; margin-left:0px;")
+        hora_layout.addWidget(self.cb_hora_salida)
+        hora_layout.addWidget(QLabel(":"))
+        hora_layout.addWidget(self.cb_min_salida)
+        hora_layout.addWidget(self.cb_ampm_salida)
+        salida_row.addSpacing(10)
+        salida_row.addWidget(hora_widget)
+        form_layout.addRow("Fecha y hora salida", salida_row)
+        # Fecha y hora entrada (fecha a la izquierda, hora/min/ampm juntos a la derecha)
         entrada_row = QHBoxLayout()
-        self.entrada_date = QDateEdit(); self.entrada_date.setCalendarPopup(True)
-        self.entrada_date.setDate(QDate.currentDate())
-        entrada_row.addWidget(self.entrada_date)
-        self.entrada_hora_cb = QComboBox(); self.entrada_hora_cb.addItems(horas_12); self.entrada_hora_cb.setCurrentText("09")
-        self.entrada_min_cb = QComboBox(); self.entrada_min_cb.addItems(minutos); self.entrada_min_cb.setCurrentText("00")
-        self.entrada_ampm_cb = QComboBox(); self.entrada_ampm_cb.addItems(ampm); self.entrada_ampm_cb.setCurrentText("AM")
-        entrada_row.addWidget(self.entrada_date)
-        entrada_row.addWidget(self.entrada_hora_cb)
-        entrada_row.addWidget(QLabel(":"))
-        entrada_row.addWidget(self.entrada_min_cb)
-        entrada_row.addWidget(self.entrada_ampm_cb)
-        card.addLayout(entrada_row)
+        self.date_entrada = QDateEdit(); self.date_entrada.setCalendarPopup(True)
+        self.date_entrada.setDate(QDate.currentDate())
+        entrada_row.addWidget(self.date_entrada)
+        hora_widget_e = QWidget(); hora_layout_e = QHBoxLayout(hora_widget_e); hora_layout_e.setContentsMargins(0,0,0,0)
+        self.cb_hora_entrada = QComboBox(); self.cb_min_entrada = QComboBox(); self.cb_ampm_entrada = QComboBox()
+        self.cb_hora_entrada.addItems([f"{h:02d}" for h in range(1, 13)])
+        self.cb_min_entrada.addItems(["00", "15", "30", "45"])
+        self.cb_ampm_entrada.addItems(["AM", "PM"])
+        self.cb_hora_entrada.setCurrentText("09")
+        self.cb_min_entrada.setCurrentText("00")
+        self.cb_ampm_entrada.setCurrentText("AM")
+        for cb in [self.cb_hora_entrada, self.cb_min_entrada, self.cb_ampm_entrada]:
+            cb.setFixedWidth(50)
+            cb.setStyleSheet("margin-right:0px; margin-left:0px;")
+        hora_layout_e.addWidget(self.cb_hora_entrada)
+        hora_layout_e.addWidget(QLabel(":"))
+        hora_layout_e.addWidget(self.cb_min_entrada)
+        hora_layout_e.addWidget(self.cb_ampm_entrada)
+        entrada_row.addSpacing(10)
+        entrada_row.addWidget(hora_widget_e)
+        form_layout.addRow("Fecha y hora entrada", entrada_row)
+        # Validación de fechas: no permitir entrada < salida
+        def validar_fechas():
+            salida = self.date_salida.date().toPyDate()
+            entrada = self.date_entrada.date().toPyDate()
+            if entrada < salida:
+                self.date_entrada.setDate(self.date_salida.date())
+                QMessageBox.warning(self, "Fecha inválida", "La fecha de entrada no puede ser anterior a la de salida.")
+        self.date_entrada.dateChanged.connect(validar_fechas)
+        self.date_salida.dateChanged.connect(validar_fechas)
         # Seguro
-        card.addWidget(QLabel("Seguro"))
+        self.cb_seguro = QComboBox()
         seguros = self.db_manager.execute_query(
             "SELECT id_seguro, descripcion, costo FROM Seguro_alquiler"
         )
-        self.seguro_cb = QComboBox()
-        self.seguro_map = {f"{s[1]} (${s[2]})": s[0] for s in (seguros or [])}
-        self.seguro_cb.addItems(list(self.seguro_map.keys()))
-        card.addWidget(self.seguro_cb)
+        self.seguro_map = {f"{s[1]} (${s[2]})": (s[0], float(s[2])) for s in (seguros or [])}
+        self.cb_seguro.addItems(list(self.seguro_map.keys()))
+        form_layout.addRow("Seguro", self.cb_seguro)
         # Método de pago
-        card.addWidget(QLabel("Método de pago"))
-        self.metodo_cb = QComboBox(); self.metodo_cb.addItems(["Efectivo", "Tarjeta", "Transferencia"])
-        card.addWidget(self.metodo_cb)
-        # Total y abono mínimo
-        self.total_label = QLabel("Total: $0")
-        self.abono_label = QLabel("Abono mínimo (30%): $0")
-        card.addWidget(self.total_label)
-        card.addWidget(self.abono_label)
-        # Campo de abono inicial
-        card.addWidget(QLabel("Abono inicial ($)"))
-        self.entry_abono = QLineEdit()
-        card.addWidget(self.entry_abono)
+        self.cb_metodo_pago = QComboBox()
+        self.cb_metodo_pago.addItems(["Efectivo", "Tarjeta", "Transferencia"])
+        form_layout.addRow("Método de pago", self.cb_metodo_pago)
+        # Total y abono
+        self.label_total = QLabel("Total: $0")
+        self.label_abono_min = QLabel("Abono mínimo (30%): $0")
+        self.input_abono_reserva = QDoubleSpinBox();
+        self.input_abono_reserva.setMaximum(99999999)
+        self.input_abono_reserva.setDecimals(2)
+        self.input_abono_reserva.setSingleStep(1000)
+        self.input_abono_reserva.setLocale(QLocale.c())
+        self.input_abono_reserva.setSuffix("")
+        self.input_abono_reserva.setButtonSymbols(QDoubleSpinBox.NoButtons)
+        form_layout.addRow(self.label_total)
+        form_layout.addRow(self.label_abono_min)
+        form_layout.addRow("Abono inicial ($)", self.input_abono_reserva)
+        layout.addWidget(form_group)
         # Botón crear reserva
-        btn_crear = QPushButton("Crear reserva")
-        btn_crear.clicked.connect(self._crear_reserva)
-        card.addWidget(btn_crear)
-        layout.addLayout(info)
-        layout.addLayout(card)
-        # Layout para descuentos al final
-        self.descuentos_layout = QVBoxLayout()
-        layout.addLayout(self.descuentos_layout)
+        self.btn_crear_reserva = QPushButton("Crear reserva")
+        self.btn_crear_reserva.clicked.connect(self._crear_reserva)
+        layout.addWidget(self.btn_crear_reserva)
+        # Descuentos disponibles (al final)
+        self.label_descuentos = QLabel("Descuentos disponibles")
+        self.label_descuentos.setStyleSheet("margin-top: 10px; font-size: 13px;")
+        layout.addWidget(self.label_descuentos)
+        self.lista_descuentos = QLabel("")
+        self.lista_descuentos.setStyleSheet("font-size: 12px; margin-bottom: 10px;")
+        layout.addWidget(self.lista_descuentos)
+        layout.addStretch()
+        # Conectar eventos para actualizar totales en tiempo real
+        self.cb_vehiculo.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.date_salida.dateChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_hora_salida.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_min_salida.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_ampm_salida.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.date_entrada.dateChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_hora_entrada.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_min_entrada.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_ampm_entrada.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
+        self.cb_seguro.currentIndexChanged.connect(self._actualizar_descuentos_y_total)
         self._actualizar_descuentos_y_total()
 
     def _actualizar_descuentos_y_total(self):
@@ -349,21 +405,16 @@ class ClienteViewQt(QWidget):
         for lbl in self.descuento_labels:
             lbl.deleteLater()
         self.descuento_labels.clear()
-        # Limpiar el layout de descuentos
-        while self.descuentos_layout.count():
-            item = self.descuentos_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
         # Fechas
-        fecha_salida = self.salida_date.date().toPyDate()
-        fecha_entrada = self.entrada_date.date().toPyDate()
+        fecha_salida = self.date_salida.date().toPyDate()
+        fecha_entrada = self.date_entrada.date().toPyDate()
         # Descuentos
         lista_desc = self.db_manager.execute_query(
             "SELECT id_descuento, descripcion, valor, fecha_inicio, fecha_fin FROM Descuento_alquiler"
         )
         self.descuento_id = None
         self.descuento_valor = 0.0
+        descuentos_text = ""
         for d in lista_desc:
             d_id, desc, val, ini, fin = d
             # Convertir ini y fin a date si son string o datetime
@@ -397,43 +448,62 @@ class ClienteViewQt(QWidget):
                 if self.descuento_id is None:
                     self.descuento_id = d_id
                     self.descuento_valor = float(val)
+            descuentos_text += texto + "\n"
             lbl = QLabel(texto)
-            self.descuentos_layout.addWidget(lbl)
             self.descuento_labels.append(lbl)
+        self.lista_descuentos.setText(descuentos_text)
         # Calcular total y abono
-        if self.vehiculo_cb.count() == 0:
-            self.total_label.setText("Total: $0")
-            self.abono_label.setText("Abono mínimo (30%): $0")
+        if self.cb_vehiculo.count() == 0:
+            self.label_total.setText("Total: $0")
+            self.label_abono_min.setText("Abono mínimo (30%): $0")
             return
-        placa = self.vehiculo_map[self.vehiculo_cb.currentText()]
+        placa = self.vehiculo_map[self.cb_vehiculo.currentText()]
         vehiculo_query = """
             SELECT t.tarifa_dia FROM Vehiculo v JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo WHERE v.placa = %s
         """
         tarifa = self.db_manager.execute_query(vehiculo_query, (placa,))
         if not tarifa:
-            self.total_label.setText("Total: $0")
-            self.abono_label.setText("Abono mínimo (30%): $0")
+            self.label_total.setText("Total: $0")
+            self.label_abono_min.setText("Abono mínimo (30%): $0")
             return
         tarifa_dia = float(tarifa[0][0])
-        dias = (self.entrada_date.date().toPyDate() - self.salida_date.date().toPyDate()).days or 1
+        dias = (self.date_entrada.date().toPyDate() - self.date_salida.date().toPyDate()).days or 1
         total = tarifa_dia * dias
         if self.descuento_valor:
             total -= self.descuento_valor
-        self.total_label.setText(f"Total: ${total:,.0f}")
+        # Sumar costo del seguro seleccionado
+        seguro_costo = 0.0
+        if self.cb_seguro.count() > 0 and self.cb_seguro.currentText() in self.seguro_map:
+            seguro_costo = self.seguro_map[self.cb_seguro.currentText()][1]
+        total += seguro_costo
+        self.label_total.setText(f"Total: ${total:.2f}")
         abono_min = total * 0.3
-        self.abono_label.setText(f"Abono mínimo (30%): ${abono_min:,.0f}")
+        self.label_abono_min.setText(f"Abono mínimo (30%): ${abono_min:.2f}")
 
     def _crear_reserva(self):
         from PyQt5.QtWidgets import QMessageBox
         from datetime import datetime
-        if self.vehiculo_cb.count() == 0:
-            QMessageBox.warning(self, "Error", "No hay vehículos disponibles")
+        # Validar campos obligatorios
+        if self.cb_vehiculo.count() == 0 or not self.cb_vehiculo.currentText():
+            QMessageBox.warning(self, "Error", "Debe seleccionar un vehículo")
             return
-        placa = self.vehiculo_map[self.vehiculo_cb.currentText()]
+        if self.cb_seguro.count() == 0 or not self.cb_seguro.currentText():
+            QMessageBox.warning(self, "Error", "Debe seleccionar un seguro")
+            return
+        if self.cb_metodo_pago.count() == 0 or not self.cb_metodo_pago.currentText():
+            QMessageBox.warning(self, "Error", "Debe seleccionar un método de pago")
+            return
+        if not self.date_salida.date().isValid() or not self.date_entrada.date().isValid():
+            QMessageBox.warning(self, "Error", "Debe seleccionar fechas válidas")
+            return
+        if self.input_abono_reserva.value() <= 0:
+            QMessageBox.warning(self, "Error", "Debe ingresar un abono inicial mayor a 0")
+            return
+        placa = self.vehiculo_map[self.cb_vehiculo.currentText()]
         id_cliente = self.user_data.get("id_cliente")
-        id_seguro = self.seguro_map[self.seguro_cb.currentText()] if self.seguro_cb.count() > 0 else None
+        id_seguro = self.seguro_map[self.cb_seguro.currentText()][0] if self.cb_seguro.count() > 0 else None
         id_descuento = self.descuento_id
-        metodo = self.metodo_cb.currentText()
+        metodo = self.cb_metodo_pago.currentText()
         # Fechas y horas
         def get_24h(date, hora_cb, min_cb, ampm_cb):
             h = int(hora_cb.currentText())
@@ -444,19 +514,19 @@ class ClienteViewQt(QWidget):
             if ampm == "AM" and h == 12:
                 h = 0
             return f"{date.date().toString('yyyy-MM-dd')} {h:02d}:{m:02d}"
-        salida = get_24h(self.salida_date, self.salida_hora_cb, self.salida_min_cb, self.salida_ampm_cb)
-        entrada = get_24h(self.entrada_date, self.entrada_hora_cb, self.entrada_min_cb, self.entrada_ampm_cb)
+        salida = get_24h(self.date_salida, self.cb_hora_salida, self.cb_min_salida, self.cb_ampm_salida)
+        entrada = get_24h(self.date_entrada, self.cb_hora_entrada, self.cb_min_entrada, self.cb_ampm_entrada)
         fmt = "%Y-%m-%d %H:%M"
         try:
-            fecha_salida_dt = datetime.strptime(salida, fmt)
-            fecha_entrada_dt = datetime.strptime(entrada, fmt)
-            if fecha_entrada_dt <= fecha_salida_dt:
-                QMessageBox.warning(self, "Error", "La fecha de entrada debe ser posterior a la de salida.")
-                return
+            salida_dt = datetime.strptime(salida, fmt)
+            entrada_dt = datetime.strptime(entrada, fmt)
         except Exception:
-            QMessageBox.warning(self, "Error", "Fechas inválidas")
+            QMessageBox.warning(self, "Error", "Fechas u horas inválidas")
             return
-        # Calcular total y abono
+        if entrada_dt <= salida_dt:
+            QMessageBox.warning(self, "Error", "La fecha/hora de entrada debe ser posterior a la de salida")
+            return
+        # Calcular valores
         vehiculo_query = """
             SELECT t.tarifa_dia FROM Vehiculo v JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo WHERE v.placa = %s
         """
@@ -465,38 +535,59 @@ class ClienteViewQt(QWidget):
             QMessageBox.warning(self, "Error", "No se pudo obtener la tarifa del vehículo")
             return
         tarifa_dia = float(tarifa[0][0])
-        dias = (self.entrada_date.date().toPyDate() - self.salida_date.date().toPyDate()).days or 1
+        dias = (entrada_dt.date() - salida_dt.date()).days or 1
         total = tarifa_dia * dias
         if self.descuento_valor:
             total -= self.descuento_valor
+        seguro_costo = 0.0
+        if self.cb_seguro.count() > 0 and self.cb_seguro.currentText() in self.seguro_map:
+            seguro_costo = self.seguro_map[self.cb_seguro.currentText()][1]
+        total += seguro_costo
         abono_min = total * 0.3
+        # Leer abono y reemplazar coma por punto si el usuario la escribe
+        abono = self.input_abono_reserva.text().replace(",", ".")
         try:
-            abono = float(self.entry_abono.text())
+            abono = float(abono)
         except Exception:
-            QMessageBox.warning(self, "Error", "Abono inválido")
+            QMessageBox.warning(self, "Error", "El abono inicial debe ser un número válido (usa punto decimal)")
             return
         if abono < abono_min:
-            QMessageBox.warning(self, "Error", f"El abono debe ser al menos el 30%: ${abono_min:,.0f}")
+            QMessageBox.warning(self, "Error", f"El abono inicial debe ser al menos el 30%: ${abono_min:.2f}")
             return
-        # Insertar reserva
+        # Insertar reserva en estado pendiente
         try:
             # Insertar en Alquiler
             insert_alquiler = """
-                INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_estado) VALUES (%s, %s, %s, %s, %s, 1)
+                INSERT INTO Alquiler (fecha_hora_salida, fecha_hora_entrada, id_vehiculo, id_cliente, id_seguro, id_descuento, valor)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            self.db_manager.execute_query(insert_alquiler, (salida, entrada, placa, id_cliente, id_seguro), fetch=False)
-            # Obtener id_alquiler
-            id_alquiler = self.db_manager.execute_query("SELECT MAX(id_alquiler) FROM Alquiler")[0][0]
+            self.db_manager.execute_query(insert_alquiler, (salida, entrada, placa, id_cliente, id_seguro, id_descuento, total))
+            # Obtener id_alquiler recién insertado
+            id_alquiler = self.db_manager.get_last_insert_id()
             # Insertar en Reserva_alquiler
             insert_reserva = """
-                INSERT INTO Reserva_alquiler (id_alquiler, saldo_pendiente, abono, id_estado_reserva, id_descuento) VALUES (%s, %s, %s, 1, %s)
+                INSERT INTO Reserva_alquiler (id_alquiler, saldo_pendiente, abono, id_estado_reserva)
+                VALUES (%s, %s, %s, %s)
             """
             saldo_pendiente = total - abono
-            self.db_manager.execute_query(insert_reserva, (id_alquiler, saldo_pendiente, abono, id_descuento), fetch=False)
-            QMessageBox.information(self, "Éxito", "Reserva creada correctamente")
-            self._actualizar_descuentos_y_total()
-        except Exception as exc:
-            QMessageBox.critical(self, "Error", f"No se pudo crear la reserva: {exc}")
+            abono_val = abono
+            id_estado_pendiente = 1  # Ajusta según tu base de datos
+            self.db_manager.execute_query(insert_reserva, (id_alquiler, saldo_pendiente, abono_val, id_estado_pendiente))
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo registrar la reserva: {e}")
+            return
+        # Mostrar mensaje o pasarela según método de pago
+        if metodo == "Efectivo":
+            QMessageBox.information(self, "Reserva registrada", "Reserva creada en estado pendiente. Debe acercarse a la sede más cercana para llevar el efectivo.")
+        else:
+            self._mostrar_pasarela_pago(total, metodo)
+        self._cargar_reservas_cliente()  # Refrescar pestaña de reservas
+        QMessageBox.information(self, "Reserva registrada", "Reserva creada exitosamente en estado pendiente.")
+
+    def _mostrar_pasarela_pago(self, total, metodo):
+        from PyQt5.QtWidgets import QMessageBox
+        # Aquí puedes implementar la lógica real de la pasarela de pago
+        QMessageBox.information(self, "Pasarela de pago", f"Simulación de pasarela de pago para {metodo}. Total a pagar: ${total:,.0f}")
 
     def _build_tab_vehiculos(self):
         from PyQt5.QtWidgets import QVBoxLayout, QLabel, QScrollArea, QWidget, QHBoxLayout
@@ -635,8 +726,8 @@ class ClienteViewQt(QWidget):
         # Formulario de abono
         form = QHBoxLayout()
         form.addWidget(QLabel("Monto a abonar ($):"))
-        self.input_abono = QLineEdit(); self.input_abono.setPlaceholderText("Ej: 50000"); self.input_abono.setEnabled(False)
-        form.addWidget(self.input_abono)
+        self.input_abono_abono = QLineEdit(); self.input_abono_abono.setPlaceholderText("Ej: 50000"); self.input_abono_abono.setEnabled(False)
+        form.addWidget(self.input_abono_abono)
         form.addWidget(QLabel("Método de pago:"))
         self.metodo_cb = QComboBox(); self.metodo_cb.addItems(["Efectivo", "Tarjeta", "Transferencia"]); self.metodo_cb.setEnabled(False)
         form.addWidget(self.metodo_cb)
@@ -713,7 +804,7 @@ class ClienteViewQt(QWidget):
             self.abonos_scroll_layout.addWidget(t)
         # Reset selección
         self._abono_seleccionado = None
-        self.input_abono.setEnabled(False)
+        self.input_abono_abono.setEnabled(False)
         self.metodo_cb.setEnabled(False)
         self.btn_abonar.setEnabled(False)
 
@@ -724,7 +815,7 @@ class ClienteViewQt(QWidget):
             else:
                 card.setStyleSheet("background: white; border-radius: 12px; margin: 8px; padding: 8px;")
         self._abono_seleccionado = id_reserva
-        self.input_abono.setEnabled(True)
+        self.input_abono_abono.setEnabled(True)
         self.metodo_cb.setEnabled(True)
         self.btn_abonar.setEnabled(True)
 
@@ -734,7 +825,7 @@ class ClienteViewQt(QWidget):
         if not id_reserva:
             QMessageBox.warning(self, "Aviso", "Seleccione una reserva para abonar")
             return
-        monto = self.input_abono.text().strip()
+        monto = self.input_abono_abono.text().strip()
         metodo = self.metodo_cb.currentText()
         if not monto:
             QMessageBox.warning(self, "Error", "Ingrese un monto")
