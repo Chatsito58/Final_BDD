@@ -65,7 +65,7 @@ from src.triple_db_manager import TripleDBManager
 from src.backup_manager import BackupManager
 from src.auth import AuthManager
 from src.views.login_view import LoginView
-from src.views.client_view import ClienteView
+from src.views.client_view_qt import ClienteViewQt
 from src.views.admin_view import AdminView
 from src.views.gerente_view import GerenteView
 from src.views.empleado_ventas_view import EmpleadoVentasView
@@ -198,12 +198,15 @@ class AlquilerApp:
                 logger.exception("Failed to open %s view", rol)
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         else:
-            from src.views.client_view import ClienteView
-            logger.debug("Opening ClienteView for %s", user_data.get('usuario'))
+            from src.views.client_view_qt import ClienteViewQt
+            logger.debug("Opening ClienteViewQt for %s", user_data.get('usuario'))
             try:
                 # Crear la vista de cliente directamente
-                cliente_view = ClienteView(user_data, db_manager, on_logout)
-                cliente_view.mainloop()
+                cliente_view = ClienteViewQt(user_data, db_manager, on_logout)
+                cliente_view.show()
+                # Mantener la ventana abierta hasta que se cierre
+                while cliente_view.isVisible():
+                    QApplication.processEvents()
             except Exception:
                 logger.exception("Failed to open %s view", rol or 'cliente')
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
