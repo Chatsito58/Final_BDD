@@ -546,3 +546,25 @@ class TripleDBManager:
         query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
         params = tuple(data.values())
         self.sqlite.execute_query(query, params, fetch=False)
+
+    def update_user_password_both(self, usuario, hashed_nueva):
+        """Actualizar la contraseña en todas las bases disponibles."""
+        try:
+            if not self.offline:
+                self.update(
+                    "UPDATE Usuario SET contrasena = %s WHERE usuario = %s",
+                    (hashed_nueva, usuario),
+                )
+
+            pending_flag = 1 if self.offline else 0
+            self.sqlite.execute_query(
+                "UPDATE Usuario SET contrasena = ?, pendiente = ? WHERE usuario = ?",
+                (hashed_nueva, pending_flag, usuario),
+                fetch=False,
+            )
+            return True
+        except Exception as exc:  # pragma: no cover - just log
+            self.logger.error(
+                "Error actualizando contraseña en ambas bases: %s", exc
+            )
+            return False
