@@ -96,9 +96,19 @@ class ReservaView(QtWidgets.QWidget):
         params = (start, end, vehicle, self.client_id, seguro, 1)
 
         try:
-            self.db_manager.execute_query(query, params)
-            update_q = f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+            id_alquiler = self.db_manager.execute_query(
+                query, params, fetch=False, return_lastrowid=True
+            )
+            update_q = (
+                f"UPDATE Vehiculo SET id_estado_vehiculo = 2 WHERE placa = {placeholder}"
+            )
             self.db_manager.execute_query(update_q, (vehicle,), fetch=False)
+
+            reserva_q = (
+                "INSERT INTO Reserva_alquiler (id_alquiler, id_estado_reserva, "
+                f"saldo_pendiente, abono, id_empleado) VALUES ({placeholder}, 1, 0, 0, NULL)"
+            )
+            self.db_manager.execute_query(reserva_q, (id_alquiler,), fetch=False)
             self.load_reservations()
         except Exception:
             datos = {
