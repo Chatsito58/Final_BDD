@@ -157,11 +157,21 @@ class AlquilerApp:
             # callback to be executed safely in the Qt event loop.
             on_logout()
         if rol == 'admin':
-            win = AdminView(user_data, db_manager, handle_logout)
-            win.mainloop()
+            logger.debug("Opening AdminView for %s", user_data.get('usuario'))
+            try:
+                win = AdminView(user_data, db_manager, handle_logout)
+                win.mainloop()
+            except Exception:
+                logger.exception("Failed to open %s view", rol)
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         elif rol == 'gerente':
-            win = GerenteView(user_data, db_manager, handle_logout)
-            win.mainloop()
+            logger.debug("Opening GerenteView for %s", user_data.get('usuario'))
+            try:
+                win = GerenteView(user_data, db_manager, handle_logout)
+                win.mainloop()
+            except Exception:
+                logger.exception("Failed to open %s view", rol)
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         elif rol == 'empleado':
             if not tipo_empleado and user_data.get('id_empleado'):
                 query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
@@ -169,21 +179,34 @@ class AlquilerApp:
                 result = db_manager.execute_query(query, params)
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
-                win = EmpleadoVentasView(user_data, db_manager, handle_logout)
+                logger.debug("Opening EmpleadoVentasView for %s", user_data.get('usuario'))
+                view_class = EmpleadoVentasView
             elif tipo_empleado == 'mantenimiento':
-                win = EmpleadoMantenimientoView(user_data, db_manager, handle_logout)
+                logger.debug("Opening EmpleadoMantenimientoView for %s", user_data.get('usuario'))
+                view_class = EmpleadoMantenimientoView
             elif tipo_empleado == 'caja':
-                win = EmpleadoCajaView(user_data, db_manager, handle_logout)
+                logger.debug("Opening EmpleadoCajaView for %s", user_data.get('usuario'))
+                view_class = EmpleadoCajaView
             else:
                 QMessageBox.warning(None, "Error", "Tipo de empleado desconocido")
                 handle_logout()
                 return
-            win.mainloop()
+            try:
+                win = view_class(user_data, db_manager, handle_logout)
+                win.mainloop()
+            except Exception:
+                logger.exception("Failed to open %s view", rol)
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         else:
             from src.views.client_view import ClienteView
-            # Crear la vista de cliente directamente
-            cliente_view = ClienteView(user_data, db_manager, on_logout)
-            cliente_view.mainloop()
+            logger.debug("Opening ClienteView for %s", user_data.get('usuario'))
+            try:
+                # Crear la vista de cliente directamente
+                cliente_view = ClienteView(user_data, db_manager, on_logout)
+                cliente_view.mainloop()
+            except Exception:
+                logger.exception("Failed to open %s view", rol or 'cliente')
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
 
 if __name__ == "__main__":
     logger.info("=== Iniciando aplicación de alquiler ===")
