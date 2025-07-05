@@ -753,7 +753,7 @@ class ClienteViewQt(QWidget):
             f"FROM Reserva_alquiler ra "
             f"JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
             f"JOIN Vehiculo v ON a.id_vehiculo = v.placa "
-            f"WHERE a.id_cliente = {placeholder} AND ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2) "
+            f"WHERE a.id_cliente = {placeholder} AND ra.saldo_pendiente > 0 AND ra.id_estado_reserva = 2 "
             f"ORDER BY a.fecha_hora_salida DESC"
         )
         reservas = self.db_manager.execute_query(query, (id_cliente,))
@@ -840,17 +840,21 @@ class ClienteViewQt(QWidget):
             return
         placeholder = "%s" if not getattr(self.db_manager, 'offline', False) else "?"
         valor_query = f'''
-            SELECT a.valor, ra.saldo_pendiente 
-            FROM Reserva_alquiler ra 
-            JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler 
+            SELECT ra.id_estado_reserva, a.valor, ra.saldo_pendiente
+            FROM Reserva_alquiler ra
+            JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler
             WHERE ra.id_reserva = {placeholder}
         '''
         valor_result = self.db_manager.execute_query(valor_query, (id_reserva,))
         if not valor_result:
             QMessageBox.critical(self, "Error", "No se pudo obtener información de la reserva")
             return
-        valor_total = valor_result[0][0]
-        saldo_pendiente = valor_result[0][1]
+        estado_reserva = valor_result[0][0]
+        valor_total = valor_result[0][1]
+        saldo_pendiente = valor_result[0][2]
+        if estado_reserva != 2:
+            QMessageBox.warning(self, "Aviso", "La reserva debe estar aprobada para registrar un abono")
+            return
         abonos_query = f"SELECT COALESCE(SUM(valor), 0) FROM Abono_reserva WHERE id_reserva = {placeholder}"
         abonos_result = self.db_manager.execute_query(abonos_query, (id_reserva,))
         abonado_anterior = abonos_result[0][0] if abonos_result and abonos_result[0] else 0
