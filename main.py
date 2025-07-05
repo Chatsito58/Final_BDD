@@ -87,6 +87,7 @@ class AlquilerApp:
         # Inicializar gestores
         setup_connection_logging()
         self.db_manager = TripleDBManager()
+        self.db_manager.ping_remotes()
         self.offline = offline_mode or self.db_manager.offline
         if self.offline:
             logger.warning("Trabajando en modo offline")
