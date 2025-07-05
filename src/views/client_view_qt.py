@@ -666,6 +666,8 @@ class ClienteViewQt(QWidget):
             card.setStyleSheet(
                 "background: #f5f5f5; border-radius: 15px; margin: 10px; padding: 10px; color: black;"
             )
+            # Limitar la altura de las tarjetas para mantener el tamaño uniforme
+            card.setMinimumHeight(280)
             card_layout = QVBoxLayout(card)
             # Header
             header = QWidget()
@@ -812,8 +814,10 @@ class ClienteViewQt(QWidget):
                     monto_minimo = float(valor_total) * 0.30 if es_primer_abono else 0
                     # Tarjeta visual
                     card = QWidget()
-                    card.setStyleSheet("background: white; border-radius: 12px; margin: 8px; padding: 8px;")
-                    card.setMinimumHeight(350)
+                    card.setStyleSheet(
+                        "background: white; border-radius: 12px; margin: 8px; padding: 8px;"
+                    )
+                    card.setMinimumHeight(280)
                     card_layout = QVBoxLayout(card)
                     l_modelo = QLabel(f"{modelo} ({placa})"); l_modelo.setStyleSheet("font-weight: bold;")
                     l_saldo = QLabel(f"Saldo pendiente: ${saldo_real:,.0f}"); l_saldo.setStyleSheet("color: #B8860B;")
