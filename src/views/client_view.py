@@ -56,6 +56,54 @@ class ClienteView(BaseCTKView):
             self._build_tab_perfil(self.tabview.tab("Editar perfil"))
         self._update_status_labels()
 
+    def _build_cambiar_contrasena_tab(self, parent):
+        import tkinter as tk
+        from tkinter import messagebox
+
+        ctk.CTkLabel(parent, text="Contraseña actual:").pack(pady=(20, 5))
+        self.input_actual = ctk.CTkEntry(parent, show="*")
+        self.input_actual.pack(pady=5)
+        ctk.CTkLabel(parent, text="Nueva contraseña:").pack(pady=5)
+        self.input_nueva = ctk.CTkEntry(parent, show="*")
+        self.input_nueva.pack(pady=5)
+        ctk.CTkLabel(parent, text="Confirmar nueva contraseña:").pack(pady=5)
+        self.input_confirmar = ctk.CTkEntry(parent, show="*")
+        self.input_confirmar.pack(pady=5)
+        ctk.CTkButton(
+            parent,
+            text="Cambiar",
+            command=self._cambiar_contrasena,
+            fg_color="#3A86FF",
+            hover_color="#265DAB",
+        ).pack(pady=20)
+
+    def _cambiar_contrasena(self):
+        from tkinter import messagebox
+
+        actual = self.input_actual.get()
+        nueva = self.input_nueva.get()
+        confirmar = self.input_confirmar.get()
+        if not actual or not nueva or not confirmar:
+            messagebox.showwarning("Error", "Complete todos los campos")
+            return
+        if nueva != confirmar:
+            messagebox.showwarning(
+                "Error", "La nueva contraseña y la confirmación no coinciden"
+            )
+            return
+        from src.auth import AuthManager
+
+        auth = AuthManager(self.db_manager)
+        usuario = self.user_data.get("usuario")
+        resultado = auth.cambiar_contrasena(usuario, actual, nueva)
+        if resultado is True:
+            messagebox.showinfo("Éxito", "Contraseña cambiada correctamente")
+            self.input_actual.delete(0, "end")
+            self.input_nueva.delete(0, "end")
+            self.input_confirmar.delete(0, "end")
+        else:
+            messagebox.showwarning("Error", str(resultado))
+
     def _build_tab_mis_reservas(self, parent):
         import tkinter as tk
         from tkinter import messagebox
@@ -1337,10 +1385,10 @@ class ClienteView(BaseCTKView):
                 saldo_real = saldo_pendiente
                 if saldo_real > 0:
                     porcentaje_abonado = (
-                        (abonado / valor_total) * 100 if valor_total > 0 else 0
+                        (float(abonado) / float(valor_total)) * 100 if valor_total > 0 else 0
                     )
                     es_primer_abono = abonado == 0
-                    monto_minimo = valor_total * 0.30 if es_primer_abono else 0
+                    monto_minimo = float(valor_total) * 0.30 if es_primer_abono else 0
                     # Tarjeta visual
                     card = ctk.CTkFrame(
                         self.cards_abonos, fg_color="white", corner_radius=12
@@ -1456,7 +1504,7 @@ class ClienteView(BaseCTKView):
         )
         # Validar 30% mínimo para el primer abono
         if abonado_anterior == 0:
-            monto_minimo = valor_total * 0.30
+            monto_minimo = float(valor_total) * 0.30
             if monto_float < monto_minimo:
                 messagebox.showwarning(
                     "Error",
@@ -2075,117 +2123,105 @@ class ClienteView(BaseCTKView):
                 text_color="white",
             ).pack()
 
-            # Información principal
-            main_frame = ctk.CTkFrame(card, fg_color="transparent")
-            main_frame.pack(fill="x", padx=10, pady=5)
+            # Información principal - usando un solo frame en lugar de múltiples anidados
+            info_frame = ctk.CTkFrame(card, fg_color="#F8F9FA", corner_radius=8)
+            info_frame.pack(fill="x", padx=10, pady=5)
 
             # Primera fila de información
-            row1 = ctk.CTkFrame(main_frame, fg_color="transparent")
-            row1.pack(fill="x", pady=2)
-
             ctk.CTkLabel(
-                row1,
+                info_frame,
                 text=f"💰 Tarifa: ${tarifa_dia:,.0f}/día",
                 font=("Arial", 12, "bold"),
                 text_color="#2E7D32",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=(8, 2))
             ctk.CTkLabel(
-                row1,
+                info_frame,
                 text=f"👥 Capacidad: {capacidad} personas",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
             ctk.CTkLabel(
-                row1,
+                info_frame,
                 text=f"⛽ Combustible: {combustible}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
 
             # Segunda fila de información
-            row2 = ctk.CTkFrame(main_frame, fg_color="transparent")
-            row2.pack(fill="x", pady=2)
-
             ctk.CTkLabel(
-                row2,
+                info_frame,
                 text=f"🎨 Color: {color or 'No especificado'}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
             ctk.CTkLabel(
-                row2,
+                info_frame,
                 text=f"⚙️ Transmisión: {transmision or 'No especificado'}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
             ctk.CTkLabel(
-                row2,
+                info_frame,
                 text=f"🔧 Cilindraje: {cilindraje or 'No especificado'}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
 
             # Tercera fila de información
-            row3 = ctk.CTkFrame(main_frame, fg_color="transparent")
-            row3.pack(fill="x", pady=2)
-
             ctk.CTkLabel(
-                row3,
+                info_frame,
                 text=f"🛡️ Blindaje: {blindaje or 'No especificado'}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
             ctk.CTkLabel(
-                row3,
+                info_frame,
                 text=f"📊 Kilometraje: {kilometraje:,} km",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=2)
             ctk.CTkLabel(
-                row3,
+                info_frame,
                 text=f"🔒 Seguro: {seguro_estado or 'No especificado'}",
                 font=("Arial", 12),
                 text_color="#424242",
-            ).pack(side="left", padx=5)
+            ).pack(anchor="w", padx=10, pady=(2, 8))
 
             # Información de sucursal
             if sucursal:
-                row4 = ctk.CTkFrame(main_frame, fg_color="#F5F5F5", corner_radius=5)
-                row4.pack(fill="x", pady=5)
+                sucursal_frame = ctk.CTkFrame(card, fg_color="#E3F2FD", corner_radius=5)
+                sucursal_frame.pack(fill="x", padx=10, pady=5)
 
                 ctk.CTkLabel(
-                    row4,
+                    sucursal_frame,
                     text=f"🏢 Sucursal: {sucursal}",
                     font=("Arial", 11, "bold"),
                     text_color="#1976D2",
-                ).pack(anchor="w", padx=5, pady=2)
+                ).pack(anchor="w", padx=10, pady=(8, 2))
                 if sucursal_dir:
                     ctk.CTkLabel(
-                        row4,
+                        sucursal_frame,
                         text=f"📍 {sucursal_dir}",
                         font=("Arial", 10),
                         text_color="#666666",
-                    ).pack(anchor="w", padx=5)
+                    ).pack(anchor="w", padx=10, pady=2)
                 if sucursal_tel:
                     ctk.CTkLabel(
-                        row4,
+                        sucursal_frame,
                         text=f"📞 {sucursal_tel}",
                         font=("Arial", 10),
                         text_color="#666666",
-                    ).pack(anchor="w", padx=5)
+                    ).pack(anchor="w", padx=10, pady=(2, 8))
 
             # Botón de reservar
-            btn_frame = ctk.CTkFrame(card, fg_color="transparent")
-            btn_frame.pack(fill="x", padx=10, pady=(5, 10))
-
             ctk.CTkButton(
-                btn_frame,
+                card,
                 text="🚗 Reservar este vehículo",
                 command=lambda p=placa: self._ir_a_crear_reserva(p),
                 fg_color="#4CAF50",
                 hover_color="#388E3C",
                 font=("Arial", 12, "bold"),
-            ).pack(pady=5)
+            ).pack(pady=(10, 15), padx=10)
 
     def _abrir_nueva_reserva_vehiculo(self, vehiculo):
         import tkinter as tk

@@ -85,7 +85,7 @@ def unique_email_from_name(name: str) -> str:
     counter = 1
     while email in used_emails:
         counter += 1
-        email = f"{base}{counter}@example.com"
+        email = f"{base}{counter}@email.com"
     used_emails.add(email)
     return email
 
