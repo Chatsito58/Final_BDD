@@ -54,7 +54,10 @@ class AuthManager:
             return None
 
         # Aplicar hash a la contraseña
-        hashed_pwd = hashlib.sha256(contrasena.encode()).hexdigest()
+        # MySQL genera hashes SHA2 en mayúsculas. Para mantener la
+        # compatibilidad entre SQLite y MySQL convertimos el hash a
+        # mayúsculas antes de comparar.
+        hashed_pwd = hashlib.sha256(contrasena.encode()).hexdigest().upper()
         
         # Consultar base de datos
         is_sqlite = getattr(self.db, 'offline', False)
@@ -142,8 +145,8 @@ class AuthManager:
         Permite cambiar la contraseña de un usuario, validando la actual y usando SHA-256.
         Devuelve True si se actualizó correctamente, o un mensaje de error si falló alguna validación.
         """
-        hashed_actual = hashlib.sha256(contrasena_actual.encode()).hexdigest()
-        hashed_nueva = hashlib.sha256(nueva_contrasena.encode()).hexdigest()
+        hashed_actual = hashlib.sha256(contrasena_actual.encode()).hexdigest().upper()
+        hashed_nueva = hashlib.sha256(nueva_contrasena.encode()).hexdigest().upper()
         is_sqlite = getattr(self.db, 'offline', False)
         try:
             # 1. Verificar contraseña actual
