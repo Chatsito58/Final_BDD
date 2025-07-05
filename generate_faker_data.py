@@ -17,6 +17,10 @@ fake = Faker("es_CO")
 
 OUTPUT_FILE = Path("data/data_inserts_faker.sql")
 
+# Existing records inserted manually in ``inserts_prueba.sql``
+ALQUILER_OFFSET = 7
+DET_FACTURA_OFFSET = 0
+
 # Codigos postales from inserts_prueba.sql
 CODIGOS_POSTALES = [
     "110111",
@@ -261,6 +265,7 @@ def generar_abonos(num: int, fechas: dict[int, datetime]) -> list[str]:
 
 
 def generar_det_facturas(num: int) -> list[str]:
+    """Return ``num`` rows for Det_factura."""
     rows = []
     for _ in range(num):
         valor = random.randint(80000, 350000)
@@ -269,12 +274,20 @@ def generar_det_facturas(num: int) -> list[str]:
     return rows
 
 
-def generar_facturas(alquiler_info: list[dict], det_offset: int) -> list[str]:
+def generar_facturas(
+    alquiler_info: list[dict], det_offset: int, alquiler_offset: int
+) -> list[str]:
+    """Return rows for ``Factura``.
+
+    ``det_offset`` and ``alquiler_offset`` account for existing records in
+    ``Det_factura`` and ``Alquiler`` tables respectively.
+    """
+
     rows = []
     for idx, data in enumerate(alquiler_info, start=1):
         valor = data["valor"]
         rows.append(
-            f"({valor}, {idx}, {data['id_cliente']}, '{data['placa']}', {det_offset + idx})"
+            f"({valor}, {alquiler_offset + idx}, {data['id_cliente']}, '{data['placa']}', {det_offset + idx})"
         )
     return rows
 
@@ -421,8 +434,10 @@ def main() -> None:
     alquileres, info = generar_alquileres(4000, disponibles, 5001, 1005)
     reservas, fechas = generar_reservas(info, 1005, extra=1000)
     abonos = generar_abonos(12000, fechas)
-    dets = generar_det_facturas(4000)
-    facturas = generar_facturas(info, det_offset=1)
+    dets = generar_det_facturas(len(info))
+    facturas = generar_facturas(
+        info, det_offset=DET_FACTURA_OFFSET, alquiler_offset=ALQUILER_OFFSET
+    )
     cp, cc, c = generar_cuentas(1000)
 
     with OUTPUT_FILE.open("w", encoding="utf-8") as f:
