@@ -485,6 +485,27 @@ class TripleDBManager:
         self._thread.join()
         self._thread = None
 
+    def try_reconnect(self):
+        """Attempt to reconnect to the remote databases."""
+        prev1 = self.remote1_active
+        prev2 = self.remote2_active
+
+        conn1 = self.connect_remote1()
+        if conn1:
+            conn1.close()
+
+        conn2 = self.connect_remote2()
+        if conn2:
+            conn2.close()
+
+        recovered1 = not prev1 and self.remote1_active
+        recovered2 = not prev2 and self.remote2_active
+
+        if recovered1 or recovered2:
+            self.retry_pending()
+
+        return self.remote1_active or self.remote2_active
+
     # ------------------------------------------------------------------
     # Compatibility helpers
     # ------------------------------------------------------------------
