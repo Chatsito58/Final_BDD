@@ -1,3 +1,5 @@
+-- Crear roles
+INSERT INTO Rol (nombre) VALUES ('cliente'), ('empleado'), ('gerente'), ('admin');
 
 -- Tipos y catálogos
 INSERT INTO Tipo_entidad (descripcion) VALUES ('Persona natural'), ('Persona juridica');
