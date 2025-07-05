@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from faker import Faker
+import unicodedata
 
 # General configuration
 Faker.seed(12345)
@@ -70,12 +71,23 @@ def unique_numeric(length: int, pool: set[str]) -> str:
             return number
 
 
-def unique_email() -> str:
-    while True:
-        email = fake.email()
-        if email not in used_emails:
-            used_emails.add(email)
-            return email
+def _sanitize_for_email(name: str) -> str:
+    """Return a lowercase string without accents or spaces."""
+    no_accents = "".join(
+        c for c in unicodedata.normalize("NFD", name) if unicodedata.category(c) != "Mn"
+    )
+    return no_accents.lower().replace(" ", ".").replace("'", "")
+
+
+def unique_email_from_name(name: str) -> str:
+    base = _sanitize_for_email(name)
+    email = f"{base}@example.com"
+    counter = 1
+    while email in used_emails:
+        counter += 1
+        email = f"{base}{counter}@example.com"
+    used_emails.add(email)
+    return email
 
 
 def unique_phone() -> str:
@@ -83,7 +95,13 @@ def unique_phone() -> str:
 
 
 def unique_document() -> str:
-    return unique_numeric(10, used_documents)
+    while True:
+        length = random.randint(7, 10)
+        first = random.choice("123456789")
+        number = first + "".join(random.choices("0123456789", k=length - 1))
+        if number not in used_documents:
+            used_documents.add(number)
+            return number
 
 
 def unique_plate() -> str:
@@ -138,7 +156,7 @@ def generar_clientes(num: int, licencia_offset: int) -> list[str]:
         nombre = fake.name()
         telefono = unique_phone()
         direccion = fake.address().replace("\n", ", ")
-        correo = unique_email()
+        correo = unique_email_from_name(nombre)
         id_licencia = licencia_offset + idx
         codigo = random.choice(CODIGOS_POSTALES)
         rows.append(
@@ -156,42 +174,32 @@ def generar_empleados(total: int, managers: list[tuple[str, int]]) -> list[str]:
         4: "Caja",
         5: "Mantenimiento",
     }
+    salarios = {2: 3500000, 3: 2500000, 4: 2000000, 5: 1800000}
 
     rows: list[str] = []
-
-    # Admin principal
-    doc = unique_document()
-    salario = random.randint(3000000, 6000000)
-    telefono = unique_phone()
-    direccion = fake.address().replace("\n", ", ")
-    correo = unique_email()
-    doc_type = random.randint(1, 2)
-    rows.append(
-        f"('{doc}', '{fake.name()}', {salario}, '{cargos[1]}', '{telefono}', '{direccion}', '{correo}', 1, {doc_type}, 1)"
-    )
 
     # Gerentes asociados a cada sucursal
     for nombre, sucursal in managers:
         doc = unique_document()
-        salario = random.randint(2500000, 5000000)
+        salario = salarios[2]
         telefono = unique_phone()
         direccion = fake.address().replace("\n", ", ")
-        correo = unique_email()
+        correo = unique_email_from_name(nombre)
         doc_type = random.randint(1, 2)
         rows.append(
             f"('{doc}', '{nombre}', {salario}, '{cargos[2]}', '{telefono}', '{direccion}', '{correo}', {sucursal}, {doc_type}, 2)"
         )
 
-    remaining = total - len(managers) - 1
+    remaining = total - len(managers)
     tipos_restantes = [3, 4, 5]
     for _ in range(remaining):
         tipo = random.choice(tipos_restantes)
         doc = unique_document()
         nombre = fake.name()
-        salario = random.randint(1800000, 4000000)
+        salario = salarios[tipo]
         telefono = unique_phone()
         direccion = fake.address().replace("\n", ", ")
-        correo = unique_email()
+        correo = unique_email_from_name(nombre)
         sucursal = random.randint(1, len(managers))
         doc_type = random.randint(1, 2)
         rows.append(
