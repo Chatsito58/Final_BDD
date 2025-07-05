@@ -590,7 +590,15 @@ class ClienteViewQt(QWidget):
         QMessageBox.information(self, "Pasarela de pago", f"Simulación de pasarela de pago para {metodo}. Total a pagar: ${total:,.0f}")
 
     def _build_tab_vehiculos(self):
-        from PyQt5.QtWidgets import QVBoxLayout, QLabel, QScrollArea, QWidget, QHBoxLayout
+        from PyQt5.QtWidgets import (
+            QVBoxLayout,
+            QLabel,
+            QScrollArea,
+            QWidget,
+            QHBoxLayout,
+            QPushButton,
+        )
+        from PyQt5.QtCore import Qt
         layout = QVBoxLayout(self.tab_vehiculos)
         label = QLabel("Vehículos disponibles")
         label.setStyleSheet("font-size: 18px; font-weight: bold;")
@@ -655,7 +663,9 @@ class ClienteViewQt(QWidget):
             ) = vehiculo
             # Card visual
             card = QWidget()
-            card.setStyleSheet("background: white; border-radius: 15px; margin: 10px; padding: 10px;")
+            card.setStyleSheet(
+                "background: #f5f5f5; border-radius: 15px; margin: 10px; padding: 10px; color: black;"
+            )
             card_layout = QVBoxLayout(card)
             # Header
             header = QWidget()
@@ -698,7 +708,30 @@ class ClienteViewQt(QWidget):
                     sucursal_layout.addWidget(QLabel(f"👤 Gerente: {sucursal_mgr}"))
                 sucursal_info.setLayout(sucursal_layout)
                 card_layout.addWidget(sucursal_info)
+            # Botón seleccionar
+            btn_sel = QPushButton("Seleccionar")
+            btn_sel.setStyleSheet(
+                "background-color: #1976D2; color: white; border-radius: 6px; padding: 4px 12px;"
+            )
+            vehiculo_text = f"{placa} - {modelo} {marca}"
+            btn_sel.clicked.connect(
+                lambda _, text=vehiculo_text, pl=placa: self._seleccionar_vehiculo(text, pl)
+            )
+            card_layout.addWidget(btn_sel, alignment=Qt.AlignRight)
             scroll_layout.addWidget(card)
+
+    def _seleccionar_vehiculo(self, texto: str, placa: str):
+        """Seleccionar vehículo desde la pestaña de vehículos disponibles."""
+        # Asegurar que la opción exista en el combobox
+        idx = self.cb_vehiculo.findText(texto)
+        if idx == -1:
+            self.cb_vehiculo.addItem(texto)
+            self.vehiculo_map[texto] = placa
+            idx = self.cb_vehiculo.findText(texto)
+        if idx >= 0:
+            self.cb_vehiculo.setCurrentIndex(idx)
+        # Cambiar a la pestaña de creación de reservas
+        self.tabs.setCurrentWidget(self.tab_crear)
 
     def _build_tab_abonos(self):
         from PyQt5.QtWidgets import QVBoxLayout, QLabel, QScrollArea, QWidget, QHBoxLayout, QLineEdit, QPushButton, QComboBox, QMessageBox
