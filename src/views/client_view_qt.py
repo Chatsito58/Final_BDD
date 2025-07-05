@@ -874,7 +874,15 @@ class ClienteViewQt(QWidget):
             # Actualizar saldo pendiente en Reserva_alquiler
             update_saldo = '''UPDATE Reserva_alquiler SET saldo_pendiente = saldo_pendiente - %s WHERE id_reserva = %s'''
             self.db_manager.execute_query(update_saldo, (monto_float, id_reserva), fetch=False)
-            QMessageBox.information(self, "Éxito", "Abono registrado correctamente")
+            if metodo == "Efectivo":
+                QMessageBox.information(
+                    self,
+                    "Aviso",
+                    "Abono registrado. Debe acercarse a la sucursal para realizar el pago en efectivo.",
+                )
+            else:
+                self._mostrar_pasarela_pago(monto_float, metodo)
+                QMessageBox.information(self, "Éxito", "Abono registrado correctamente")
             self._cargar_reservas_pendientes()
         except Exception as exc:
             QMessageBox.critical(self, "Error", f"No se pudo registrar el abono: {exc}")
