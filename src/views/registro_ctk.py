@@ -318,7 +318,10 @@ class RegistroCTk(ctk.CTk):
                 if self.db.offline
                 else "INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente) VALUES (%s, %s, %s, %s)"
             )
-            hashed_doc = hashlib.sha256(documento.encode()).hexdigest()
+            # MySQL's SHA2() devuelve el hash en mayúsculas, por lo que
+            # estandarizamos la contraseña a mayúsculas para evitar
+            # problemas de comparación entre bases de datos.
+            hashed_doc = hashlib.sha256(documento.encode()).hexdigest().upper()
             usuario_params = (correo, hashed_doc, rol_id, cliente_id)
             if self.db.offline:
                 self.db.save_pending_registro(
