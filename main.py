@@ -159,16 +159,16 @@ class AlquilerApp:
         if rol == 'admin':
             logger.debug("Opening AdminView for %s", user_data.get('usuario'))
             try:
-                win = AdminView(user_data, db_manager, handle_logout)
-                win.mainloop()
+                self.win = AdminView(user_data, db_manager, handle_logout)
+                self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol)
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         elif rol == 'gerente':
             logger.debug("Opening GerenteView for %s", user_data.get('usuario'))
             try:
-                win = GerenteView(user_data, db_manager, handle_logout)
-                win.mainloop()
+                self.win = GerenteView(user_data, db_manager, handle_logout)
+                self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol)
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
@@ -180,30 +180,26 @@ class AlquilerApp:
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
                 logger.debug("Opening EmpleadoVentasView for %s", user_data.get('usuario'))
-                view_class = EmpleadoVentasView
+                self.win = EmpleadoVentasView(user_data, db_manager, handle_logout)
+                self.win.show()
             elif tipo_empleado == 'mantenimiento':
                 logger.debug("Opening EmpleadoMantenimientoView for %s", user_data.get('usuario'))
-                view_class = EmpleadoMantenimientoView
+                self.win = EmpleadoMantenimientoView(user_data, db_manager, handle_logout)
+                self.win.show()
             elif tipo_empleado == 'caja':
                 logger.debug("Opening EmpleadoCajaView for %s", user_data.get('usuario'))
-                view_class = EmpleadoCajaView
+                self.win = EmpleadoCajaView(user_data, db_manager, handle_logout)
+                self.win.show()
             else:
                 QMessageBox.warning(None, "Error", "Tipo de empleado desconocido")
                 handle_logout()
                 return
-            try:
-                win = view_class(user_data, db_manager, handle_logout)
-                win.mainloop()
-            except Exception:
-                logger.exception("Failed to open %s view", rol)
-                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         else:
             from src.views.client_view import ClienteView
             logger.debug("Opening ClienteView for %s", user_data.get('usuario'))
             try:
-                # Crear la vista de cliente directamente
-                cliente_view = ClienteView(user_data, db_manager, on_logout)
-                cliente_view.mainloop()
+                self.win = ClienteView(user_data, db_manager, on_logout)
+                self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol or 'cliente')
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))

@@ -1,15 +1,11 @@
 # Interfaz gráfica
 PyQt5>=5.15.0
-customtkinter>=5.2.0
 
 # Base de datos
 mysql-connector-python>=8.0.0
 
 # Utilidades
 python-dotenv>=1.0.0
-
-# Componentes de interfaz
-tkcalendar>=1.6.0
 
 # Generación de datos ficticios
 Faker>=20.0.0

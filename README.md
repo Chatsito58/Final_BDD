@@ -38,7 +38,7 @@ Este proyecto implementa una aplicación de alquiler de vehículos con una inter
 - **PyQt5** y **CustomTkinter** para la interfaz.
 - **mysql-connector-python** y **sqlite3** para la capa de datos.
 - **python-dotenv** para la configuración.
-- **tkcalendar** como componente adicional de la UI.
+
 
 ## Requisitos
 - Python 3.8 o superior.

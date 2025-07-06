@@ -1,46 +1,39 @@
-import customtkinter as ctk
-from .base_view import BaseCTKView
-from src.services.roles import (
-    puede_gestionar_gerentes,
-    verificar_permiso_creacion_empleado,
-    cargos_permitidos_para_gerente,
-    puede_ejecutar_sql_libre,
-)
-from ..styles import BG_DARK, TEXT_COLOR, PRIMARY_COLOR, PRIMARY_COLOR_DARK
+import os
+from PyQt5.QtWidgets import QMainWindow, QLabel
+from PyQt5.uic import loadUi
 
-class AdminView(BaseCTKView):
-    """Vista CTk para administradores con visión general de personal y clientes."""
-    def _welcome_message(self):
-        return f"Bienvenido administrador, {self.user_data.get('usuario', '')}"
+class AdminView(QMainWindow):
+    def __init__(self, user_data, db_manager, on_logout):
+        super().__init__()
+        self.user_data = user_data
+        self.db_manager = db_manager
+        self.on_logout = on_logout
 
-    def _build_ui(self):
-        topbar = ctk.CTkFrame(self, fg_color="#222831")
-        topbar.pack(fill="x", pady=(0, 5))
-        self._status_label1 = ctk.CTkLabel(
-            topbar, text="", font=("Arial", 12, "bold"), text_color="#FFFFFF"
-        )
-        self._status_label1.pack(side="left", padx=10, pady=8)
-        self._status_label2 = ctk.CTkLabel(
-            topbar, text="", font=("Arial", 12, "bold"), text_color="#FFFFFF"
-        )
-        self._status_label2.pack(side="left", padx=10, pady=8)
-        ctk.CTkButton(
-            topbar,
-            text="Cerrar sesión",
-            command=self.logout,
-            fg_color="#3A86FF",
-            hover_color="#265DAB",
-            width=140,
-            height=32,
-        ).pack(side="right", padx=10, pady=8)
-        self.tabview = ctk.CTkTabview(self)
-        self.tabview.pack(expand=True, fill="both")
-        self.tab_principal = self.tabview.add("Principal")
-        frame = ctk.CTkFrame(self.tabview.tab("Principal"))
-        frame.pack(expand=True, fill="both")
-        ctk.CTkLabel(
-            frame,
-            text=self._welcome_message(),
-            text_color="#222831",
-            font=("Arial", 20),
-        ).pack(pady=30)
+        # Cargar la interfaz de usuario desde el archivo .ui
+        ui_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ui', 'admin_view.ui')
+        loadUi(ui_path, self)
+
+        self._setup_ui()
+
+    def _setup_ui(self):
+        # Configurar mensaje de bienvenida
+        self.welcome_label.setText(f"Bienvenido administrador, {self.user_data.get('usuario', '')}")
+
+        # Conectar botones
+        self.logout_button.clicked.connect(self.logout)
+
+        # Actualizar estado de la conexión
+        self.update_connection_status()
+
+    def update_connection_status(self):
+        status1 = "Online" if self.db_manager.is_remote1_active() else "Offline"
+        status2 = "Online" if self.db_manager.is_remote2_active() else "Offline"
+        self.status_label1.setText(f"BD Remota 1: {status1}")
+        self.status_label2.setText(f"BD Remota 2: {status2}")
+
+    def logout(self):
+        self.close()
+        self.on_logout()
+
+    def show(self):
+        super().show()
