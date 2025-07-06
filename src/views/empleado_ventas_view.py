@@ -9,6 +9,7 @@ class EmpleadoVentasView(QMainWindow):
         self.db_manager = db_manager
         self.on_logout = on_logout
         self._cliente_sel = None
+        self._selected_reserva_id = None
 
         # Cargar la interfaz de usuario desde el archivo .ui
         ui_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ui', 'empleado_ventas_view.ui')
@@ -16,6 +17,422 @@ class EmpleadoVentasView(QMainWindow):
 
         self._setup_ui()
         self._setup_clientes_tab()
+        self._setup_reservas_tab()
+        self._setup_vehiculos_tab()
+        self._setup_perfil_tab()
+        self._setup_cambiar_contrasena_tab()
+
+    # --- Pestaña Mi Perfil ---
+    def _setup_perfil_tab(self):
+        self.guardar_perfil_button.clicked.connect(self._guardar_perfil)
+        self._cargar_datos_perfil()
+
+    def _cargar_datos_perfil(self):
+        id_empleado = self.user_data.get("id_empleado")
+        query = "SELECT nombre, telefono, direccion, correo FROM Empleado WHERE id_empleado = %s"
+        datos = self.db_manager.execute_query(query, (id_empleado,))
+        if datos:
+            nombre, telefono, direccion, correo = datos[0]
+            self.nombre_perfil_edit.setText(nombre or "")
+            self.telefono_perfil_edit.setText(telefono or "")
+            self.direccion_perfil_edit.setText(direccion or "")
+            self.correo_perfil_edit.setText(correo or "")
+
+    def _guardar_perfil(self):
+        nombre = self.nombre_perfil_edit.text().strip()
+        telefono = self.telefono_perfil_edit.text().strip()
+        direccion = self.direccion_perfil_edit.text().strip()
+        correo = self.correo_perfil_edit.text().strip()
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not nombre or not correo:
+            QMessageBox.warning(self, "Aviso", "Nombre y correo son obligatorios.")
+            return
+
+        try:
+            query = "UPDATE Empleado SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_empleado = %s"
+            self.db_manager.update(query, (nombre, telefono, direccion, correo, id_empleado))
+            QMessageBox.information(self, "Éxito", "Perfil actualizado correctamente.")
+            self.user_data["usuario"] = nombre
+            self._setup_ui()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar el perfil: {e}")
+
+    # --- Pestaña Cambiar Contraseña ---
+    def _setup_cambiar_contrasena_tab(self):
+        self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
+
+    def _cambiar_contrasena(self):
+        actual_pass = self.actual_pass_edit.text()
+        nueva_pass = self.nueva_pass_edit.text()
+        confirmar_pass = self.confirmar_pass_edit.text()
+
+        if not actual_pass or not nueva_pass or not confirmar_pass:
+            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
+            return
+
+        if nueva_pass != confirmar_pass:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_id = self.user_data.get("id_usuario") 
+            if not user_id:
+                QMessageBox.critical(self, "Error", "No se pudo obtener el ID de usuario para cambiar la contraseña.")
+                return
+
+            query_hash = "SELECT contrasena_hash FROM Usuario WHERE id_usuario = %s"
+            stored_hash = self.db_manager.execute_query(query_hash, (user_id,))
+
+            if not stored_hash or stored_hash[0][0] != hashlib.sha256(actual_pass.encode()).hexdigest():
+                QMessageBox.warning(self, "Error", "Contraseña actual incorrecta.")
+                return
+
+            new_hash = hashlib.sha256(nueva_pass.encode()).hexdigest()
+            update_pass_query = "UPDATE Usuario SET contrasena_hash = %s WHERE id_usuario = %s"
+            self.db_manager.update(update_pass_query, (new_hash, user_id))
+
+            QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+            self.actual_pass_edit.clear()
+            self.nueva_pass_edit.clear()
+            self.confirmar_pass_edit.clear()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
+        self._setup_perfil_tab()
+        self._setup_cambiar_contrasena_tab()
+
+    # --- Pestaña Mi Perfil ---
+    def _setup_perfil_tab(self):
+        self.guardar_perfil_button.clicked.connect(self._guardar_perfil)
+        self._cargar_datos_perfil()
+
+    def _cargar_datos_perfil(self):
+        id_empleado = self.user_data.get("id_empleado")
+        query = "SELECT nombre, telefono, direccion, correo FROM Empleado WHERE id_empleado = %s"
+        datos = self.db_manager.execute_query(query, (id_empleado,))
+        if datos:
+            nombre, telefono, direccion, correo = datos[0]
+            self.nombre_perfil_edit.setText(nombre or "")
+            self.telefono_perfil_edit.setText(telefono or "")
+            self.direccion_perfil_edit.setText(direccion or "")
+            self.correo_perfil_edit.setText(correo or "")
+
+    def _guardar_perfil(self):
+        nombre = self.nombre_perfil_edit.text().strip()
+        telefono = self.telefono_perfil_edit.text().strip()
+        direccion = self.direccion_perfil_edit.text().strip()
+        correo = self.correo_perfil_edit.text().strip()
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not nombre or not correo:
+            QMessageBox.warning(self, "Aviso", "Nombre y correo son obligatorios.")
+            return
+
+        try:
+            query = "UPDATE Empleado SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_empleado = %s"
+            self.db_manager.update(query, (nombre, telefono, direccion, correo, id_empleado))
+            QMessageBox.information(self, "Éxito", "Perfil actualizado correctamente.")
+            self.user_data["usuario"] = nombre
+            self._setup_ui()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar el perfil: {e}")
+
+    # --- Pestaña Cambiar Contraseña ---
+    def _setup_cambiar_contrasena_tab(self):
+        self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
+
+    def _cambiar_contrasena(self):
+        actual_pass = self.actual_pass_edit.text()
+        nueva_pass = self.nueva_pass_edit.text()
+        confirmar_pass = self.confirmar_pass_edit.text()
+
+        if not actual_pass or not nueva_pass or not confirmar_pass:
+            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
+            return
+
+        if nueva_pass != confirmar_pass:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_id = self.user_data.get("id_usuario") 
+            if not user_id:
+                QMessageBox.critical(self, "Error", "No se pudo obtener el ID de usuario para cambiar la contraseña.")
+                return
+
+            query_hash = "SELECT contrasena_hash FROM Usuario WHERE id_usuario = %s"
+            stored_hash = self.db_manager.execute_query(query_hash, (user_id,))
+
+            if not stored_hash or stored_hash[0][0] != hashlib.sha256(actual_pass.encode()).hexdigest():
+                QMessageBox.warning(self, "Error", "Contraseña actual incorrecta.")
+                return
+
+            new_hash = hashlib.sha256(nueva_pass.encode()).hexdigest()
+            update_pass_query = "UPDATE Usuario SET contrasena_hash = %s WHERE id_usuario = %s"
+            self.db_manager.update(update_pass_query, (new_hash, user_id))
+
+            QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+            self.actual_pass_edit.clear()
+            self.nueva_pass_edit.clear()
+            self.confirmar_pass_edit.clear()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
+        self._setup_perfil_tab()
+        self._setup_cambiar_contrasena_tab()
+
+    # --- Pestaña Mi Perfil ---
+    def _setup_perfil_tab(self):
+        self.guardar_perfil_button.clicked.connect(self._guardar_perfil)
+        self._cargar_datos_perfil()
+
+    def _cargar_datos_perfil(self):
+        id_empleado = self.user_data.get("id_empleado")
+        query = "SELECT nombre, telefono, direccion, correo FROM Empleado WHERE id_empleado = %s"
+        datos = self.db_manager.execute_query(query, (id_empleado,))
+        if datos:
+            nombre, telefono, direccion, correo = datos[0]
+            self.nombre_perfil_edit.setText(nombre or "")
+            self.telefono_perfil_edit.setText(telefono or "")
+            self.direccion_perfil_edit.setText(direccion or "")
+            self.correo_perfil_edit.setText(correo or "")
+
+    def _guardar_perfil(self):
+        nombre = self.nombre_perfil_edit.text().strip()
+        telefono = self.telefono_perfil_edit.text().strip()
+        direccion = self.direccion_perfil_edit.text().strip()
+        correo = self.correo_perfil_edit.text().strip()
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not nombre or not correo:
+            QMessageBox.warning(self, "Aviso", "Nombre y correo son obligatorios.")
+            return
+
+        try:
+            query = "UPDATE Empleado SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_empleado = %s"
+            self.db_manager.update(query, (nombre, telefono, direccion, correo, id_empleado))
+            QMessageBox.information(self, "Éxito", "Perfil actualizado correctamente.")
+            self.user_data["usuario"] = nombre
+            self._setup_ui()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar el perfil: {e}")
+
+    # --- Pestaña Cambiar Contraseña ---
+    def _setup_cambiar_contrasena_tab(self):
+        self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
+
+    def _cambiar_contrasena(self):
+        actual_pass = self.actual_pass_edit.text()
+        nueva_pass = self.nueva_pass_edit.text()
+        confirmar_pass = self.confirmar_pass_edit.text()
+
+        if not actual_pass or not nueva_pass or not confirmar_pass:
+            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
+            return
+
+        if nueva_pass != confirmar_pass:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_id = self.user_data.get("id_usuario") 
+            if not user_id:
+                QMessageBox.critical(self, "Error", "No se pudo obtener el ID de usuario para cambiar la contraseña.")
+                return
+
+            query_hash = "SELECT contrasena_hash FROM Usuario WHERE id_usuario = %s"
+            stored_hash = self.db_manager.execute_query(query_hash, (user_id,))
+
+            if not stored_hash or stored_hash[0][0] != hashlib.sha256(actual_pass.encode()).hexdigest():
+                QMessageBox.warning(self, "Error", "Contraseña actual incorrecta.")
+                return
+
+            new_hash = hashlib.sha256(nueva_pass.encode()).hexdigest()
+            update_pass_query = "UPDATE Usuario SET contrasena_hash = %s WHERE id_usuario = %s"
+            self.db_manager.update(update_pass_query, (new_hash, user_id))
+
+            QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+            self.actual_pass_edit.clear()
+            self.nueva_pass_edit.clear()
+            self.confirmar_pass_edit.clear()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
+
+    # --- Pestaña Vehículos ---
+    def _setup_vehiculos_tab(self):
+        self._cargar_vehiculos_disponibles()
+
+    def _cargar_vehiculos_disponibles(self):
+        self.vehiculos_disponibles_list.clear()
+        id_sucursal = self.user_data.get("id_sucursal")
+        query = (
+            "SELECT v.placa, v.modelo, v.kilometraje, v.n_chasis, "
+            "m.nombre_marca, t.descripcion as tipo_vehiculo, t.tarifa_dia, t.capacidad, t.combustible, "
+            "c.nombre_color, tr.descripcion as transmision, ci.descripcion as cilindraje, "
+            "b.descripcion as blindaje, s.estado as seguro_estado, s.descripcion as seguro_desc, "
+            "su.nombre as sucursal, su.direccion as sucursal_dir, su.telefono as sucursal_tel, su.gerente as sucursal_mgr "
+            "FROM Vehiculo v "
+            "JOIN Marca_vehiculo m ON v.id_marca = m.id_marca "
+            "JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo "
+            "LEFT JOIN Color_vehiculo c ON v.id_color = c.id_color "
+            "LEFT JOIN Transmision_vehiculo tr ON v.id_transmision = tr.id_transmision "
+            "LEFT JOIN Cilindraje_vehiculo ci ON v.id_cilindraje = ci.id_cilindraje "
+            "LEFT JOIN Blindaje_vehiculo b ON v.id_blindaje = b.id_blindaje "
+            "LEFT JOIN Seguro_vehiculo s ON v.id_seguro_vehiculo = s.id_seguro "
+            "LEFT JOIN Sucursal su ON v.id_sucursal = su.id_sucursal "
+            "WHERE v.id_estado_vehiculo = 1"
+        )
+        params = ()
+        if id_sucursal is not None:
+            query += f" AND v.id_sucursal = %s"
+            params = (id_sucursal,)
+        
+        vehiculos = self.db_manager.execute_query(query, params) or []
+
+        if not vehiculos:
+            self.vehiculos_disponibles_list.addItem("No hay vehículos disponibles en esta sucursal.")
+            return
+
+        for v in vehiculos:
+            placa, modelo, kilometraje, n_chasis, marca, tipo_vehiculo, tarifa_dia, capacidad, combustible, color, transmision, cilindraje, blindaje, seguro_estado, seguro_desc, sucursal, sucursal_dir, sucursal_tel, sucursal_mgr = v
+            item_text = f"Placa: {placa} | Modelo: {modelo} | Marca: {marca} | Tipo: {tipo_vehiculo} | Tarifa: ${tarifa_dia:,.0f}/día\n"
+            item_text += f"  KM: {kilometraje:,} | Chasis: {n_chasis} | Color: {color or 'N/A'} | Transmisión: {transmision or 'N/A'}\n"
+            item_text += f"  Capacidad: {capacidad} | Combustible: {combustible} | Blindaje: {blindaje or 'N/A'} | Seguro: {seguro_desc or 'N/A'}\n"
+            item_text += f"  Sucursal: {sucursal} ({sucursal_dir})"
+            self.vehiculos_disponibles_list.addItem(item_text)
+
+    # --- Pestaña Mi Perfil ---
+    def _setup_perfil_tab(self):
+        self.guardar_perfil_button.clicked.connect(self._guardar_perfil)
+        self._cargar_datos_perfil()
+
+    def _cargar_datos_perfil(self):
+        id_empleado = self.user_data.get("id_empleado")
+        query = "SELECT nombre, telefono, direccion, correo FROM Empleado WHERE id_empleado = %s"
+        datos = self.db_manager.execute_query(query, (id_empleado,))
+        if datos:
+            nombre, telefono, direccion, correo = datos[0]
+            self.nombre_perfil_edit.setText(nombre or "")
+            self.telefono_perfil_edit.setText(telefono or "")
+            self.direccion_perfil_edit.setText(direccion or "")
+            self.correo_perfil_edit.setText(correo or "")
+
+    def _guardar_perfil(self):
+        nombre = self.nombre_perfil_edit.text().strip()
+        telefono = self.telefono_perfil_edit.text().strip()
+        direccion = self.direccion_perfil_edit.text().strip()
+        correo = self.correo_perfil_edit.text().strip()
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not nombre or not correo:
+            QMessageBox.warning(self, "Aviso", "Nombre y correo son obligatorios.")
+            return
+
+        try:
+            query = "UPDATE Empleado SET nombre = %s, telefono = %s, direccion = %s, correo = %s WHERE id_empleado = %s"
+            self.db_manager.update(query, (nombre, telefono, direccion, correo, id_empleado))
+            QMessageBox.information(self, "Éxito", "Perfil actualizado correctamente.")
+            self.user_data["usuario"] = nombre
+            self._setup_ui()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar el perfil: {e}")
+
+    # --- Pestaña Cambiar Contraseña ---
+    def _setup_cambiar_contrasena_tab(self):
+        self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
+
+    def _cambiar_contrasena(self):
+        actual_pass = self.actual_pass_edit.text()
+        nueva_pass = self.nueva_pass_edit.text()
+        confirmar_pass = self.confirmar_pass_edit.text()
+
+        if not actual_pass or not nueva_pass or not confirmar_pass:
+            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
+            return
+
+        if nueva_pass != confirmar_pass:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_id = self.user_data.get("id_usuario") 
+            if not user_id:
+                QMessageBox.critical(self, "Error", "No se pudo obtener el ID de usuario para cambiar la contraseña.")
+                return
+
+            query_hash = "SELECT contrasena_hash FROM Usuario WHERE id_usuario = %s"
+            stored_hash = self.db_manager.execute_query(query_hash, (user_id,))
+
+            if not stored_hash or stored_hash[0][0] != hashlib.sha256(actual_pass.encode()).hexdigest():
+                QMessageBox.warning(self, "Error", "Contraseña actual incorrecta.")
+                return
+
+            new_hash = hashlib.sha256(nueva_pass.encode()).hexdigest()
+            update_pass_query = "UPDATE Usuario SET contrasena_hash = %s WHERE id_usuario = %s"
+            self.db_manager.update(update_pass_query, (new_hash, user_id))
+
+            QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+            self.actual_pass_edit.clear()
+            self.nueva_pass_edit.clear()
+            self.confirmar_pass_edit.clear()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
+
+    def _setup_reservas_tab(self):
+        self.aprobar_reserva_button.clicked.connect(self._aprobar_reserva)
+        self.reservas_pendientes_list.itemSelectionChanged.connect(self._on_reserva_pendiente_selection_changed)
+        self._cargar_reservas_pendientes()
+
+    def _on_reserva_pendiente_selection_changed(self):
+        selected_items = self.reservas_pendientes_list.selectedItems()
+        if selected_items:
+            item_text = selected_items[0].text()
+            self._selected_reserva_id = int(item_text.split(":")[0].replace("Reserva ", "").strip())
+        else:
+            self._selected_reserva_id = None
+
+    def _cargar_reservas_pendientes(self):
+        self.reservas_pendientes_list.clear()
+        query = (
+            "SELECT ra.id_reserva, c.nombre, v.placa, a.fecha_hora_salida, a.valor "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
+            "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
+            "WHERE ra.id_estado_reserva = 1 AND a.id_sucursal = %s"
+        )
+        reservas = self.db_manager.execute_query(query, (self.user_data.get("id_sucursal"),)) or []
+
+        if not reservas:
+            self.reservas_pendientes_list.addItem("No hay reservas pendientes de aprobación.")
+            return
+
+        for r in reservas:
+            id_reserva, cliente_nombre, placa, fecha_salida, valor = r
+            self.reservas_pendientes_list.addItem(f"Reserva {id_reserva}: {cliente_nombre} - {placa} - Salida: {fecha_salida} - Valor: ${valor:,.0f}")
+
+    def _aprobar_reserva(self):
+        if not self._selected_reserva_id:
+            QMessageBox.warning(self, "Aviso", "Seleccione una reserva para aprobar.")
+            return
+
+        reply = QMessageBox.question(self, 'Confirmar Aprobación', 
+                                     "¿Está seguro que desea aprobar esta reserva?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.No:
+            return
+
+        try:
+            update_reserva_query = "UPDATE Reserva_alquiler SET id_estado_reserva = 2 WHERE id_reserva = %s"
+            self.db_manager.update(update_reserva_query, (self._selected_reserva_id,))
+
+            QMessageBox.information(self, "Éxito", "Reserva aprobada correctamente.")
+            self._cargar_reservas_pendientes()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo aprobar la reserva: {e}")
 
     def _setup_ui(self):
         # Conectar botones

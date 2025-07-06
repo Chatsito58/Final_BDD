@@ -12,11 +12,7 @@ from PyQt5.QtCore import Qt
 
 logger = logging.getLogger(__name__)
 
-try:
-    from .registro_ctk import RegistroCTk
-except Exception as e:
-    logger.error(f"Error importando RegistroCTk: {e}")
-    RegistroCTk = None
+
 
 class LoginView(QDialog):
     
@@ -79,8 +75,7 @@ class LoginView(QDialog):
             
             # Conectar eventos
             self.btn_login.clicked.connect(self.attempt_login)
-            if self.btn_register:
-                self.btn_register.clicked.connect(self.open_registration)
+            self.btn_register.clicked.connect(self._open_registration_dialog)
             
             # Configurar la ventana
             self.setWindowTitle("Login - Sistema de Alquiler")
@@ -151,10 +146,7 @@ class LoginView(QDialog):
                     QMessageBox.Yes | QMessageBox.No,
                     QMessageBox.Yes
                 )
-                if reply == QMessageBox.Yes:
-                    logger.info("Usuario eligió registrarse")
-                    self.open_registration(correo_pendiente=correo)
-                return
+                
             logger.info("Correo existe, intentando autenticar usuario...")
             user_data = self.auth_manager.login(correo, contrasena)
             logger.info(f"Resultado de autenticación: {user_data}")
@@ -177,54 +169,15 @@ class LoginView(QDialog):
             logger.warning("Contraseña incorrecta")
             QMessageBox.warning(self, "Error", "Contraseña incorrecta")
     
-    def open_registration(self, correo_pendiente=None):
-        if RegistroCTk is None:
-            QMessageBox.warning(self, "Error", "Módulo de registro no disponible")
-            return
-        try:
-            self._stop_status = True
-            self.hide()
+    def _open_registration_dialog(self):
+        from src.views.registro_view import RegistroDialog
+        reg_dialog = RegistroDialog(self.auth_manager.db, on_registration_success=self._on_registration_success)
+        reg_dialog.exec_()
 
-            def volver_a_login(correo_registrado=None):
-                reg = getattr(self, "_registro_window", None)
-                if reg:
-                    try:
-                        if reg.winfo_exists():
-                            reg.destroy()
-                    except Exception:
-                        pass  # window already destroyed
-                    reg._stop_status = True
-                self.show()
-                self.raise_()
-                self.activateWindow()
-                self._stop_status = False
-                self._start_status_updater()
-                self.emailLineEdit.clear()
-                self.passwordLineEdit.clear()
-                if correo_registrado:
-                    self.emailLineEdit.setText(correo_registrado)
-                elif correo_pendiente:
-                    self.emailLineEdit.setText(correo_pendiente)
-                self.emailLineEdit.setFocus()
-
-            self._registro_window = RegistroCTk(
-                self.auth_manager.db,
-                on_back=volver_a_login,
-                correo_inicial=correo_pendiente,
-            )
-            # Ensure the login window reappears even if the registration
-            # window is closed directly via the window manager
-            self._registro_window.protocol("WM_DELETE_WINDOW", volver_a_login)
-            self._registro_window.mainloop()
-            # mainloop only returns when the registration window is closed;
-            # call volver_a_login to guarantee focus returns to the login
-            volver_a_login()
-        except Exception as e:
-            logger.error(f"Error abriendo registro: {e}")
-            QMessageBox.critical(self, "Error", f"Error al abrir registro: {e}")
-            self.show()
-            self._stop_status = False
-            self._start_status_updater()
+    def _on_registration_success(self, registered_email):
+        self.emailLineEdit.setText(registered_email)
+        self.passwordLineEdit.clear()
+        self.emailLineEdit.setFocus()
 
     def _update_status_labels(self):
         db = getattr(self.auth_manager, 'db', None)

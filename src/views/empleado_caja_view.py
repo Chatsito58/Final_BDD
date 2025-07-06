@@ -1,6 +1,7 @@
 import os
-from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QVBoxLayout, QWidget
 from PyQt5.uic import loadUi
+from datetime import datetime
 
 class EmpleadoCajaView(QMainWindow):
     def __init__(self, user_data, db_manager, on_logout):
@@ -9,6 +10,7 @@ class EmpleadoCajaView(QMainWindow):
         self.db_manager = db_manager
         self.on_logout = on_logout
         self._reserva_efectivo_sel = None
+        self._transacciones_dia = []
 
         # Cargar la interfaz de usuario desde el archivo .ui
         ui_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ui', 'empleado_caja_view.ui')
@@ -16,6 +18,7 @@ class EmpleadoCajaView(QMainWindow):
 
         self._setup_ui()
         self._setup_pagos_tab()
+        self._setup_caja_dia_tab()
 
     def _setup_ui(self):
         # Conectar botones
@@ -101,7 +104,7 @@ class EmpleadoCajaView(QMainWindow):
 
         # Registrar el abono en efectivo
         insert_q = f"INSERT INTO Abono_reserva (valor, fecha_hora, id_reserva, id_medio_pago) VALUES (%s, CURRENT_TIMESTAMP, %s, 1)"
-        self.db_manager.execute_query(insert_q, (monto_f, id_reserva), fetch=False)
+        self.db_manager.insert(insert_q, (monto_f, id_reserva), fetch=False)
 
         # Actualizar saldo pendiente de la reserva
         nuevo_saldo = max(0, saldo - monto_f)
@@ -111,12 +114,64 @@ class EmpleadoCajaView(QMainWindow):
             update_q += ", id_estado_reserva = 2"
         update_q += f" WHERE id_reserva = %s"
         params.append(id_reserva)
-        self.db_manager.execute_query(update_q, tuple(params), fetch=False)
+        self.db_manager.update(update_q, tuple(params), fetch=False)
 
         QMessageBox.information(self, "Pago registrado", f"Pago de ${monto_f:,.0f} registrado")
 
         self.monto_edit.clear()
         self._cargar_reservas_pendientes_efectivo()
+        self._transacciones_dia = self._cargar_transacciones_dia()
+        self._actualizar_caja_dia()
+
+    def _setup_caja_dia_tab(self):
+        self.cerrar_caja_button.clicked.connect(self._cerrar_caja)
+        self._transacciones_dia = self._cargar_transacciones_dia()
+        self._actualizar_caja_dia()
+
+    def _cargar_transacciones_dia(self):
+        date_fn = "CURDATE()" if not self.db_manager.offline else "date('now')"
+        query = (
+            "SELECT ab.valor, c.nombre, ab.fecha_hora "
+            "FROM Abono_reserva ab "
+            "JOIN Reserva_alquiler ra ON ab.id_reserva = ra.id_reserva "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
+            f"WHERE DATE(ab.fecha_hora) = {date_fn} "
+            "AND ab.id_medio_pago = 1 "
+            f"AND a.id_sucursal = %s"
+        )
+        return (
+            self.db_manager.execute_query(
+                query, (self.user_data.get("id_sucursal"),)
+            )
+            or []
+        )
+
+    def _actualizar_caja_dia(self):
+        transacciones = getattr(self, "_transacciones_dia", [])
+        total = sum(float(t[0]) for t in transacciones)
+        count = len(transacciones)
+        promedio = total / count if count else 0
+
+        self.total_caja_label.setText(f"Total efectivo del día: ${total:,.0f}")
+        self.transacciones_count_label.setText(f"Transacciones: {count}")
+        self.promedio_caja_label.setText(f"Promedio: ${promedio:,.0f}")
+
+        self.transacciones_list.clear()
+        for valor, cliente, fecha in transacciones:
+            hora = str(fecha)[11:16] if fecha else ""
+            self.transacciones_list.addItem(f"{hora} | {cliente} | ${float(valor):,.0f}")
+
+    def _cerrar_caja(self):
+        reply = QMessageBox.question(self, 'Confirmar Cierre', 
+                                     "¿Está seguro que desea cerrar la caja del día? Esto borrará el registro actual.",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.No:
+            return
+        
+        self._transacciones_dia = []
+        self._actualizar_caja_dia()
+        QMessageBox.information(self, "Caja Cerrada", "La caja del día ha sido cerrada y el registro limpiado.")
 
     def update_connection_status(self):
         status1 = "Online" if self.db_manager.is_remote1_active() else "Offline"

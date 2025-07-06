@@ -101,6 +101,39 @@
        <attribute name="title">
         <string>Caja del Día</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="total_caja_label">
+          <property name="text">
+           <string>Total efectivo del día: $0</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="transacciones_count_label">
+          <property name="text">
+           <string>Transacciones: 0</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="promedio_caja_label">
+          <property name="text">
+           <string>Promedio: $0</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="transacciones_list"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="cerrar_caja_button">
+          <property name="text">
+           <string>Cerrar Caja</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
