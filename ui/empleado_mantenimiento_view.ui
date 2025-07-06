@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>EmpleadoMantenimientoWindow</class>
- <widget class="QMainWindow" name="EmpleadoMantenimientoWindow">
+ <class>EmpleadoMantenimientoView</class>
+ <widget class="QMainWindow" name="EmpleadoMantenimientoView">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Panel de Mantenimiento</string>
+   <string>Empleado de Mantenimiento</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -68,87 +68,310 @@
       </property>
       <widget class="QWidget" name="vehiculos_tab">
        <attribute name="title">
-        <string>Vehículos</string>
+        <string>Vehículos Disponibles</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QListWidget" name="vehiculos_list"/>
+         <widget class="QLabel" name="label_vehiculos_disponibles">
+          <property name="text">
+           <string>Vehículos no alquilados hoy:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="vehiculos_table">
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Marca</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Modelo</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Año</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Placa</string>
+           </property>
+          </column>
+         </widget>
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="reportar_tab">
+      <widget class="QWidget" name="mantenimiento_tab">
        <attribute name="title">
-        <string>Reportar</string>
+        <string>Registrar Mantenimiento</string>
        </attribute>
-       <layout class="QFormLayout" name="formLayout">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_seleccionar_vehiculo">
           <property name="text">
-           <string>Placa del Vehículo:</string>
+           <string>Seleccionar Vehículo para Mantenimiento:</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="placa_edit"/>
+        <item>
+         <widget class="QComboBox" name="vehiculo_mantenimiento_combo"/>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Tipo de Mantenimiento:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QComboBox" name="tipo_mantenimiento_combo"/>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Taller:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="taller_combo"/>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Costo:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QLineEdit" name="costo_edit"/>
-        </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="label_5">
+        <item>
+         <widget class="QLabel" name="label_descripcion_mantenimiento">
           <property name="text">
            <string>Descripción:</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
-         <widget class="QTextEdit" name="descripcion_edit"/>
+        <item>
+         <widget class="QTextEdit" name="descripcion_mantenimiento_textEdit"/>
         </item>
-        <item row="5" column="1">
-         <widget class="QPushButton" name="guardar_mantenimiento_button">
+        <item>
+         <widget class="QLabel" name="label_valor_mantenimiento">
           <property name="text">
-           <string>Guardar Mantenimiento</string>
+           <string>Valor:</string>
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QLineEdit" name="valor_mantenimiento_lineEdit"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_tipo_mantenimiento">
+          <property name="text">
+           <string>Tipo de Mantenimiento:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="tipo_mantenimiento_combo"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_taller_mantenimiento">
+          <property name="text">
+           <string>Taller:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="taller_mantenimiento_combo"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_fecha_fin_mantenimiento">
+          <property name="text">
+           <string>Fecha de Fin de Mantenimiento:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDateEdit" name="fecha_fin_mantenimiento_dateEdit">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="registrar_mantenimiento_button">
+          <property name="text">
+           <string>Registrar Mantenimiento</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="historial_tab">
+      <widget class="QWidget" name="perfil_tab">
        <attribute name="title">
-        <string>Historial</string>
+        <string>Mi Perfil</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QTabWidget" name="perfil_sub_tabWidget">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="info_personal_tab">
+           <attribute name="title">
+            <string>Información Personal</string>
+           </attribute>
+           <layout class="QFormLayout" name="formLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_nombre">
+              <property name="text">
+               <string>Nombre:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="nombre_lineEdit"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_email">
+              <property name="text">
+               <string>Email:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="email_lineEdit"/>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_documento">
+              <property name="text">
+               <string>Documento:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="documento_lineEdit"/>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_tipo_documento">
+              <property name="text">
+               <string>Tipo Documento:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="tipo_documento_combo"/>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_telefono">
+              <property name="text">
+               <string>Teléfono:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="telefono_lineEdit"/>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_direccion">
+              <property name="text">
+               <string>Dirección:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLineEdit" name="direccion_lineEdit"/>
+            </item>
+            <item row="6" column="1">
+             <widget class="QPushButton" name="update_profile_button">
+              <property name="text">
+               <string>Actualizar Información Personal</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="cambiar_contrasena_tab">
+           <attribute name="title">
+            <string>Cambiar Contraseña</string>
+           </attribute>
+           <layout class="QFormLayout" name="formLayout_2">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_current_password">
+              <property name="text">
+               <string>Contraseña Actual:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="current_password_lineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_new_password">
+              <property name="text">
+               <string>Nueva Contraseña:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="new_password_lineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_confirm_password">
+              <property name="text">
+               <string>Confirmar Nueva Contraseña:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="confirm_password_lineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QPushButton" name="update_password_button">
+              <property name="text">
+               <string>Actualizar Contraseña</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
    </layout>
   </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
  <connections/>
