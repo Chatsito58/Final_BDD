@@ -23,6 +23,9 @@ class ClienteView(QMainWindow):
         self._setup_perfil_tab()
         self._setup_cambiar_contrasena_tab()
 
+        # Inicializar seguros_data para evitar AttributeError
+        self.seguros_data = []
+
     def _setup_ui(self):
         self.logout_button.clicked.connect(self.logout)
         self.update_connection_status()
@@ -119,7 +122,8 @@ class ClienteView(QMainWindow):
         # Obtener datos de la reserva
         query = (
             "SELECT a.fecha_hora_salida, a.fecha_hora_entrada, a.id_vehiculo, a.id_seguro, a.id_descuento, a.valor "
-            "FROM Reserva_alquiler ra JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
+            "FROM Reserva_alquiler ra "
+            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
             "WHERE ra.id_reserva = %s"
         )
         reserva_data = self.db_manager.execute_query(query, (self._selected_reserva_id,))
@@ -208,13 +212,16 @@ class ClienteView(QMainWindow):
         self.salida_datetime.setDateTime(QDateTime.currentDateTime())
         self.entrada_datetime.setDateTime(QDateTime.currentDateTime().addDays(1))
         
+        # Cargar datos antes de conectar eventos
+        self._cargar_vehiculos_disponibles()
+        self._cargar_seguros_disponibles()
+        
+        # Conectar eventos después de cargar datos
         self.salida_datetime.dateTimeChanged.connect(self._recalcular_total_reserva)
         self.entrada_datetime.dateTimeChanged.connect(self._recalcular_total_reserva)
         self.vehiculo_combo.currentIndexChanged.connect(self._recalcular_total_reserva)
         self.seguro_combo.currentIndexChanged.connect(self._recalcular_total_reserva)
 
-        self._cargar_vehiculos_disponibles()
-        self._cargar_seguros_disponibles()
         self._recalcular_total_reserva()
 
         self.metodo_pago_combo.addItems(["Efectivo", "Tarjeta", "Transferencia"])
@@ -290,15 +297,15 @@ class ClienteView(QMainWindow):
             seguro_costo = 0
             selected_seguro_text = self.seguro_combo.currentText()
             if selected_seguro_text != "Ninguno":
-                seguro_info = next((s for s in self.seguros_data if f"{s[1]} (${s[2]:,.0f})" == selected_seguro_text), None)
+                seguro_info = next((s for s in self.seguros_data if f"{s[1]} (${float(s[2]):,.0f})" == selected_seguro_text), None)
                 if seguro_info: seguro_costo = float(seguro_info[2])
 
             # Calcular descuento
             id_descuento, desc_text, desc_val = self._obtener_descuento_activo(fecha_salida, fecha_entrada)
-            if id_descuento: self.descuento_label.setText(f"Descuento Aplicado: {desc_text} (-${desc_val:,.0f})")
+            if id_descuento: self.descuento_label.setText(f"Descuento Aplicado: {desc_text} (-${float(desc_val):,.0f})")
             else: self.descuento_label.setText("Descuento Aplicado: Ninguno")
 
-            total = precio_base + seguro_costo - desc_val
+            total = precio_base + seguro_costo - float(desc_val)
             if total < 0: total = 0
 
             abono_min = round(total * 0.3, 2)
@@ -356,7 +363,7 @@ class ClienteView(QMainWindow):
             id_seguro = None
             selected_seguro_text = self.seguro_combo.currentText()
             if selected_seguro_text != "Ninguno":
-                seguro_info = next((s for s in self.seguros_data if f"{s[1]} (${s[2]:,.0f})" == selected_seguro_text), None)
+                seguro_info = next((s for s in self.seguros_data if f"{s[1]} (${float(s[2]):,.0f})" == selected_seguro_text), None)
                 if seguro_info: id_seguro = seguro_info[0]
 
             # Obtener id_descuento
@@ -451,7 +458,7 @@ class ClienteView(QMainWindow):
             "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
             "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
             "WHERE a.id_cliente = %s AND ra.saldo_pendiente > 0 AND ra.id_estado_reserva IN (1,2) "
-            "ORDER BY ra.fecha_hora_salida DESC"
+            "ORDER BY a.fecha_hora_salida DESC"
         )
         reservas = self.db_manager.execute_query(query, (id_cliente,))
 
@@ -461,7 +468,7 @@ class ClienteView(QMainWindow):
 
         for r in reservas:
             id_reserva, modelo, placa, saldo_pendiente, valor_total = r
-            self.abonos_reservas_list.addItem(f"Reserva {id_reserva}: {modelo} ({placa}) - Saldo: ${saldo_pendiente:,.0f} / Total: ${valor_total:,.0f}")
+            self.abonos_reservas_list.addItem(f"Reserva {id_reserva}: {modelo} ({placa}) - Saldo: ${float(saldo_pendiente):,.0f} / Total: ${float(valor_total):,.0f}")
 
     def _realizar_abono(self):
         if not self._selected_reserva_id:

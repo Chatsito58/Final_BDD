@@ -125,41 +125,42 @@ class AlquilerApp:
                 "Modo offline",
                 "No se pudo conectar con el servidor. La aplicación funcionará en modo offline.",
             )
-        # Crear y mostrar vista de login
-        def show_login():
-            login_view = LoginView(self.auth_manager)
-            logger.info("Vista de login creada")
-            result = login_view.exec_()
-            if result == QDialog.Accepted:
-                user_data = login_view.user_data
-                logger.info(f"Login exitoso para usuario: {user_data}")
-                print(f"¡Login exitoso! Bienvenido {user_data['usuario']}")
-                self.show_role_view(user_data, show_login, self.db_manager, self.auth_manager)
-            else:
-                logger.info("Login cancelado por el usuario - cerrando aplicación")
-                # Cerrar completamente la aplicación cuando se rechaza el login
-                self._cleanup()
-                app.quit()
-                sys.exit(0)
-        try:
-            show_login()
-        finally:
-            self._cleanup()
+        
+        self.login_view = LoginView(self.auth_manager)
+        result = self.login_view.exec_() # This blocks until login dialog closes
 
-    def show_role_view(self, user_data, on_logout, db_manager, auth_manager):
+        if result == QDialog.Accepted:
+            user_data = self.login_view.user_data
+            logger.info(f"Login exitoso para usuario: {user_data}")
+            print(f"¡Login exitoso! Bienvenido {user_data['usuario']}")
+            self.show_role_view(user_data) # Pass user_data directly
+
+            # Start the main application event loop after the role view is shown
+            sys.exit(app.exec_())
+        else:
+            logger.info("Login cancelado por el usuario - cerrando aplicación")
+            self._cleanup()
+            sys.exit(0)
+
+    def show_role_view(self, user_data):
         rol = (user_data.get('rol') or '').lower()
         tipo_empleado = (user_data.get('tipo_empleado') or '').lower() if user_data.get('tipo_empleado') else None
+
         def handle_logout():
-            # For CTk (Tkinter based) windows we can call the callback directly
-            # since they do not share the Qt event loop. Using QTimer.singleShot
-            # here delays the re-display of the login dialog after closing the
-            # admin window. When running a Qt based view this still allows the
-            # callback to be executed safely in the Qt event loop.
-            on_logout()
+            self.win.close()
+            self.login_view = LoginView(self.auth_manager)
+            self.login_view.exec_()
+            if self.login_view.result() == QDialog.Accepted:
+                new_user_data = self.login_view.user_data
+                self.show_role_view(new_user_data)
+            else:
+                self._cleanup()
+                sys.exit(0)
+
         if rol == 'admin':
             logger.debug("Opening AdminView for %s", user_data.get('usuario'))
             try:
-                self.win = AdminView(user_data, db_manager, handle_logout)
+                self.win = AdminView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol)
@@ -167,7 +168,7 @@ class AlquilerApp:
         elif rol == 'gerente':
             logger.debug("Opening GerenteView for %s", user_data.get('usuario'))
             try:
-                self.win = GerenteView(user_data, db_manager, handle_logout)
+                self.win = GerenteView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol)
@@ -176,29 +177,28 @@ class AlquilerApp:
             if not tipo_empleado and user_data.get('id_empleado'):
                 query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
                 params = (user_data['id_empleado'],)
-                result = db_manager.execute_query(query, params)
+                result = self.db_manager.execute_query(query, params)
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
                 logger.debug("Opening EmpleadoVentasView for %s", user_data.get('usuario'))
-                self.win = EmpleadoVentasView(user_data, db_manager, handle_logout)
+                self.win = EmpleadoVentasView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             elif tipo_empleado == 'mantenimiento':
                 logger.debug("Opening EmpleadoMantenimientoView for %s", user_data.get('usuario'))
-                self.win = EmpleadoMantenimientoView(user_data, db_manager, handle_logout)
+                self.win = EmpleadoMantenimientoView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             elif tipo_empleado == 'caja':
                 logger.debug("Opening EmpleadoCajaView for %s", user_data.get('usuario'))
-                self.win = EmpleadoCajaView(user_data, db_manager, handle_logout)
+                self.win = EmpleadoCajaView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             else:
                 QMessageBox.warning(None, "Error", "Tipo de empleado desconocido")
                 handle_logout()
                 return
         else:
-            from src.views.client_view import ClienteView
             logger.debug("Opening ClienteView for %s", user_data.get('usuario'))
             try:
-                self.win = ClienteView(user_data, db_manager, on_logout)
+                self.win = ClienteView(user_data, self.db_manager, handle_logout)
                 self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol or 'cliente')
