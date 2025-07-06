@@ -17,28 +17,30 @@ Este proyecto implementa una aplicación de alquiler de vehículos con una inter
 12. [Sistema de abonos](#sistema-de-abonos)
 13. [Logging](#logging)
 14. [Gestor de doble escritura](#gestor-de-doble-escritura)
-15. [Ejecutar pruebas](#ejecutar-pruebas)
-16. [Contribuir](#contribuir)
-17. [Licencia](#licencia)
-18. [Desarrolladores y soporte](#desarrolladores-y-soporte)
+15. [Sistema de respaldos](#sistema-de-respaldos)
+16. [Ejecutar pruebas](#ejecutar-pruebas)
+17. [Contribuir](#contribuir)
+18. [Licencia](#licencia)
+19. [Desarrolladores y soporte](#desarrolladores-y-soporte)
 
 ## Características Principales
-- Interfaz gráfica moderna basada en **PyQt5** y **CustomTkinter**.
+- Interfaz gráfica moderna basada en **PyQt5**.
 - Sistema de autenticación con roles y permisos.
 - Base de datos redundante (MariaDB/MySQL como principal y SQLite en local).
 - Modo offline automático con sincronización de datos cuando vuelve la conexión.
 - Gestión completa de clientes, empleados, vehículos, reservas y pagos.
-- Sistema de abonos que valida el primer pago mínimo del 30 % y admite múltiples abonos.
+- Sistema de abonos que valida el primer pago mínimo del 30 % y admite múltiples abonos.
 - Panel de reportes de ventas por sede y por vendedor.
 - Reconexión automática con la base de datos remota cuando se restablece la red.
 - Mantenimiento predictivo que sugiere cuándo programar revisiones de vehículos.
+- Sistema de respaldos automáticos con rotación y compresión.
 
 ## Tecnologías Utilizadas
 - **Python 3.8+**
-- **PyQt5** y **CustomTkinter** para la interfaz.
+- **PyQt5** para la interfaz gráfica.
 - **mysql-connector-python** y **sqlite3** para la capa de datos.
 - **python-dotenv** para la configuración.
-
+- **Faker** para generación de datos de prueba.
 
 ## Requisitos
 - Python 3.8 o superior.
@@ -142,11 +144,17 @@ Final_BDD/
 │   ├── auth.py          # Manejo de autenticación
 │   ├── config.py        # Configuración global
 │   ├── triple_db_manager.py # Gestor de triple escritura
+│   ├── backup_manager.py # Gestor de respaldos automáticos
 │   ├── db_manager.py    # Gestor anterior (obsoleto)
 │   └── sqlite_manager.py# Gestor de la base local SQLite
 ├── data/                # Esquemas y datos de ejemplo
+│   ├── backups/         # Respaldos automáticos de SQLite
+│   ├── sql_bases.sql    # Esquema MySQL/MariaDB
+│   ├── sqlite_schema.sql # Esquema SQLite
+│   └── inserts_prueba.sql # Datos de ejemplo
 ├── ui/                  # Archivos .ui para PyQt5
 ├── main.py              # Punto de entrada de la aplicación
+├── generate_faker_data.py # Generador de datos ficticios
 └── requirements.txt     # Dependencias
 ```
 
@@ -176,7 +184,7 @@ Final_BDD/
 
 ## Sistema de Abonos
 - Pestaña dedicada para realizar pagos parciales de las reservas.
-- El primer abono debe cubrir al menos el 30 % del valor total.
+- El primer abono debe cubrir al menos el 30 % del valor total.
 - Se admiten abonos posteriores de cualquier valor hasta saldar la reserva.
 - Soporta pago en efectivo, tarjeta o transferencia (con pasarela simulada).
 - La tabla de abonos se actualiza en tiempo real y permite realizar varios pagos consecutivos sin reiniciar la vista.
@@ -236,6 +244,20 @@ intentarlas en el servidor correspondiente. Si la operación se ejecuta con
 manual o dejar que el método `start_worker()` inicie un hilo en segundo plano
 que la ejecute periódicamente. De este modo las escrituras pendientes se
 reenvían tan pronto como alguno de los remotos vuelva a estar disponible.
+
+## Sistema de Respaldos
+El módulo `src/backup_manager.py` proporciona un sistema completo de respaldos automáticos:
+
+- **Respaldos automáticos**: Se crean al iniciar y cerrar la aplicación
+- **Rotación de respaldos**: Mantiene solo los últimos 3 respaldos por tipo
+- **Compresión automática**: Los respaldos antiguos se comprimen con gzip
+- **Verificación de integridad**: Valida la integridad de la base SQLite antes de crear respaldos
+- **Recuperación automática**: Si la base está corrupta, intenta restaurar desde el último respaldo válido
+- **Gestión de espacio**: Verifica que haya suficiente espacio en disco antes de crear respaldos
+
+Los respaldos se almacenan en `data/backups/` con nombres como:
+- `backup_startup_2024-01-15_10-30-45.db`
+- `backup_shutdown_2024-01-15_18-45-22.db`
 
 ## Verificación manual
 Los siguientes pasos se emplearon para verificar la integridad del proyecto:

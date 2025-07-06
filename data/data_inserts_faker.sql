@@ -1,3 +1,4 @@
+USE Alquiler_vehiculos;
 -- Tabla: Licencia_conduccion
 INSERT INTO Licencia_conduccion (estado, fecha_emision, fecha_vencimiento, id_categoria) VALUES
     ('Vigente', '2020-01-18', '2025-01-16', 3),

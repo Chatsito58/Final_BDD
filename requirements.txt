@@ -15,4 +15,5 @@ pytest>=7.0.0
 black>=24.3.0
 
 # Nota: Los siguientes módulos son parte de la biblioteca estándar de Python
-# y no necesitan instalación: threading, time, datetime, re, os, sys, logging
+# y no necesitan instalación: threading, time, datetime, re, os, sys, logging,
+# sqlite3, json, hashlib, shutil, gzip, pathlib, typing, unicodedata
