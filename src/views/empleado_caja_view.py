@@ -1,13 +1,15 @@
 import os
+import hashlib
 from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QVBoxLayout, QWidget
 from PyQt5.uic import loadUi
 from datetime import datetime
 
 class EmpleadoCajaView(QMainWindow):
-    def __init__(self, user_data, db_manager, on_logout):
+    def __init__(self, user_data, db_manager, auth_manager, on_logout):
         super().__init__()
         self.user_data = user_data
         self.db_manager = db_manager
+        self.auth_manager = auth_manager
         self.on_logout = on_logout
         self._reserva_efectivo_sel = None
         self._transacciones_dia = []
@@ -19,6 +21,7 @@ class EmpleadoCajaView(QMainWindow):
         self._setup_ui()
         self._setup_pagos_tab()
         self._setup_caja_dia_tab()
+        self._setup_perfil_tabs()
 
     def _setup_ui(self):
         # Conectar botones
@@ -35,20 +38,6 @@ class EmpleadoCajaView(QMainWindow):
         # Cargar datos iniciales
         self._cargar_reservas_pendientes_efectivo()
 
-    def _cargar_reservas_pendientes_efectivo(self):
-        self.reservas_list.clear()
-        query = (
-            "SELECT ra.id_reserva, c.nombre, v.placa, ra.saldo_pendiente, a.fecha_hora_salida "
-            "FROM Reserva_alquiler ra "
-            "JOIN Alquiler a ON ra.id_alquiler = a.id_alquiler "
-            "JOIN Cliente c ON a.id_cliente = c.id_cliente "
-            "JOIN Vehiculo v ON a.id_vehiculo = v.placa "
-            f"WHERE ra.saldo_pendiente > 0 AND a.id_sucursal = %s"
-        )
-        reservas = self.db_manager.execute_query(query, (self.user_data.get("id_sucursal"),)) or []
-        for rid, nombre, placa, saldo, fecha in reservas:
-            self.reservas_list.addItem(f"{rid} | {nombre} | {placa} | Saldo: ${saldo:,.0f}")
-
     def _seleccionar_reserva_efectivo(self):
         selected_items = self.reservas_list.selectedItems()
         if not selected_items:
@@ -57,7 +46,7 @@ class EmpleadoCajaView(QMainWindow):
         selected_item = selected_items[0]
         self._reserva_efectivo_sel = int(selected_item.text().split("|")[0].strip())
 
-    def _aprobar_pago_efectivo(self):
+    def _aprobar_pago_efectivo(self, monto):
         if not self._reserva_efectivo_sel:
             QMessageBox.warning(self, "Aviso", "Seleccione una reserva")
             return
@@ -178,6 +167,114 @@ class EmpleadoCajaView(QMainWindow):
         status2 = "Online" if self.db_manager.is_remote2_active() else "Offline"
         self.status_label1.setText(f"BD Remota 1: {status1}")
         self.status_label2.setText(f"BD Remota 2: {status2}")
+
+    # --- Pestañas de Perfil ---
+    def _setup_perfil_tabs(self):
+        self.update_profile_button.clicked.connect(self._update_personal_info)
+        self.update_password_button.clicked.connect(self._update_password)
+        self._cargar_datos_perfil()
+        self._cargar_tipos_documento()
+
+    def _cargar_datos_perfil(self):
+        id_usuario = self.user_data.get("id_usuario")
+        id_empleado = self.user_data.get("id_empleado")
+
+        # Cargar datos del usuario (email)
+        query_usuario = "SELECT usuario FROM Usuario WHERE id_usuario = %s"
+        usuario_data = self.db_manager.execute_query(query_usuario, (id_usuario,))
+        if usuario_data:
+            self.email_lineEdit.setText(usuario_data[0][0] or "")
+
+        # Cargar datos del empleado (nombre, documento, telefono, direccion, id_tipo_documento)
+        query_empleado = "SELECT documento, nombre, telefono, direccion, id_tipo_documento FROM Empleado WHERE id_empleado = %s"
+        empleado_data = self.db_manager.execute_query(query_empleado, (id_empleado,))
+        if empleado_data:
+            documento, nombre, telefono, direccion, id_tipo_documento = empleado_data[0]
+            self.documento_lineEdit.setText(documento or "")
+            self.nombre_lineEdit.setText(nombre or "")
+            self.telefono_lineEdit.setText(telefono or "")
+            self.direccion_lineEdit.setText(direccion or "")
+            
+            # Set the correct type document in the combo box
+            if hasattr(self, 'tipos_documento_map') and id_tipo_documento is not None:
+                for desc, id_tipo in self.tipos_documento_map.items():
+                    if id_tipo == id_tipo_documento:
+                        self.tipo_documento_combo.setCurrentText(desc)
+                        break
+
+    def _cargar_tipos_documento(self):
+        self.tipo_documento_combo.clear()
+        tipos = self.db_manager.execute_query("SELECT id_tipo_documento, descripcion FROM Tipo_documento") or []
+        self.tipos_documento_map = {t[1]: t[0] for t in tipos}
+        self.tipo_documento_combo.addItems(list(self.tipos_documento_map.keys()))
+
+    def _update_personal_info(self):
+        new_nombre = self.nombre_lineEdit.text().strip()
+        new_email = self.email_lineEdit.text().strip()
+        new_documento = self.documento_lineEdit.text().strip()
+        new_telefono = self.telefono_lineEdit.text().strip()
+        new_direccion = self.direccion_lineEdit.text().strip()
+        selected_tipo_documento_desc = self.tipo_documento_combo.currentText()
+
+        id_usuario = self.user_data.get("id_usuario")
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not all([new_nombre, new_email, new_documento, selected_tipo_documento_desc]):
+            QMessageBox.warning(self, "Aviso", "Nombre, Email, Documento y Tipo de Documento son obligatorios.")
+            return
+
+        id_tipo_documento = self.tipos_documento_map.get(selected_tipo_documento_desc)
+        if id_tipo_documento is None:
+            QMessageBox.critical(self, "Error", "Tipo de documento no válido.")
+            return
+
+        try:
+            # Update Employee data
+            query_update_empleado = "UPDATE Empleado SET documento = %s, nombre = %s, telefono = %s, direccion = %s, id_tipo_documento = %s WHERE id_empleado = %s"
+            self.db_manager.update(query_update_empleado, (new_documento, new_nombre, new_telefono, new_direccion, id_tipo_documento, id_empleado))
+
+            # Update User email
+            query_update_usuario_email = "UPDATE Usuario SET usuario = %s WHERE id_usuario = %s"
+            self.db_manager.update(query_update_usuario_email, (new_email, id_usuario))
+
+            QMessageBox.information(self, "Éxito", "Información personal actualizada correctamente.")
+            self.user_data["usuario"] = new_email # Update user_data in session
+            self.user_data["nombre"] = new_nombre # Update user_data in session
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar la información personal: {e}")
+
+    def _update_password(self):
+        current_password = self.current_password_lineEdit.text()
+        new_password = self.new_password_lineEdit.text()
+        confirm_password = self.confirm_password_lineEdit.text()
+
+        id_usuario = self.user_data.get("id_usuario")
+
+        if not current_password or not new_password or not confirm_password:
+            QMessageBox.warning(self, "Aviso", "Todos los campos de contraseña son obligatorios.")
+            return
+
+        if new_password != confirm_password:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_email = self.user_data.get("usuario")
+            auth_result = self.auth_manager.cambiar_contrasena(user_email, current_password, new_password)
+            
+            if auth_result is True:
+                QMessageBox.information(self, "Éxito", "Contraseña actualizada correctamente.")
+                
+                # Clear password fields after successful update
+                self.current_password_lineEdit.clear()
+                self.new_password_lineEdit.clear()
+                self.confirm_password_lineEdit.clear()
+            else:
+                QMessageBox.warning(self, "Error", auth_result)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
 
     def logout(self):
         self.close()

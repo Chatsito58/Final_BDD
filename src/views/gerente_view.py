@@ -12,6 +12,7 @@ class GerenteView(QMainWindow):
         super().__init__()
         self.user_data = user_data
         self.db_manager = db_manager
+        self.auth_manager = auth_manager
         self.on_logout = on_logout
         self._emp_sel = None
 
@@ -81,26 +82,16 @@ class GerenteView(QMainWindow):
             return
 
         try:
-            user_id = self.user_data.get("id_usuario") 
-            if not user_id:
-                QMessageBox.critical(self, "Error", "No se pudo obtener el ID de usuario para cambiar la contraseña.")
-                return
+            user_email = self.user_data.get("usuario")
+            auth_result = self.auth_manager.cambiar_contrasena(user_email, actual_pass, nueva_pass)
 
-            query_hash = "SELECT contrasena_hash FROM Usuario WHERE id_usuario = %s"
-            stored_hash = self.db_manager.execute_query(query_hash, (user_id,))
-
-            if not stored_hash or stored_hash[0][0] != hashlib.sha256(actual_pass.encode()).hexdigest():
-                QMessageBox.warning(self, "Error", "Contraseña actual incorrecta.")
-                return
-
-            new_hash = hashlib.sha256(nueva_pass.encode()).hexdigest()
-            update_pass_query = "UPDATE Usuario SET contrasena_hash = %s WHERE id_usuario = %s"
-            self.db_manager.update(update_pass_query, (new_hash, user_id))
-
-            QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
-            self.actual_pass_edit.clear()
-            self.nueva_pass_edit.clear()
-            self.confirmar_pass_edit.clear()
+            if auth_result is True:
+                QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+                self.actual_pass_edit.clear()
+                self.nueva_pass_edit.clear()
+                self.confirmar_pass_edit.clear()
+            else:
+                QMessageBox.warning(self, "Error", auth_result)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")

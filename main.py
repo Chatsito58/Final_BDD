@@ -198,7 +198,7 @@ class AlquilerApp:
         else:
             logger.debug("Opening ClienteView for %s", user_data.get('usuario'))
             try:
-                self.win = ClienteView(user_data, self.db_manager, handle_logout)
+                self.win = ClienteView(user_data, self.db_manager, self.auth_manager, handle_logout)
                 self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol or 'cliente')
