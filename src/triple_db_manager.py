@@ -521,15 +521,6 @@ class TripleDBManager:
         # Fallback for other statements
         return self.update(query, params)
 
-    def update_user_password_both(self, usuario, hashed_nueva):
-        """
-        Actualiza la contraseña en ambas bases (remota y local) si hay conexión.
-        Si está offline, solo en la local y marca como pendiente para sincronizar.
-        """
-        query = "UPDATE Usuario SET contrasena = %s WHERE usuario = %s"
-        params = (hashed_nueva, usuario)
-        self._write(query, params, last=False)
-        return True
 
     def execute_query_with_headers(self, query, params=None):
         """Execute a query and return ``(rows, column_names)``."""
