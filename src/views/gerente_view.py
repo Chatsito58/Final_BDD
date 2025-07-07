@@ -100,12 +100,10 @@ class GerenteView(QMainWindow):
     def _setup_reportes_tab(self):
         self.generar_reporte_sucursal_button.clicked.connect(self._generar_reporte_ingresos_sucursal)
         self.generar_reporte_vendedor_button.clicked.connect(self._generar_reporte_ingresos_vendedor)
-        self.generar_reporte_vehiculos_alquilados_button.clicked.connect(self._generar_reporte_vehiculos_mas_alquilados)
-        self.generar_reporte_abonos_button.clicked.connect(self._generar_reporte_abonos_realizados)
+        # self.generar_reporte_vehiculos_alquilados_button.clicked.connect(self._generar_reporte_vehiculos_mas_alquilados)
+        # self.generar_reporte_abonos_button.clicked.connect(self._generar_reporte_abonos_realizados)
 
-        # Asumiendo que tienes un QTextEdit llamado 'reporte_output_textedit' en tu UI
-        # Si no lo tienes, necesitarás añadirlo en gerente_view.ui
-        self.reporte_output_textedit.setReadOnly(True)
+        # self.reporte_output_textedit.setReadOnly(True)
 
     def _generar_reporte_ingresos_sucursal(self):
         # Lógica para obtener ingresos por sucursal
@@ -187,7 +185,10 @@ class GerenteView(QMainWindow):
                         row_str.append(str(item))
                 report_text += " | ".join(row_str) + "\n"
         
-        self.reporte_output_textedit.setText(report_text)
+        if hasattr(self, 'reporte_output_textedit'):
+            self.reporte_output_textedit.setText(report_text)
+        else:
+            QMessageBox.information(self, "Reporte Generado", report_text)
 
     def _setup_clientes_tab(self):
         self.nuevo_cliente_button.clicked.connect(self._nuevo_cliente)
