@@ -194,6 +194,77 @@ class EmpleadoVentasView(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo aprobar la reserva: {e}")
 
+    # --- Pestaña Mi Perfil ---
+    def _setup_perfil_tab(self):
+        self.guardar_perfil_button.clicked.connect(self._guardar_perfil)
+        self._cargar_datos_perfil()
+
+    def _cargar_datos_perfil(self):
+        id_empleado = self.user_data.get("id_empleado")
+        query = "SELECT nombre, telefono, direccion, correo FROM Empleado WHERE id_empleado = %s"
+        datos = self.db_manager.execute_query(query, (id_empleado,))
+        if datos:
+            nombre, telefono, direccion, correo = datos[0]
+            self.nombre_perfil_edit.setText(nombre or "")
+            self.telefono_perfil_edit.setText(telefono or "")
+            self.direccion_perfil_edit.setText(direccion or "")
+            self.correo_perfil_edit.setText(correo or "")
+
+    def _guardar_perfil(self):
+        nombre = self.nombre_perfil_edit.text().strip()
+        telefono = self.telefono_perfil_edit.text().strip()
+        direccion = self.direccion_perfil_edit.text().strip()
+        correo = self.correo_perfil_edit.text().strip()
+        id_empleado = self.user_data.get("id_empleado")
+
+        if not nombre or not correo:
+            QMessageBox.warning(self, "Aviso", "Nombre y correo son obligatorios.")
+            return
+
+        try:
+            query = (
+                "UPDATE Empleado SET nombre = %s, telefono = %s, direccion = %s, correo = %s "
+                "WHERE id_empleado = %s"
+            )
+            self.db_manager.update(query, (nombre, telefono, direccion, correo, id_empleado))
+            QMessageBox.information(self, "Éxito", "Perfil actualizado correctamente.")
+            self.user_data["usuario"] = nombre
+            self._setup_ui()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al actualizar el perfil: {e}")
+
+    # --- Pestaña Cambiar Contraseña ---
+    def _setup_cambiar_contrasena_tab(self):
+        self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
+
+    def _cambiar_contrasena(self):
+        actual_pass = self.actual_pass_edit.text()
+        nueva_pass = self.nueva_pass_edit.text()
+        confirmar_pass = self.confirmar_pass_edit.text()
+
+        if not actual_pass or not nueva_pass or not confirmar_pass:
+            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
+            return
+
+        if nueva_pass != confirmar_pass:
+            QMessageBox.warning(self, "Error", "La nueva contraseña y la confirmación no coinciden.")
+            return
+
+        try:
+            user_email = self.user_data.get("usuario")
+            auth_result = self.auth_manager.cambiar_contrasena(user_email, actual_pass, nueva_pass)
+
+            if auth_result is True:
+                QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
+                self.actual_pass_edit.clear()
+                self.nueva_pass_edit.clear()
+                self.confirmar_pass_edit.clear()
+            else:
+                QMessageBox.warning(self, "Error", auth_result)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
+
     def update_connection_status(self):
         status1 = "Online" if self.db_manager.is_remote1_active() else "Offline"
         status2 = "Online" if self.db_manager.is_remote2_active() else "Offline"
