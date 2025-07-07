@@ -70,14 +70,14 @@ class EmpleadoMantenimientoView(QMainWindow):
         """
         
         print(f"[DEBUG] Query for available vehicles: {query} with sucursal_id: {id_sucursal}")
-        vehiculos, headers = self.db_manager.execute_query_with_headers(query, (id_sucursal,))
-        print(f"[DEBUG] Result of available vehicles query: {vehiculos}")
+        rows, headers = self.db_manager.execute_query_with_headers(query, (id_sucursal,))
+        print(f"[DEBUG] Result of available vehicles query: {rows}")
 
-        if vehiculos:
+        if rows:
             self.vehiculos_table.setColumnCount(len(headers))
             self.vehiculos_table.setHorizontalHeaderLabels(headers)
-            self.vehiculos_table.setRowCount(len(vehiculos))
-            for row_idx, vehiculo in enumerate(vehiculos):
+            self.vehiculos_table.setRowCount(len(rows))
+            for row_idx, vehiculo in enumerate(rows):
                 for col_idx, data in enumerate(vehiculo):
                     self.vehiculos_table.setItem(row_idx, col_idx, QTableWidgetItem(str(data)))
             self.vehiculos_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
