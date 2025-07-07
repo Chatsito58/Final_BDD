@@ -168,14 +168,14 @@ class AlquilerApp:
         elif rol == 'gerente':
             logger.debug("Opening GerenteView for %s", user_data.get('usuario'))
             try:
-                self.win = GerenteView(user_data, self.db_manager, handle_logout)
+                self.win = GerenteView(user_data, self.db_manager, self.auth_manager, handle_logout)
                 self.win.show()
             except Exception:
                 logger.exception("Failed to open %s view", rol)
                 QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
         elif rol == 'empleado':
             if not tipo_empleado and user_data.get('id_empleado'):
-                query = "SELECT cargo FROM Empleado WHERE id_empleado = %s"
+                query = "SELECT te.descripcion FROM Empleado e JOIN Tipo_empleado te ON e.cargo = te.id_tipo_empleado WHERE e.id_empleado = %s"
                 params = (user_data['id_empleado'],)
                 result = self.db_manager.execute_query(query, params)
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""

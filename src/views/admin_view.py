@@ -192,13 +192,10 @@ class AdminView(QMainWindow):
 
         try:
             if self._sede_sel:
-                q = "UPDATE Sucursal SET nombre=%s, direccion=%s, telefono=%s, gerente=%s, id_codigo_postal=%s WHERE id_sucursal=%s"
-                params = (nombre, direccion, telefono, gerente, codigo_postal, self._sede_sel)
+                self.db_manager.update_sucursal(self._sede_sel, nombre, direccion, telefono, gerente, codigo_postal)
             else:
-                q = "INSERT INTO Sucursal (nombre, direccion, telefono, gerente, id_codigo_postal) VALUES (%s, %s, %s, %s, %s)"
-                params = (nombre, direccion, telefono, gerente, codigo_postal)
+                self.db_manager.create_sucursal(nombre, direccion, telefono, gerente, codigo_postal)
             
-            self.db_manager.execute_query(q, params, fetch=False)
             QMessageBox.information(self, "Éxito", "Sede guardada correctamente.")
             self._nuevo_sede()
             self._cargar_sedes()
@@ -217,7 +214,7 @@ class AdminView(QMainWindow):
             return
 
         try:
-            self.db_manager.delete("DELETE FROM Sucursal WHERE id_sucursal = %s", (self._sede_sel,))
+            self.db_manager.delete_sucursal(self._sede_sel)
             QMessageBox.information(self, "Éxito", "Sede eliminada correctamente.")
             self._nuevo_sede()
             self._cargar_sedes()
@@ -262,7 +259,7 @@ class AdminView(QMainWindow):
 
             # Ejecutar la consulta
             if query.lower().startswith("select"):
-                headers, rows = self.db_manager.execute_query_with_headers(query)
+                rows, headers = self.db_manager.execute_query_with_headers(query)
                 
                 self.sql_results_table.setRowCount(0) # Clear existing rows
                 self.sql_results_table.setColumnCount(0) # Clear existing columns

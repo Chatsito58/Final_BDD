@@ -137,31 +137,14 @@ class AuthManager:
             )
         return None
 
-    def cambiar_contrasena(self, usuario, contrasena_actual, nueva_contrasena):
+    def cambiar_contrasena(self, usuario, nueva_contrasena):
         """
-        Permite cambiar la contraseña de un usuario, validando la actual y usando SHA-256.
+        Permite cambiar la contraseña de un usuario, usando SHA-256.
         Devuelve True si se actualizó correctamente, o un mensaje de error si falló alguna validación.
         """
-        hashed_actual = hashlib.sha256(contrasena_actual.encode()).hexdigest()
         hashed_nueva = hashlib.sha256(nueva_contrasena.encode()).hexdigest()
-        is_sqlite = getattr(self.db, 'offline', False)
         try:
-            # 1. Verificar contraseña actual
-            if is_sqlite:
-                query = "SELECT contrasena FROM Usuario WHERE usuario = ?"
-                params = (usuario,)
-            else:
-                query = "SELECT contrasena FROM Usuario WHERE usuario = %s"
-                params = (usuario,)
-            result = self.db.execute_query(query, params)
-            if not result or result[0][0] != hashed_actual:
-                self.logger.warning(f"Intento fallido de cambio de contraseña para {usuario}: contraseña actual incorrecta")
-                return "La contraseña actual es incorrecta."
-            # 2. Validar que la nueva contraseña no sea igual a la actual
-            if hashed_actual == hashed_nueva:
-                self.logger.warning(f"Intento fallido de cambio de contraseña para {usuario}: nueva contraseña igual a la actual")
-                return "La nueva contraseña no puede ser igual a la actual."
-            # 3. Actualizar la contraseña en ambas bases
+            # 1. Actualizar la contraseña en ambas bases
             ok = self.db.update_user_password_both(usuario, hashed_nueva)
             if ok:
                 self.logger.info(f"Contraseña cambiada exitosamente para {usuario} (ambas bases)")

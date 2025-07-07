@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QDialog
+from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QDialog, QVBoxLayout, QDateTimeEdit, QPushButton
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import QDateTime, QTimer
 from datetime import datetime
@@ -481,9 +481,11 @@ class ClienteView(QMainWindow):
             QMessageBox.warning(self, "Error", "Ingrese el monto a abonar.")
             return
         try:
-            monto = float(monto_str)
+            # Limpiar el string de entrada de caracteres no numéricos (excepto el punto decimal)
+            monto_str_limpio = ''.join(filter(lambda x: x.isdigit() or x == '.', monto_str.replace(',', '')))
+            monto = float(monto_str_limpio)
         except ValueError:
-            QMessageBox.warning(self, "Error", "Monto inválido. Ingrese un número.")
+            QMessageBox.warning(self, "Error", f"Monto inválido: '{monto_str}'. Ingrese un número válido.")
             return
 
         if monto <= 0:
@@ -571,11 +573,10 @@ class ClienteView(QMainWindow):
         self.cambiar_pass_button.clicked.connect(self._cambiar_contrasena)
 
     def _cambiar_contrasena(self):
-        actual_pass = self.actual_pass_edit.text()
         nueva_pass = self.nueva_pass_edit.text()
         confirmar_pass = self.confirmar_pass_edit.text()
 
-        if not actual_pass or not nueva_pass or not confirmar_pass:
+        if not nueva_pass or not confirmar_pass:
             QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
             return
 
@@ -585,11 +586,10 @@ class ClienteView(QMainWindow):
 
         try:
             user_email = self.user_data.get("usuario")
-            auth_result = self.auth_manager.cambiar_contrasena(user_email, actual_pass, nueva_pass)
+            auth_result = self.auth_manager.cambiar_contrasena(user_email, nueva_pass)
 
             if auth_result is True:
                 QMessageBox.information(self, "Éxito", "Contraseña cambiada correctamente.")
-                self.actual_pass_edit.clear()
                 self.nueva_pass_edit.clear()
                 self.confirmar_pass_edit.clear()
             else:

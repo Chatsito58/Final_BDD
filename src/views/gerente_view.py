@@ -8,7 +8,7 @@ from src.services.roles import (
 )
 
 class GerenteView(QMainWindow):
-    def __init__(self, user_data, db_manager, on_logout):
+    def __init__(self, user_data, db_manager, auth_manager, on_logout):
         super().__init__()
         self.user_data = user_data
         self.db_manager = db_manager

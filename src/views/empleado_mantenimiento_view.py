@@ -39,21 +39,11 @@ class EmpleadoMantenimientoView(QMainWindow):
         
         # Query para obtener vehículos que NO están alquilados hoy y no están en mantenimiento
         query = """
-            SELECT v.placa, mv.nombre_marca, v.modelo, v.anio, v.placa
+            SELECT v.placa, mv.nombre_marca, v.modelo, ev.descripcion
             FROM Vehiculo v
             JOIN Marca_vehiculo mv ON v.id_marca = mv.id_marca
+            JOIN Estado_vehiculo ev ON v.id_estado_vehiculo = ev.id_estado
             WHERE v.id_sucursal = %s
-            AND v.id_estado_vehiculo = 1 -- Asumiendo 1 es 'Disponible'
-            AND v.placa NOT IN (
-                SELECT r.id_vehiculo
-                FROM Alquiler r
-                WHERE CURRENT_DATE BETWEEN r.fecha_hora_salida AND r.fecha_hora_entrada
-            )
-            AND v.placa NOT IN (
-                SELECT m.placa
-                FROM Mantenimiento m
-                WHERE CURRENT_DATE BETWEEN m.fecha AND m.fecha_fin
-            )
         """
         
         print(f"[DEBUG] Query for available vehicles: {query} with sucursal_id: {id_sucursal}")
