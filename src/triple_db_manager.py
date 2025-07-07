@@ -532,11 +532,11 @@ class TripleDBManager:
         return True
 
     def execute_query_with_headers(self, query, params=None):
-        """Execute a query and return results with column headers."""
+        """Execute a query and return ``(rows, column_names)``."""
         result = self.execute_query(query, params)
         if not result:
             return [], []
-        
+
         # Get headers from the first row's keys if it's a dict
         if isinstance(result[0], dict):
             headers = list(result[0].keys())
@@ -545,8 +545,8 @@ class TripleDBManager:
             # For tuple results, we don't have headers
             headers = []
             rows = result
-        
-        return headers, rows
+
+        return rows, headers
 
     def get_mantenimientos(self):
         """
