@@ -1,7 +1,7 @@
 import os
-from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QDialog, QVBoxLayout, QDateTimeEdit, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QDialog, QVBoxLayout, QDateTimeEdit, QPushButton, QMenu
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import QDateTime, QTimer
+from PyQt5.QtCore import QDateTime, QTimer, Qt
 from datetime import datetime
 import hashlib
 
@@ -30,6 +30,26 @@ class ClienteView(QMainWindow):
     def _setup_ui(self):
         self.logout_button.clicked.connect(self.logout)
         self.update_connection_status()
+
+        # Configurar menú contextual para recargar
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+
+    def _show_context_menu(self, pos):
+        context_menu = QMenu(self)
+        reload_action = context_menu.addAction("Recargar")
+        action = context_menu.exec_(self.mapToGlobal(pos))
+        if action == reload_action:
+            self._reload_all_data()
+
+    def _reload_all_data(self):
+        # Recargar todas las pestañas relevantes
+        self._cargar_reservas_cliente()
+        self._cargar_vehiculos_disponibles()
+        self._cargar_seguros_disponibles()
+        self._cargar_reservas_pendientes_abono()
+        self._cargar_datos_perfil()
+        QMessageBox.information(self, "Recargar", "Datos recargados correctamente.")
 
     def update_connection_status(self):
         status1 = "Online" if self.db_manager.is_remote1_active() else "Offline"
@@ -199,6 +219,19 @@ class ClienteView(QMainWindow):
             # Actualizar la reserva en la base de datos
             update_alquiler_query = "UPDATE Alquiler SET fecha_hora_salida = %s, fecha_hora_entrada = %s, valor = %s WHERE id_alquiler = (SELECT id_alquiler FROM Reserva_alquiler WHERE id_reserva = %s)"
             self.db_manager.update(update_alquiler_query, (nueva_salida_str, nueva_entrada_str, nuevo_valor, self._selected_reserva_id))
+
+            # Obtener el abono actual de la reserva
+            abono_actual_query = "SELECT abono FROM Reserva_alquiler WHERE id_reserva = %s"
+            abono_actual_result = self.db_manager.execute_query(abono_actual_query, (self._selected_reserva_id,))
+            abono_actual = float(abono_actual_result[0][0]) if abono_actual_result else 0
+
+            # Recalcular saldo pendiente
+            nuevo_saldo_pendiente = nuevo_valor - abono_actual
+            if nuevo_saldo_pendiente < 0: nuevo_saldo_pendiente = 0
+
+            # Actualizar saldo pendiente en Reserva_alquiler
+            update_reserva_saldo_query = "UPDATE Reserva_alquiler SET saldo_pendiente = %s WHERE id_reserva = %s"
+            self.db_manager.update(update_reserva_saldo_query, (nuevo_saldo_pendiente, self._selected_reserva_id))
 
             QMessageBox.information(self, "Éxito", "Reserva actualizada correctamente.")
             dialog.accept()

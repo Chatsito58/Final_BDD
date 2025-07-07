@@ -1,6 +1,7 @@
 import os
-from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QMenu
 from PyQt5.uic import loadUi
+from PyQt5.QtCore import Qt
 from src.services.roles import (
     puede_gestionar_gerentes,
     verificar_permiso_creacion_empleado,
@@ -382,6 +383,26 @@ class GerenteView(QMainWindow):
 
         # Actualizar estado de la conexión
         self.update_connection_status()
+
+        # Configurar menú contextual para recargar
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+
+    def _show_context_menu(self, pos):
+        context_menu = QMenu(self)
+        reload_action = context_menu.addAction("Recargar")
+        action = context_menu.exec_(self.mapToGlobal(pos))
+        if action == reload_action:
+            self._reload_all_data()
+
+    def _reload_all_data(self):
+        # Recargar todas las pestañas relevantes
+        self._cargar_empleados()
+        self._cargar_catalogos_vehiculos()
+        self._cargar_clientes()
+        # No hay una función _cargar_reportes, los reportes se generan al hacer clic en el botón
+        self._cargar_datos_perfil()
+        QMessageBox.information(self, "Recargar", "Datos recargados correctamente.")
 
     def _setup_empleados_tab(self):
         # Conectar señales y slots
