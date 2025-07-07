@@ -416,17 +416,19 @@ class ClienteView(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error al guardar la reserva: {e}")
 
     def _simular_pasarela_pago(self, id_reserva, monto, metodo):
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle(f"Pasarela de Pago - {metodo}")
-        msg_box.setText(f"Simulando pago de ${monto:,.0f} con {metodo}...")
-        msg_box.setIcon(QMessageBox.Information)
-        msg_box.setStandardButtons(QMessageBox.NoButton)
-        msg_box.show()
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Pasarela de Pago - {metodo}")
+        layout = QVBoxLayout()
+        label = QLabel(f"Simulando pago de ${monto:,.0f} con {metodo}...")
+        layout.addWidget(label)
+        dialog.setLayout(layout)
+        dialog.setModal(False) # Asegurarse de que no sea modal
+        dialog.show()
 
-        QTimer.singleShot(2000, lambda: self._finalizar_simulacion_pago(msg_box, id_reserva, monto, metodo))
+        QTimer.singleShot(2000, lambda: self._finalizar_simulacion_pago(dialog, id_reserva, monto, metodo))
 
-    def _finalizar_simulacion_pago(self, msg_box, id_reserva, monto, metodo):
-        msg_box.close()
+    def _finalizar_simulacion_pago(self, dialog, id_reserva, monto, metodo):
+        dialog.close()
         try:
             # Actualizar estado de la reserva a Aprobada (estado 2)
             update_reserva_query = "UPDATE Reserva_alquiler SET id_estado_reserva = 2 WHERE id_reserva = %s"
