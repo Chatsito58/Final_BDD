@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QLabel, QMessageBox, QTableWidgetItem, QHeaderView
 from PyQt5.uic import loadUi
 
 class EmpleadoVentasView(QMainWindow):
@@ -127,90 +127,19 @@ class EmpleadoVentasView(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error al eliminar el cliente: {e}")
 
     def _setup_vehiculos_tab(self):
-        self.guardar_vehiculo_button.clicked.connect(self._guardar_vehiculo)
-        self._cargar_catalogos_vehiculos()
+        self._cargar_vehiculos()
 
-    def _cargar_catalogos_vehiculos(self):
-        # Cargar marcas
-        marcas = self.db_manager.execute_query("SELECT id_marca, nombre_marca FROM Marca_vehiculo") or []
-        self.marca_vehiculo_map = {m[1]: m[0] for m in marcas}
-        self.marca_vehiculo_combo.addItems(list(self.marca_vehiculo_map.keys()))
-
-        # Cargar colores
-        colores = self.db_manager.execute_query("SELECT id_color, nombre_color FROM Color_vehiculo") or []
-        self.color_vehiculo_map = {c[1]: c[0] for c in colores}
-        self.color_vehiculo_combo.addItems(list(self.color_vehiculo_map.keys()))
-
-        # Cargar tipos de vehículo
-        tipos = self.db_manager.execute_query("SELECT id_tipo, descripcion FROM Tipo_vehiculo") or []
-        self.tipo_vehiculo_map = {t[1]: t[0] for t in tipos}
-        self.tipo_vehiculo_combo.addItems(list(self.tipo_vehiculo_map.keys()))
-
-        # Cargar transmisiones
-        transmisiones = self.db_manager.execute_query("SELECT id_transmision, descripcion FROM Transmision_vehiculo") or []
-        self.transmision_vehiculo_map = {t[1]: t[0] for t in transmisiones}
-        self.transmision_vehiculo_combo.addItems(list(self.transmision_vehiculo_map.keys()))
-
-        # Cargar blindajes
-        blindajes = self.db_manager.execute_query("SELECT id_blindaje, descripcion FROM Blindaje_vehiculo") or []
-        self.blindaje_vehiculo_map = {b[1]: b[0] for b in blindajes}
-        self.blindaje_vehiculo_combo.addItems(list(self.blindaje_vehiculo_map.keys()))
-
-        # Cargar seguros
-        seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion FROM Seguro_vehiculo WHERE estado = 'Activo'") or []
-        self.seguro_vehiculo_map = {s[1]: s[0] for s in seguros}
-        self.seguro_vehiculo_combo.addItems(list(self.seguro_vehiculo_map.keys()))
-
-        # Cargar proveedores
-        proveedores = self.db_manager.execute_query("SELECT id_proveedor, nombre FROM Proveedor_vehiculo") or []
-        self.proveedor_vehiculo_map = {p[1]: p[0] for p in proveedores}
-        self.proveedor_vehiculo_combo.addItems(list(self.proveedor_vehiculo_map.keys()))
-
-    def _guardar_vehiculo(self):
-        placa = self.placa_vehiculo_edit.text().strip()
-        chasis = self.chasis_vehiculo_edit.text().strip()
-        modelo = self.modelo_vehiculo_edit.text().strip()
-        kilometraje_str = self.kilometraje_vehiculo_edit.text().strip()
-
-        marca_desc = self.marca_vehiculo_combo.currentText()
-        color_desc = self.color_vehiculo_combo.currentText()
-        tipo_desc = self.tipo_vehiculo_combo.currentText()
-        transmision_desc = self.transmision_vehiculo_combo.currentText()
-        blindaje_desc = self.blindaje_vehiculo_combo.currentText()
-        seguro_desc = self.seguro_vehiculo_combo.currentText()
-        proveedor_desc = self.proveedor_vehiculo_combo.currentText()
-
-        if not all([placa, modelo, marca_desc, color_desc, tipo_desc, transmision_desc, blindaje_desc, seguro_desc, proveedor_desc]):
-            QMessageBox.warning(self, "Aviso", "Todos los campos son obligatorios.")
-            return
-
-        try:
-            kilometraje = int(kilometraje_str)
-        except ValueError:
-            QMessageBox.warning(self, "Error", "Kilometraje inválido. Ingrese un número entero.")
-            return
-
-        id_marca = self.marca_vehiculo_map.get(marca_desc)
-        id_color = self.color_vehiculo_map.get(color_desc)
-        id_tipo_vehiculo = self.tipo_vehiculo_map.get(tipo_desc)
-        id_transmision = self.transmision_vehiculo_map.get(transmision_desc)
-        id_blindaje = self.blindaje_vehiculo_map.get(blindaje_desc)
-        id_seguro_vehiculo = self.seguro_vehiculo_map.get(seguro_desc)
-        id_proveedor = self.proveedor_vehiculo_map.get(proveedor_desc)
-        id_sucursal = self.user_data.get("id_sucursal") # Asumiendo que el gerente solo puede agregar vehículos a su sucursal
-
-        try:
-            query = "INSERT INTO Vehiculo (placa, n_chasis, modelo, kilometraje, id_marca, id_color, id_tipo_vehiculo, id_transmision, id_blindaje, id_seguro_vehiculo, id_estado_vehiculo, id_proveedor, id_sucursal) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            params = (placa, chasis, modelo, kilometraje, id_marca, id_color, id_tipo_vehiculo, id_transmision, id_blindaje, id_seguro_vehiculo, 1, id_proveedor, id_sucursal)
-            self.db_manager.insert(query, params)
-            QMessageBox.information(self, "Éxito", "Vehículo guardado correctamente.")
-            # Limpiar formulario
-            self.placa_vehiculo_edit.clear()
-            self.chasis_vehiculo_edit.clear()
-            self.modelo_vehiculo_edit.clear()
-            self.kilometraje_vehiculo_edit.clear()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al guardar el vehículo: {e}")
+    def _cargar_vehiculos(self):
+        self.vehiculos_table.setRowCount(0)
+        rows, headers = self.db_manager.get_all_vehiculos()
+        if rows:
+            self.vehiculos_table.setRowCount(len(rows))
+            self.vehiculos_table.setColumnCount(len(headers))
+            self.vehiculos_table.setHorizontalHeaderLabels(headers)
+            for i, row in enumerate(rows):
+                for j, col in enumerate(row):
+                    self.vehiculos_table.setItem(i, j, QTableWidgetItem(str(col)))
+            self.vehiculos_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def _setup_reservas_tab(self):
         self.aprobar_reserva_button.clicked.connect(self._aprobar_reserva)

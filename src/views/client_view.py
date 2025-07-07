@@ -203,6 +203,7 @@ class ClienteView(QMainWindow):
             QMessageBox.information(self, "Éxito", "Reserva actualizada correctamente.")
             dialog.accept()
             self._cargar_reservas_cliente()
+            self._cargar_reservas_pendientes_abono()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo actualizar la reserva: {e}")
@@ -481,8 +482,8 @@ class ClienteView(QMainWindow):
             QMessageBox.warning(self, "Error", "Ingrese el monto a abonar.")
             return
         try:
-            # Limpiar el string de entrada de caracteres no numéricos (excepto el punto decimal)
-            monto_str_limpio = ''.join(filter(lambda x: x.isdigit() or x == '.', monto_str.replace(',', '')))
+            # Limpiar el string de entrada de comas y puntos de miles.
+            monto_str_limpio = monto_str.replace(',', '').replace('.', '')
             monto = float(monto_str_limpio)
         except ValueError:
             QMessageBox.warning(self, "Error", f"Monto inválido: '{monto_str}'. Ingrese un número válido.")
@@ -492,9 +493,14 @@ class ClienteView(QMainWindow):
             QMessageBox.warning(self, "Error", "El monto debe ser mayor a 0.")
             return
 
-        # Obtener saldo pendiente actual
+        # Obtener saldo pendiente actual y convertirlo a float
         saldo_query = "SELECT saldo_pendiente FROM Reserva_alquiler WHERE id_reserva = %s"
-        saldo_actual = self.db_manager.execute_query(saldo_query, (self._selected_reserva_id,))[0][0]
+        resultado_saldo = self.db_manager.execute_query(saldo_query, (self._selected_reserva_id,))
+        if not resultado_saldo:
+            QMessageBox.critical(self, "Error", "No se pudo obtener el saldo de la reserva.")
+            return
+        
+        saldo_actual = float(resultado_saldo[0][0])
 
         if monto > saldo_actual:
             QMessageBox.warning(self, "Error", f"El monto a abonar (${monto:,.0f}) no puede ser mayor al saldo pendiente (${saldo_actual:,.0f}).")

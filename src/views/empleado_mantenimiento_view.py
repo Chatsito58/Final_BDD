@@ -5,10 +5,11 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import QDate
 
 class EmpleadoMantenimientoView(QMainWindow):
-    def __init__(self, user_data, db_manager, on_logout):
+    def __init__(self, user_data, db_manager, auth_manager, on_logout):
         super().__init__()
         self.user_data = user_data
         self.db_manager = db_manager
+        self.auth_manager = auth_manager
         self.on_logout = on_logout
 
         ui_path = os.path.join(os.path.dirname(__file__), '..', '..', 'ui', 'empleado_mantenimiento_view.ui')

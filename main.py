@@ -181,15 +181,15 @@ class AlquilerApp:
                 tipo_empleado = result[0][0].lower() if result and len(result) > 0 else ""
             if tipo_empleado == 'ventas':
                 logger.debug("Opening EmpleadoVentasView for %s", user_data.get('usuario'))
-                self.win = EmpleadoVentasView(user_data, self.db_manager, handle_logout)
+                self.win = EmpleadoVentasView(user_data, self.db_manager, self.auth_manager, handle_logout)
                 self.win.show()
             elif tipo_empleado == 'mantenimiento':
                 logger.debug("Opening EmpleadoMantenimientoView for %s", user_data.get('usuario'))
-                self.win = EmpleadoMantenimientoView(user_data, self.db_manager, handle_logout)
+                self.win = EmpleadoMantenimientoView(user_data, self.db_manager, self.auth_manager, handle_logout)
                 self.win.show()
             elif tipo_empleado == 'caja':
                 logger.debug("Opening EmpleadoCajaView for %s", user_data.get('usuario'))
-                self.win = EmpleadoCajaView(user_data, self.db_manager, handle_logout)
+                self.win = EmpleadoCajaView(user_data, self.db_manager, self.auth_manager, handle_logout)
                 self.win.show()
             else:
                 QMessageBox.warning(None, "Error", "Tipo de empleado desconocido")
