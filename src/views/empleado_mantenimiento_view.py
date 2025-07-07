@@ -27,8 +27,11 @@ class EmpleadoMantenimientoView(QMainWindow):
         self.update_connection_status()
 
         # Mover las pestañas de perfil al nivel superior
-        self.tabWidget.addTab(self.perfil_tab, "Información Personal")
+        self.tabWidget.addTab(self.info_personal_tab, "Información Personal")
         self.tabWidget.addTab(self.cambiar_contrasena_tab, "Cambiar Contraseña")
+        perfil_index = self.tabWidget.indexOf(self.perfil_tab)
+        if perfil_index != -1:
+            self.tabWidget.removeTab(perfil_index)
 
     def update_connection_status(self):
         status1 = "Online" if self.db_manager.is_remote1_active() else "Offline"
