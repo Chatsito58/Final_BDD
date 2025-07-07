@@ -1,6 +1,6 @@
 import os
 import hashlib
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QVBoxLayout, QComboBox, QTableWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import QDate
 
@@ -18,6 +18,8 @@ class EmpleadoMantenimientoView(QMainWindow):
         self._setup_ui()
         self._setup_vehiculos_tab()
         self._setup_mantenimiento_tab()
+        self._setup_mis_mantenimientos_tab()
+        self._setup_historial_mantenimientos_tab()
         self._setup_perfil_tabs()
 
     def _setup_ui(self):
@@ -40,18 +42,31 @@ class EmpleadoMantenimientoView(QMainWindow):
         
         # Query para obtener vehículos que NO están alquilados hoy y no están en mantenimiento
         query = """
-            SELECT v.placa, mv.nombre_marca, v.modelo, ev.descripcion
+            SELECT 
+                v.placa AS Placa, 
+                mv.nombre_marca AS Marca, 
+                v.modelo AS Modelo, 
+                ev.descripcion AS Estado, 
+                tv.combustible AS Combustible, 
+                bv.descripcion AS Blindaje, 
+                cv.descripcion AS Cilindraje
             FROM Vehiculo v
             JOIN Marca_vehiculo mv ON v.id_marca = mv.id_marca
             JOIN Estado_vehiculo ev ON v.id_estado_vehiculo = ev.id_estado
+            JOIN Tipo_vehiculo tv ON v.id_tipo_vehiculo = tv.id_tipo
+            JOIN Blindaje_vehiculo bv ON v.id_blindaje = bv.id_blindaje
+            JOIN Cilindraje_vehiculo cv ON v.id_cilindraje = cv.id_cilindraje
             WHERE v.id_sucursal = %s
+            AND v.id_estado_vehiculo NOT IN (2, 3) -- Excluir 'Alquilado' (2) y 'En Mantenimiento' (3)
         """
         
         print(f"[DEBUG] Query for available vehicles: {query} with sucursal_id: {id_sucursal}")
-        vehiculos = self.db_manager.execute_query(query, (id_sucursal,))
+        vehiculos, headers = self.db_manager.execute_query_with_headers(query, (id_sucursal,))
         print(f"[DEBUG] Result of available vehicles query: {vehiculos}")
 
         if vehiculos:
+            self.vehiculos_table.setColumnCount(len(headers))
+            self.vehiculos_table.setHorizontalHeaderLabels(headers)
             self.vehiculos_table.setRowCount(len(vehiculos))
             for row_idx, vehiculo in enumerate(vehiculos):
                 for col_idx, data in enumerate(vehiculo):
@@ -69,6 +84,37 @@ class EmpleadoMantenimientoView(QMainWindow):
         self._cargar_vehiculos_para_mantenimiento_combo()
         self._cargar_tipos_mantenimiento()
         self._cargar_talleres()
+
+    def _setup_mis_mantenimientos_tab(self):
+        # Crear la nueva pestaña
+        self.mis_mantenimientos_tab = QWidget()
+        self.tabWidget.insertTab(2, self.mis_mantenimientos_tab, "Mis Mantenimientos")
+
+        # Crear el layout y la tabla
+        layout = QVBoxLayout(self.mis_mantenimientos_tab)
+        self.mis_mantenimientos_table = QTableWidget()
+        layout.addWidget(self.mis_mantenimientos_table)
+
+        # Cargar los datos
+        self._cargar_mis_mantenimientos()
+
+    def _setup_historial_mantenimientos_tab(self):
+        # Crear la nueva pestaña
+        self.historial_mantenimientos_tab = QWidget()
+        self.tabWidget.insertTab(3, self.historial_mantenimientos_tab, "Historial de Mantenimientos")
+
+        # Crear el layout, el combo box y la tabla
+        layout = QVBoxLayout(self.historial_mantenimientos_tab)
+        self.historial_vehiculo_combo = QComboBox()
+        self.historial_mantenimientos_table = QTableWidget()
+        layout.addWidget(self.historial_vehiculo_combo)
+        layout.addWidget(self.historial_mantenimientos_table)
+
+        # Conectar el combo box a la función de carga
+        self.historial_vehiculo_combo.currentIndexChanged.connect(self._cargar_historial_mantenimientos)
+
+        # Cargar los datos
+        self._cargar_vehiculos_para_historial_combo()
 
     def _cargar_vehiculos_para_mantenimiento_combo(self):
         self.vehiculo_mantenimiento_combo.clear()
@@ -107,6 +153,46 @@ class EmpleadoMantenimientoView(QMainWindow):
         self.talleres_mantenimiento_map = {t[1]: t[0] for t in talleres}
         self.taller_mantenimiento_combo.addItems(list(self.talleres_mantenimiento_map.keys()))
 
+    def _cargar_mis_mantenimientos(self):
+        self.mis_mantenimientos_table.setRowCount(0)
+        id_empleado = self.user_data.get("id_empleado")
+        rows, headers = self.db_manager.get_mantenimientos_empleado(id_empleado)
+        if rows:
+            self.mis_mantenimientos_table.setRowCount(len(rows))
+            self.mis_mantenimientos_table.setColumnCount(len(headers))
+            self.mis_mantenimientos_table.setHorizontalHeaderLabels(headers)
+            for i, row in enumerate(rows):
+                for j, col in enumerate(row):
+                    self.mis_mantenimientos_table.setItem(i, j, QTableWidgetItem(str(col)))
+            self.mis_mantenimientos_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def _cargar_vehiculos_para_historial_combo(self):
+        self.historial_vehiculo_combo.clear()
+        vehiculos, _ = self.db_manager.get_all_vehiculos()
+        if vehiculos:
+            for v in vehiculos:
+                self.historial_vehiculo_combo.addItem(f"{v[1]} {v[2]} (Placa: {v[0]})", v[0])
+        else:
+            self.historial_vehiculo_combo.addItem("No hay vehículos disponibles", None)
+
+    def _cargar_historial_mantenimientos(self):
+        self.historial_mantenimientos_table.setRowCount(0)
+        placa = self.historial_vehiculo_combo.currentData()
+        if placa:
+            rows, headers = self.db_manager.get_historial_mantenimientos_vehiculo(placa)
+            if rows:
+                self.historial_mantenimientos_table.setRowCount(len(rows))
+                self.historial_mantenimientos_table.setColumnCount(len(headers))
+                self.historial_mantenimientos_table.setHorizontalHeaderLabels(headers)
+                for i, row in enumerate(rows):
+                    for j, col in enumerate(row):
+                        self.historial_mantenimientos_table.setItem(i, j, QTableWidgetItem(str(col)))
+                self.historial_mantenimientos_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            else:
+                QMessageBox.information(self, "Historial de Mantenimientos", f"No hay mantenimientos registrados para el vehículo con placa {placa}.")
+        else:
+            QMessageBox.information(self, "Historial de Mantenimientos", "Seleccione un vehículo para ver su historial.")
+
     def _registrar_mantenimiento(self):
         selected_vehiculo_placa = self.vehiculo_mantenimiento_combo.currentData()
         fecha_fin = self.fecha_fin_mantenimiento_dateEdit.date().toString("yyyy-MM-dd")
@@ -136,22 +222,22 @@ class EmpleadoMantenimientoView(QMainWindow):
             # Insertar el registro de mantenimiento en la tabla Mantenimiento
             query_insert_mantenimiento = """
                 INSERT INTO Mantenimiento (placa, descripcion, fecha, fecha_fin)
-                VALUES (%s, CURRENT_TIMESTAMP, %s, %s)
+                VALUES (%s, CURRENT_TIMESTAMP, %s)
             """
-            self.db_manager.insert(query_insert_mantenimiento, 
-                                   (selected_vehiculo_placa, descripcion, fecha_fin))
+            self.db_manager.execute_query(query_insert_mantenimiento, 
+                                   (selected_vehiculo_placa, descripcion, fecha_fin), fetch=False)
 
             # Insertar el registro de mantenimiento en la tabla Mantenimiento_vehiculo
             query_insert_mantenimiento_vehiculo = """
                 INSERT INTO Mantenimiento_vehiculo (id_vehiculo, descripcion, fecha_hora, valor, id_tipo, id_taller)
                 VALUES (%s, %s, CURRENT_TIMESTAMP, %s, %s, %s)
             """
-            self.db_manager.insert(query_insert_mantenimiento_vehiculo, 
-                                   (selected_vehiculo_placa, descripcion, valor, id_tipo_mantenimiento, id_taller_mantenimiento))
+            self.db_manager.execute_query(query_insert_mantenimiento_vehiculo, 
+                                   (selected_vehiculo_placa, descripcion, valor, id_tipo_mantenimiento, id_taller_mantenimiento), fetch=False)
 
             # Actualizar el estado del vehículo a 'En Mantenimiento' (id_estado_vehiculo = 3)
             query_update_vehiculo_estado = "UPDATE Vehiculo SET id_estado_vehiculo = 3 WHERE placa = %s"
-            self.db_manager.update(query_update_vehiculo_estado, (selected_vehiculo_placa,))
+            self.db_manager.execute_query(query_update_vehiculo_estado, (selected_vehiculo_placa,), fetch=False)
 
             QMessageBox.information(self, "Éxito", "Mantenimiento registrado y vehículo puesto en estado de mantenimiento.")
             self._cargar_vehiculos_disponibles() # Refresh the available vehicles list

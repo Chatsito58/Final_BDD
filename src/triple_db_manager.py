@@ -548,6 +548,61 @@ class TripleDBManager:
         
         return headers, rows
 
+    def get_mantenimientos(self):
+        """
+        Obtiene la lista de mantenimientos registrados.
+        """
+        query = """
+            SELECT m.id_mantenimiento, v.placa, v.modelo, t.descripcion as tipo_mantenimiento, m.fecha_hora, m.costo, m.descripcion
+            FROM Mantenimiento m
+            JOIN Vehiculo v ON m.id_vehiculo = v.placa
+            JOIN Tipo_mantenimiento t ON m.id_tipo_mantenimiento = t.id_tipo
+        """
+        return self.execute_query_with_headers(query)
+
+    def get_mantenimientos_empleado(self, id_empleado):
+        query = """
+            SELECT m.id_mantenimiento, v.placa, v.modelo, t.descripcion as tipo_mantenimiento, m.fecha, m.costo, m.descripcion
+            FROM Mantenimiento m
+            JOIN Vehiculo v ON m.id_vehiculo = v.placa
+            JOIN Tipo_mantenimiento t ON m.id_tipo_mantenimiento = t.id_tipo
+            WHERE m.id_empleado = %s
+        """
+        return self.execute_query_with_headers(query, (id_empleado,))
+
+    def get_historial_mantenimientos_vehiculo(self, placa):
+        query = """
+            SELECT m.id_mantenimiento, t.descripcion as tipo_mantenimiento, m.fecha, m.costo, m.descripcion, e.nombre as realizado_por
+            FROM Mantenimiento m
+            JOIN Tipo_mantenimiento t ON m.id_tipo_mantenimiento = t.id_tipo
+            JOIN Empleado e ON m.id_empleado = e.id_empleado
+            WHERE m.id_vehiculo = %s
+        """
+        return self.execute_query_with_headers(query, (placa,))
+
+    def update_user_password_both(self, usuario, hashed_nueva):
+        """
+        Actualiza la contraseña en ambas bases (remota y local) si hay conexión.
+        Si está offline, solo en la local y marca como pendiente para sincronizar.
+        """
+        query = "UPDATE Usuario SET contrasena = %s WHERE usuario = %s"
+        params = (hashed_nueva, usuario)
+        self._write(query, params, last=False)
+        return True
+
+    def get_all_vehiculos(self):
+        """
+        Obtiene todos los vehículos, independientemente de su estado.
+        """
+        query = """
+            SELECT v.placa, v.modelo, m.nombre_marca, t.descripcion as tipo, v.kilometraje, e.descripcion as estado
+            FROM Vehiculo v
+            JOIN Marca_vehiculo m ON v.id_marca = m.id_marca
+            JOIN Tipo_vehiculo t ON v.id_tipo_vehiculo = t.id_tipo
+            JOIN Estado_vehiculo e ON v.id_estado_vehiculo = e.id_estado
+        """
+        return self.execute_query_with_headers(query)
+
     def save_pending_registro(self, tabla, data):
         """Insertar un registro pendiente en cualquier tabla con columna 'pendiente'."""
         # data: dict con los campos y valores

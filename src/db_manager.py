@@ -602,3 +602,55 @@ class DBManager:
         except Exception as exc:
             self.logger.error(f"Error actualizando datos de cliente en ambas bases: {exc}")
             return False
+
+    def get_mantenimientos_empleado(self, id_empleado):
+        query = """
+            SELECT
+                MV.id_mantenimiento,
+                V.placa,
+                MV.descripcion AS Descripcion,
+                MV.fecha_hora AS Fecha_Inicio,
+                M.fecha_fin AS Fecha_Fin,
+                MV.valor AS Costo,
+                TM.descripcion AS Tipo_Mantenimiento,
+                T.nombre AS Taller
+            FROM Mantenimiento_vehiculo MV
+            JOIN Vehiculo V ON MV.id_vehiculo = V.placa
+            JOIN Marca_vehiculo MM ON V.id_marca = MM.id_marca
+            JOIN Tipo_mantenimiento TM ON MV.id_tipo = TM.id_tipo
+            JOIN Taller_mantenimiento T ON MV.id_taller = T.id_taller
+            LEFT JOIN Mantenimiento M ON MV.id_vehiculo = M.placa AND MV.fecha_hora = M.fecha
+            WHERE V.id_sucursal = (SELECT id_sucursal FROM Empleado WHERE id_empleado = %s)
+            ORDER BY MV.fecha_hora DESC
+        """
+        return self.execute_query_with_headers(query, (id_empleado,))
+
+    def get_historial_mantenimientos_vehiculo(self, placa):
+        query = """
+            SELECT
+                MV.id_mantenimiento,
+                MV.descripcion AS Descripcion,
+                MV.fecha_hora AS Fecha_Inicio,
+                M.fecha_fin AS Fecha_Fin,
+                MV.valor AS Costo,
+                TM.descripcion AS Tipo_Mantenimiento,
+                T.nombre AS Taller
+            FROM Mantenimiento_vehiculo MV
+            JOIN Tipo_mantenimiento TM ON MV.id_tipo = TM.id_tipo
+            JOIN Taller_mantenimiento T ON MV.id_taller = T.id_taller
+            LEFT JOIN Mantenimiento M ON MV.id_vehiculo = M.placa AND MV.fecha_hora = M.fecha
+            WHERE MV.id_vehiculo = %s
+            ORDER BY MV.fecha_hora DESC
+        """
+        return self.execute_query_with_headers(query, (placa,))
+
+    def get_all_vehiculos(self):
+        query = """
+            SELECT
+                v.placa,
+                mv.nombre_marca,
+                v.modelo
+            FROM Vehiculo v
+            JOIN Marca_vehiculo mv ON v.id_marca = mv.id_marca
+        """
+        return self.execute_query_with_headers(query)
