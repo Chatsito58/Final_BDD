@@ -110,6 +110,8 @@ class DBManager:
 
     def execute_query(self, query, params=None, fetch=True, return_lastrowid=False):
         try:
+            print(f"[DB_EXEC] Query: {query}")
+            print(f"[DB_EXEC] Params: {params}")
             self.logger.info(f"Ejecutando consulta: {query}")
             self.logger.info(f"Parámetros: {params}")
             self.logger.info(f"Modo offline: {self.offline}")
@@ -136,6 +138,7 @@ class DBManager:
                     cursor.close()
                     conn.close()
                     self.logger.info("Conexión cerrada exitosamente")
+                    print(f"[DB_EXEC] Last inserted ID (SQLite): {last_id}")
                     return last_id
                 else:
                     # Para MySQL, obtener el LAST_INSERT_ID() de manera segura
@@ -146,6 +149,7 @@ class DBManager:
                         cursor.close()
                         conn.close()
                         self.logger.info("Conexión cerrada exitosamente")
+                        print(f"[DB_EXEC] Last inserted ID (MySQL): {last_id}")
                         return last_id
                     except Exception as e:
                         print(f"[DB][ERROR] Error obteniendo LAST_INSERT_ID: {e}")
@@ -158,17 +162,20 @@ class DBManager:
                 self.logger.info("Obteniendo resultados...")
                 result = cursor.fetchall()
                 self.logger.info(f"Resultado obtenido: {result}")
+                print(f"[DB_EXEC] Result: {result}")
             elif not fetch:
                 result = None
                 # Solo hacer commit si no es return_lastrowid
                 conn.commit()
                 self.logger.info("Cambios confirmados en la base de datos")
+                print("[DB_EXEC] Changes committed.")
             else:
                 # Si return_lastrowid es True, no necesitamos fetch
                 result = None
                 if not self.is_sqlite():
                     conn.commit()
                     self.logger.info("Cambios confirmados en la base de datos")
+                    print("[DB_EXEC] Changes committed (return_lastrowid, non-SQLite).")
             
             self.logger.info("Cerrando cursor...")
             cursor.close()
@@ -181,6 +188,9 @@ class DBManager:
             import sqlite3
             import sys
             from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError, IntegrityError, ProgrammingError, InternalError
+            print(f"[DB_EXEC][ERROR] Exception during query execution: {type(exc).__name__} - {exc}")
+            self.logger.error(f"[DB_EXEC][ERROR] Exception during query execution: {type(exc).__name__} - {exc}")
+            self.logger.error(traceback.format_exc())
             # Si es un error de integridad, sintaxis o "Unread result found", NO cambiar a offline
             if isinstance(exc, (IntegrityError, ProgrammingError, sqlite3.IntegrityError, sqlite3.ProgrammingError)):
                 print(f"[DB][ERROR] Error de integridad o sintaxis: {exc}")
@@ -243,6 +253,8 @@ class DBManager:
     def execute_query_with_headers(self, query, params=None):
         """Execute a query and return (rows, column_names)."""
         try:
+            print(f"[DB_EXEC_HEADERS] Query: {query}")
+            print(f"[DB_EXEC_HEADERS] Params: {params}")
             conn = self.connect()
             if self.is_sqlite():
                 query = query.replace('%s', '?')
@@ -254,8 +266,13 @@ class DBManager:
             headers = [d[0] for d in cursor.description]
             cursor.close()
             conn.close()
+            print(f"[DB_EXEC_HEADERS] Result Rows: {rows}")
+            print(f"[DB_EXEC_HEADERS] Result Headers: {headers}")
             return rows, headers
-        except Exception:
+        except Exception as exc:
+            print(f"[DB_EXEC_HEADERS][ERROR] Exception during query with headers: {type(exc).__name__} - {exc}")
+            self.logger.error(f"[DB_EXEC_HEADERS][ERROR] Exception during query with headers: {type(exc).__name__} - {exc}")
+            self.logger.error(traceback.format_exc())
             return None, []
 
     def save_pending_reservation(self, data):
