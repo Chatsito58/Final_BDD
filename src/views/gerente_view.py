@@ -97,18 +97,96 @@ class GerenteView(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error al cambiar la contraseña: {e}")
 
     def _setup_reportes_tab(self):
-        self.generar_reporte_sucursal_button.clicked.connect(self._generar_reporte_ventas_sucursal)
-        self.generar_reporte_vendedor_button.clicked.connect(self._generar_reporte_ventas_vendedor)
+        self.generar_reporte_sucursal_button.clicked.connect(self._generar_reporte_ingresos_sucursal)
+        self.generar_reporte_vendedor_button.clicked.connect(self._generar_reporte_ingresos_vendedor)
+        self.generar_reporte_vehiculos_alquilados_button.clicked.connect(self._generar_reporte_vehiculos_mas_alquilados)
+        self.generar_reporte_abonos_button.clicked.connect(self._generar_reporte_abonos_realizados)
 
-    def _generar_reporte_ventas_sucursal(self):
-        # Implementar lógica para obtener datos de ventas por sucursal
-        # y mostrarlos en el chart_view
-        QMessageBox.information(self, "Reporte", "Generando reporte de ventas por sucursal.")
+        # Asumiendo que tienes un QTextEdit llamado 'reporte_output_textedit' en tu UI
+        # Si no lo tienes, necesitarás añadirlo en gerente_view.ui
+        self.reporte_output_textedit.setReadOnly(True)
 
-    def _generar_reporte_ventas_vendedor(self):
-        # Implementar lógica para obtener datos de ventas por vendedor
-        # y mostrarlos en el chart_view
-        QMessageBox.information(self, "Reporte", "Generando reporte de ventas por vendedor.")
+    def _generar_reporte_ingresos_sucursal(self):
+        # Lógica para obtener ingresos por sucursal
+        query = """
+            SELECT
+                s.nombre AS Sucursal,
+                SUM(a.valor) AS Total_Ingresos
+            FROM Alquiler a
+            JOIN Sucursal s ON a.id_sucursal = s.id_sucursal
+            GROUP BY s.nombre
+            ORDER BY Total_Ingresos DESC
+        """
+        rows, headers = self.db_manager.execute_query_with_headers(query)
+        self._display_report("Reporte de Ingresos por Sucursal", rows, headers)
+
+    def _generar_reporte_ingresos_vendedor(self):
+        # Lógica para obtener ingresos por vendedor
+        query = """
+            SELECT
+                e.nombre AS Vendedor,
+                SUM(a.valor) AS Total_Ingresos
+            FROM Alquiler a
+            JOIN Empleado e ON a.id_empleado = e.id_empleado
+            GROUP BY e.nombre
+            ORDER BY Total_Ingresos DESC
+        """
+        rows, headers = self.db_manager.execute_query_with_headers(query)
+        self._display_report("Reporte de Ingresos por Vendedor", rows, headers)
+
+    def _generar_reporte_vehiculos_mas_alquilados(self):
+        # Lógica para obtener vehículos más alquilados
+        query = """
+            SELECT
+                v.modelo AS Modelo,
+                v.placa AS Placa,
+                COUNT(a.id_vehiculo) AS Veces_Alquilado
+            FROM Alquiler a
+            JOIN Vehiculo v ON a.id_vehiculo = v.placa
+            GROUP BY v.modelo, v.placa
+            ORDER BY Veces_Alquilado DESC
+            LIMIT 10
+        """
+        rows, headers = self.db_manager.execute_query_with_headers(query)
+        self._display_report("Reporte de Vehículos Más Alquilados", rows, headers)
+
+    def _generar_reporte_abonos_realizados(self):
+        # Lógica para obtener abonos realizados
+        query = """
+            SELECT
+                ar.fecha_hora AS Fecha_Hora,
+                ar.valor AS Monto,
+                mp.descripcion AS Metodo_Pago,
+                ra.id_reserva AS ID_Reserva
+            FROM Abono_reserva ar
+            JOIN Medio_pago mp ON ar.id_medio_pago = mp.id_medio_pago
+            JOIN Reserva_alquiler ra ON ar.id_reserva = ra.id_reserva
+            ORDER BY ar.fecha_hora DESC
+        """
+        rows, headers = self.db_manager.execute_query_with_headers(query)
+        self._display_report("Reporte de Abonos Realizados", rows, headers)
+
+    def _display_report(self, title, rows, headers):
+        report_text = f"### {title}\n\n"
+        if not rows:
+            report_text += "No hay datos disponibles para este reporte.\n"
+        else:
+            # Formatear encabezados
+            header_line = " | ".join(headers)
+            report_text += header_line + "\n"
+            report_text += "-" * len(header_line) + "\n"
+            
+            # Formatear filas
+            for row in rows:
+                row_str = []
+                for item in row:
+                    if isinstance(item, (int, float)):
+                        row_str.append(f"{item:, .0f}") # Formato numérico
+                    else:
+                        row_str.append(str(item))
+                report_text += " | ".join(row_str) + "\n"
+        
+        self.reporte_output_textedit.setText(report_text)
 
     def _setup_clientes_tab(self):
         self.nuevo_cliente_button.clicked.connect(self._nuevo_cliente)
@@ -211,38 +289,45 @@ class GerenteView(QMainWindow):
 
     def _cargar_catalogos_vehiculos(self):
         # Cargar marcas
-        marcas = self.db_manager.execute_query("SELECT id_marca, nombre_marca FROM Marca_vehiculo") or []
-        self.marca_vehiculo_map = {m[1]: m[0] for m in marcas}
+        marcas = self.db_manager.execute_query("SELECT id_marca, nombre_marca FROM Marca_vehiculo")
+        self.marca_vehiculo_map = {m[1]: m[0] for m in (marcas or [])}
+        self.marca_vehiculo_combo.clear()
         self.marca_vehiculo_combo.addItems(list(self.marca_vehiculo_map.keys()))
 
         # Cargar colores
-        colores = self.db_manager.execute_query("SELECT id_color, nombre_color FROM Color_vehiculo") or []
-        self.color_vehiculo_map = {c[1]: c[0] for c in colores}
+        colores = self.db_manager.execute_query("SELECT id_color, nombre_color FROM Color_vehiculo")
+        self.color_vehiculo_map = {c[1]: c[0] for c in (colores or [])}
+        self.color_vehiculo_combo.clear()
         self.color_vehiculo_combo.addItems(list(self.color_vehiculo_map.keys()))
 
         # Cargar tipos de vehículo
-        tipos = self.db_manager.execute_query("SELECT id_tipo, descripcion FROM Tipo_vehiculo") or []
-        self.tipo_vehiculo_map = {t[1]: t[0] for t in tipos}
+        tipos = self.db_manager.execute_query("SELECT id_tipo, descripcion FROM Tipo_vehiculo")
+        self.tipo_vehiculo_map = {t[1]: t[0] for t in (tipos or [])}
+        self.tipo_vehiculo_combo.clear()
         self.tipo_vehiculo_combo.addItems(list(self.tipo_vehiculo_map.keys()))
 
         # Cargar transmisiones
-        transmisiones = self.db_manager.execute_query("SELECT id_transmision, descripcion FROM Transmision_vehiculo") or []
-        self.transmision_vehiculo_map = {t[1]: t[0] for t in transmisiones}
+        transmisiones = self.db_manager.execute_query("SELECT id_transmision, descripcion FROM Transmision_vehiculo")
+        self.transmision_vehiculo_map = {t[1]: t[0] for t in (transmisiones or [])}
+        self.transmision_vehiculo_combo.clear()
         self.transmision_vehiculo_combo.addItems(list(self.transmision_vehiculo_map.keys()))
 
         # Cargar blindajes
-        blindajes = self.db_manager.execute_query("SELECT id_blindaje, descripcion FROM Blindaje_vehiculo") or []
-        self.blindaje_vehiculo_map = {b[1]: b[0] for b in blindajes}
+        blindajes = self.db_manager.execute_query("SELECT id_blindaje, descripcion FROM Blindaje_vehiculo")
+        self.blindaje_vehiculo_map = {b[1]: b[0] for b in (blindajes or [])}
+        self.blindaje_vehiculo_combo.clear()
         self.blindaje_vehiculo_combo.addItems(list(self.blindaje_vehiculo_map.keys()))
 
         # Cargar seguros
-        seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion FROM Seguro_vehiculo WHERE estado = 'Activo'") or []
-        self.seguro_vehiculo_map = {s[1]: s[0] for s in seguros}
+        seguros = self.db_manager.execute_query("SELECT id_seguro, descripcion FROM Seguro_vehiculo WHERE estado = 'Activo'")
+        self.seguro_vehiculo_map = {s[1]: s[0] for s in (seguros or [])}
+        self.seguro_vehiculo_combo.clear()
         self.seguro_vehiculo_combo.addItems(list(self.seguro_vehiculo_map.keys()))
 
         # Cargar proveedores
-        proveedores = self.db_manager.execute_query("SELECT id_proveedor, nombre FROM Proveedor_vehiculo") or []
-        self.proveedor_vehiculo_map = {p[1]: p[0] for p in proveedores}
+        proveedores = self.db_manager.execute_query("SELECT id_proveedor, nombre FROM Proveedor_vehiculo")
+        self.proveedor_vehiculo_map = {p[1]: p[0] for p in (proveedores or [])}
+        self.proveedor_vehiculo_combo.clear()
         self.proveedor_vehiculo_combo.addItems(list(self.proveedor_vehiculo_map.keys()))
 
     def _guardar_vehiculo(self):
