@@ -121,6 +121,23 @@ class DBManager:
             if self.is_sqlite():
                 query = query.replace('%s', '?')
                 self.logger.info(f"Consulta adaptada para SQLite: {query}")
+                # Si estamos offline y es un INSERT, guardar como pendiente en SQLite
+                if query.strip().upper().startswith('INSERT'):
+                    if "INSERT INTO Cliente" in query:
+                        # Asumiendo que los parámetros para Cliente son (documento, nombre, telefono, direccion, correo)
+                        # y que el orden es consistente
+                        documento, nombre, telefono, direccion, correo = params
+                        self._sqlite.save_pending_cliente(documento, nombre, telefono, direccion, correo)
+                        self.logger.info(f"Guardado INSERT pendiente para Cliente en SQLite.")
+                        # Devolver un ID simulado para la operación
+                        return self._sqlite.get_lastrowid("Cliente") 
+                    elif "INSERT INTO Usuario" in query:
+                        # Asumiendo que los parámetros para Usuario son (usuario, contrasena, id_rol, id_cliente, id_empleado)
+                        usuario, contrasena, id_rol, id_cliente, id_empleado = params
+                        self._sqlite.save_pending_usuario(usuario, contrasena, id_rol, id_cliente, id_empleado)
+                        self.logger.info(f"Guardado INSERT pendiente para Usuario en SQLite.")
+                        # Devolver un ID simulado para la operación
+                        return self._sqlite.get_lastrowid("Usuario")
             if conn is None:
                 print("[SYNC][ERROR] No se pudo establecer conexión con la base de datos. Cambiando a modo offline.")
                 self.logger.error("No se pudo establecer conexión con la base de datos")
@@ -334,6 +351,28 @@ class DBManager:
                 ),
                 'params': lambda a: (a[1], a[2], a[3], 1),
                 'id': 0
+            },
+            {
+                'tabla': 'Cliente',
+                'get': self._sqlite.get_pending_clientes,
+                'delete': self._sqlite.clear_pending_cliente,
+                'insert': (
+                    "INSERT INTO Cliente (documento, nombre, telefono, direccion, correo) "
+                    "VALUES (%s, %s, %s, %s, %s)"
+                ),
+                'params': lambda c: (c[1], c[2], c[3], c[4], c[5]),
+                'id': 0 # id_cliente
+            },
+            {
+                'tabla': 'Usuario',
+                'get': self._sqlite.get_pending_usuarios,
+                'delete': self._sqlite.clear_pending_usuario,
+                'insert': (
+                    "INSERT INTO Usuario (usuario, contrasena, id_rol, id_cliente, id_empleado) "
+                    "VALUES (%s, %s, %s, %s, %s)"
+                ),
+                'params': lambda u: (u[1], u[2], u[3], u[4], u[5]),
+                'id': 0 # id_usuario
             },
             # Agrega aquí más tablas si tienes más operaciones pendientes
         ]
