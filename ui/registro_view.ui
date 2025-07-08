@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Registro de Cliente</string>
+   <string>Registro Nuevo Cliente</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
